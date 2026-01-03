@@ -1,7 +1,7 @@
-//! hbd - Git-first issue tracker powered by HelixDB
+//! hbd - Git-first issue tracker powered by `HelixDB`
 //!
 //! A distributed issue tracker designed for AI-supervised coding workflows.
-//! Issues are stored as Markdown files in `.tickets/` and synced to HelixDB
+//! Issues are stored as Markdown files in `.tickets/` and synced to `HelixDB`
 //! for fast graph traversal, vector search, and BM25 text search.
 //!
 //! See specs/ for full documentation.
@@ -293,7 +293,7 @@ enum Commands {
         command: AdminCommands,
     },
 
-    /// Sync between git and HelixDB
+    /// Sync between git and `HelixDB`
     Sync {
         /// Only import from files
         #[arg(long)]
@@ -356,7 +356,7 @@ enum DepCommands {
         /// Source issue ID
         from: String,
 
-        /// Dependency type: blocks, related, waits_for, duplicate_of
+        /// Dependency type (blocks, related, waits-for, duplicate-of)
         dep_type: String,
 
         /// Target issue ID
@@ -452,7 +452,7 @@ enum AdminCommands {
     },
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone, Copy)]
 enum DaemonCommands {
     /// Start the daemon
     Start,
@@ -467,7 +467,6 @@ enum DaemonCommands {
 fn main() {
     let cli = Cli::parse();
 
-    // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -475,104 +474,46 @@ fn main() {
         )
         .init();
 
-    match cli.command {
+    run_command(cli.command);
+}
+
+fn run_command(command: Commands) {
+    match command {
         Commands::Init => {
             println!("TODO: Initialize hbd in current directory");
             println!("See specs/tasks.md for implementation details");
         }
-        Commands::Info => {
-            println!("TODO: Show system info (db path, daemon status, issue count)");
-        }
-        Commands::Create { title, .. } => {
-            println!("TODO: Create issue: {}", title);
-        }
-        Commands::Show { id } => {
-            println!("TODO: Show issue: {}", id);
-        }
-        Commands::List { .. } => {
-            println!("TODO: List issues");
-        }
-        Commands::Update { id, .. } => {
-            println!("TODO: Update issue: {}", id);
-        }
-        Commands::Close { id, .. } => {
-            println!("TODO: Close issue: {}", id);
-        }
-        Commands::Reopen { id } => {
-            println!("TODO: Reopen issue: {}", id);
-        }
-        Commands::Search { query, .. } => {
-            println!("TODO: Search for: {}", query);
-        }
-        Commands::Similar { id, .. } => {
-            println!("TODO: Find similar to: {}", id);
-        }
-        Commands::Dep { command } => match command {
-            DepCommands::Add { from, dep_type, to } => {
-                println!("TODO: Add dependency: {} {} {}", from, dep_type, to);
-            }
-            DepCommands::Remove { from, dep_type, to } => {
-                println!("TODO: Remove dependency: {} {} {}", from, dep_type, to);
-            }
-            DepCommands::List { id } => {
-                println!("TODO: List dependencies for: {}", id);
-            }
-            DepCommands::Cycles => {
-                println!("TODO: Find all cycles in dependency graph");
-            }
-        },
-        Commands::Label { command } => match command {
-            LabelCommands::Add { id, label } => {
-                println!("TODO: Add label '{}' to issue: {}", label, id);
-            }
-            LabelCommands::Remove { id, label } => {
-                println!("TODO: Remove label '{}' from issue: {}", label, id);
-            }
-            LabelCommands::List { id } => {
-                println!("TODO: List labels for issue: {}", id);
-            }
-            LabelCommands::ListAll => {
-                println!("TODO: List all labels in project");
-            }
-        },
-        Commands::Comment { id, message } => {
-            println!("TODO: Add comment to {}: {}", id, message);
-        }
-        Commands::Comments { id } => {
-            println!("TODO: List comments for: {}", id);
-        }
-        Commands::Ready { .. } => {
-            println!("TODO: Show ready issues");
-        }
-        Commands::Blocked { .. } => {
-            println!("TODO: Show blocked issues");
-        }
-        Commands::Explain { id } => {
-            println!("TODO: Explain blockers for: {}", id);
-        }
-        Commands::CriticalPath { id } => {
-            println!("TODO: Find critical path for: {}", id);
-        }
+        Commands::Info => println!("TODO: Show system info (db path, daemon status, issue count)"),
+        Commands::Create { title, .. } => println!("TODO: Create issue: {title}"),
+        Commands::Show { id } => println!("TODO: Show issue: {id}"),
+        Commands::List { .. } => println!("TODO: List issues"),
+        Commands::Update { id, .. } => println!("TODO: Update issue: {id}"),
+        Commands::Close { id, .. } => println!("TODO: Close issue: {id}"),
+        Commands::Reopen { id } => println!("TODO: Reopen issue: {id}"),
+        Commands::Search { query, .. } => println!("TODO: Search for: {query}"),
+        Commands::Similar { id, .. } => println!("TODO: Find similar to: {id}"),
+        Commands::Dep { command } => run_dep_command(command),
+        Commands::Label { command } => run_label_command(command),
+        Commands::Comment { id, message } => println!("TODO: Add comment to {id}: {message}"),
+        Commands::Comments { id } => println!("TODO: List comments for: {id}"),
+        Commands::Ready { .. } => println!("TODO: Show ready issues"),
+        Commands::Blocked { .. } => println!("TODO: Show blocked issues"),
+        Commands::Explain { id } => println!("TODO: Explain blockers for: {id}"),
+        Commands::CriticalPath { id } => println!("TODO: Find critical path for: {id}"),
         Commands::Graph { id, output, depth } => {
-            println!(
-                "TODO: Generate graph for {} (depth={}, output={:?})",
-                id, depth, output
-            );
+            println!("TODO: Generate graph for {id} (depth={depth}, output={output:?})");
         }
         Commands::Stale {
             days,
             status,
             limit,
         } => {
-            println!(
-                "TODO: Find stale issues (days={}, status={:?}, limit={:?})",
-                days, status, limit
-            );
+            println!("TODO: Find stale issues (days={days}, status={status:?}, limit={limit:?})");
         }
         Commands::Count { status, r#type } => {
             println!(
-                "TODO: Count issues (status={:?}, type={:?})",
-                status, r#type
+                "TODO: Count issues (status={status:?}, type={type:?})",
+                r#type = r#type
             );
         }
         Commands::Merge {
@@ -580,63 +521,76 @@ fn main() {
             into,
             dry_run,
         } => {
-            println!(
-                "TODO: Merge {:?} into {} (dry_run={})",
-                sources, into, dry_run
-            );
+            println!("TODO: Merge {sources:?} into {into} (dry_run={dry_run})");
         }
-        Commands::Restore { id } => {
-            println!("TODO: Restore compacted issue: {}", id);
-        }
-        Commands::Admin { command } => match command {
-            AdminCommands::Cleanup {
-                older_than,
-                dry_run,
-                force,
-                cascade,
-            } => {
-                println!(
-                    "TODO: Cleanup issues older than {} days (dry_run={}, force={}, cascade={})",
-                    older_than, dry_run, force, cascade
-                );
-            }
-        },
-        Commands::Sync { .. } => {
-            println!("TODO: Sync git <-> HelixDB");
-        }
-        Commands::Health { .. } => {
-            println!("TODO: Show health metrics");
-        }
-        Commands::Stats { .. } => {
-            println!("TODO: Show statistics");
-        }
-        Commands::Context { .. } => {
-            println!("TODO: Get AI context");
-        }
+        Commands::Restore { id } => println!("TODO: Restore compacted issue: {id}"),
+        Commands::Admin { command } => run_admin_command(&command),
+        Commands::Sync { .. } => println!("TODO: Sync git <-> HelixDB"),
+        Commands::Health { .. } => println!("TODO: Show health metrics"),
+        Commands::Stats { .. } => println!("TODO: Show statistics"),
+        Commands::Context { .. } => println!("TODO: Get AI context"),
         Commands::Compact { dry_run } => {
             println!(
                 "TODO: Compact old issues{}",
                 if dry_run { " (dry run)" } else { "" }
             );
         }
-        Commands::Config { command } => match command {
-            ConfigCommands::Show => {
-                println!("TODO: Show configuration");
-            }
-            ConfigCommands::Set { key, value } => {
-                println!("TODO: Set {} = {}", key, value);
-            }
-        },
-        Commands::Daemon { command } => match command {
-            DaemonCommands::Start => {
-                println!("TODO: Start daemon");
-            }
-            DaemonCommands::Stop => {
-                println!("TODO: Stop daemon");
-            }
-            DaemonCommands::Status => {
-                println!("TODO: Show daemon status");
-            }
-        },
+        Commands::Config { command } => run_config_command(command),
+        Commands::Daemon { command } => run_daemon_command(command),
+    }
+}
+
+fn run_dep_command(command: DepCommands) {
+    match command {
+        DepCommands::Add { from, dep_type, to } => {
+            println!("TODO: Add dependency: {from} {dep_type} {to}");
+        }
+        DepCommands::Remove { from, dep_type, to } => {
+            println!("TODO: Remove dependency: {from} {dep_type} {to}");
+        }
+        DepCommands::List { id } => println!("TODO: List dependencies for: {id}"),
+        DepCommands::Cycles => println!("TODO: Find all cycles in dependency graph"),
+    }
+}
+
+fn run_label_command(command: LabelCommands) {
+    match command {
+        LabelCommands::Add { id, label } => println!("TODO: Add label '{label}' to issue: {id}"),
+        LabelCommands::Remove { id, label } => {
+            println!("TODO: Remove label '{label}' from issue: {id}");
+        }
+        LabelCommands::List { id } => println!("TODO: List labels for issue: {id}"),
+        LabelCommands::ListAll => println!("TODO: List all labels in project"),
+    }
+}
+
+fn run_admin_command(command: &AdminCommands) {
+    match command {
+        AdminCommands::Cleanup {
+            older_than,
+            dry_run,
+            force,
+            cascade,
+        } => {
+            println!(
+                "TODO: Cleanup issues older than {older_than} days \
+                 (dry_run={dry_run}, force={force}, cascade={cascade})"
+            );
+        }
+    }
+}
+
+fn run_config_command(command: ConfigCommands) {
+    match command {
+        ConfigCommands::Show => println!("TODO: Show configuration"),
+        ConfigCommands::Set { key, value } => println!("TODO: Set {key} = {value}"),
+    }
+}
+
+fn run_daemon_command(command: DaemonCommands) {
+    match command {
+        DaemonCommands::Start => println!("TODO: Start daemon"),
+        DaemonCommands::Stop => println!("TODO: Stop daemon"),
+        DaemonCommands::Status => println!("TODO: Show daemon status"),
     }
 }

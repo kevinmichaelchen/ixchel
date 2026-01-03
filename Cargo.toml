@@ -8,7 +8,7 @@ members = [
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/kevinmichaelchen/helix-tools"
 authors = ["Kevin Chen"]
@@ -58,3 +58,36 @@ pulldown-cmark-to-cmark = "17"
 
 # YAML frontmatter
 gray_matter = "0.2"
+
+# Git hooks
+husky-rs = "0.1"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+# Correctness
+correctness = { level = "deny", priority = -1 }
+
+# Style & Readability
+style = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Complexity
+cognitive_complexity = "warn"
+
+# Performance
+perf = { level = "warn", priority = -1 }
+
+# Suspicious patterns
+suspicious = { level = "warn", priority = -1 }
+
+# Nursery (experimental but useful)
+nursery = { level = "warn", priority = -1 }
+
+# Specific relaxations for pedantic noise
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"

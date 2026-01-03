@@ -63,3 +63,7 @@ gray_matter = { workspace = true }
 tempfile = "3.12"
 assert_cmd = "2.0"
 predicates = "3.1"
+husky-rs = { workspace = true }
+
+[lints]
+workspace = true
