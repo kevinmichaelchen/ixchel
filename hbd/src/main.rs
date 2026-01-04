@@ -217,10 +217,7 @@ enum Commands {
         label: Option<String>,
     },
 
-    Stats {
-        #[arg(long)]
-        project: Option<String>,
-    },
+    Stats,
 
     Context {
         #[arg(long)]
@@ -405,7 +402,7 @@ fn run(cli: Cli) -> hbd::Result<()> {
             status,
             limit,
         } => cmd_stale(days, status.as_deref(), limit, cli.json),
-        Commands::Stats { project: _ } => cmd_stats(cli.json),
+        Commands::Stats => cmd_stats(cli.json),
         _ => {
             eprintln!("Command not yet implemented. See specs/tasks.md for roadmap.");
             Ok(())
