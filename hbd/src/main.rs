@@ -413,6 +413,12 @@ fn run(cli: Cli) -> hbd::Result<()> {
             DepCommands::List { id } => cmd_dep_list(&id, cli.json),
             DepCommands::Cycles => cmd_dep_cycles(cli.json),
         },
+        Commands::Label { command } => match command {
+            LabelCommands::Add { id, label } => cmd_label_add(&id, &label, cli.json),
+            LabelCommands::Remove { id, label } => cmd_label_remove(&id, &label, cli.json),
+            LabelCommands::List { id } => cmd_label_list(&id, cli.json),
+            LabelCommands::ListAll => cmd_label_list_all(cli.json),
+        },
         _ => {
             eprintln!("Command not yet implemented. See specs/tasks.md for roadmap.");
             Ok(())
@@ -870,27 +876,27 @@ fn cmd_dep_add(from: &str, dep_type: &str, to: &str, json: bool) -> hbd::Result<
 
     if dep_type == DepType::Blocks {
         let issues_map = store.read_all_issues_map()?;
-        if would_create_cycle(&issues_map, &from_id, &to_id) {
+        if would_create_cycle(&issues_map, &to_id, &from_id) {
             return Err(hbd::HbdError::Other(format!(
-                "adding this dependency would create a cycle: {from_id} -> {to_id} -> ... -> {from_id}"
+                "adding this dependency would create a cycle: {to_id} -> {from_id} -> ... -> {to_id}"
             )));
         }
     }
 
-    let mut issue = store.read_issue(&from_id)?;
-    issue.add_dependency(&to_id, dep_type);
+    let mut issue = store.read_issue(&to_id)?;
+    issue.add_dependency(&from_id, dep_type);
     store.write_issue(&issue)?;
 
     if json {
         let result = serde_json::json!({
-            "from": from_id,
-            "to": to_id,
+            "blocker": from_id,
+            "blocked": to_id,
             "dep_type": dep_type.as_str(),
             "action": "added"
         });
         println!("{}", serde_json::to_string_pretty(&result)?);
     } else {
-        println!("{from_id} now {dep_type} {to_id}");
+        println!("{to_id} now depends on {from_id}");
     }
     Ok(())
 }
@@ -901,12 +907,12 @@ fn cmd_dep_remove(from: &str, dep_type: &str, to: &str, json: bool) -> hbd::Resu
     let to_id = store.resolve_id(to)?;
     let _: DepType = dep_type.parse().map_err(hbd::HbdError::Other)?;
 
-    let mut issue = store.read_issue(&from_id)?;
-    let removed = issue.remove_dependency(&to_id);
+    let mut issue = store.read_issue(&to_id)?;
+    let removed = issue.remove_dependency(&from_id);
 
     if !removed {
         return Err(hbd::HbdError::Other(format!(
-            "no dependency from {from_id} to {to_id}"
+            "{to_id} does not depend on {from_id}"
         )));
     }
 
@@ -914,13 +920,13 @@ fn cmd_dep_remove(from: &str, dep_type: &str, to: &str, json: bool) -> hbd::Resu
 
     if json {
         let result = serde_json::json!({
-            "from": from_id,
-            "to": to_id,
+            "blocker": from_id,
+            "blocked": to_id,
             "action": "removed"
         });
         println!("{}", serde_json::to_string_pretty(&result)?);
     } else {
-        println!("Removed dependency: {from_id} -> {to_id}");
+        println!("{to_id} no longer depends on {from_id}");
     }
     Ok(())
 }
@@ -1089,4 +1095,123 @@ fn find_all_cycles(issues_map: &HashMap<String, Issue>) -> Vec<Vec<String>> {
     }
 
     cycles
+}
+
+fn cmd_label_add(id: &str, label: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    let label = label.trim().to_lowercase();
+    if issue.labels.contains(&label) {
+        return Err(hbd::HbdError::Other(format!(
+            "issue {id} already has label '{label}'"
+        )));
+    }
+
+    issue.labels.push(label.clone());
+    issue.labels.sort();
+    issue.touch();
+    store.write_issue(&issue)?;
+
+    if json {
+        let result = serde_json::json!({
+            "id": id,
+            "label": label,
+            "action": "added",
+            "labels": issue.labels
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("Added label '{label}' to {id}");
+    }
+    Ok(())
+}
+
+fn cmd_label_remove(id: &str, label: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    let label = label.trim().to_lowercase();
+    let original_len = issue.labels.len();
+    issue.labels.retain(|l| l != &label);
+
+    if issue.labels.len() == original_len {
+        return Err(hbd::HbdError::Other(format!(
+            "issue {id} does not have label '{label}'"
+        )));
+    }
+
+    issue.touch();
+    store.write_issue(&issue)?;
+
+    if json {
+        let result = serde_json::json!({
+            "id": id,
+            "label": label,
+            "action": "removed",
+            "labels": issue.labels
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("Removed label '{label}' from {id}");
+    }
+    Ok(())
+}
+
+fn cmd_label_list(id: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let issue = store.read_issue(&id)?;
+
+    if json {
+        let result = serde_json::json!({
+            "id": id,
+            "labels": issue.labels
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else if issue.labels.is_empty() {
+        println!("{id} has no labels");
+    } else {
+        println!("Labels for {id}:");
+        for label in &issue.labels {
+            println!("  {label}");
+        }
+    }
+    Ok(())
+}
+
+fn cmd_label_list_all(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let issues = store.read_all_issues()?;
+
+    let mut label_counts: HashMap<String, usize> = HashMap::new();
+    for issue in &issues {
+        for label in &issue.labels {
+            *label_counts.entry(label.clone()).or_insert(0) += 1;
+        }
+    }
+
+    let mut labels: Vec<_> = label_counts.into_iter().collect();
+    labels.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+
+    if json {
+        let result: Vec<_> = labels
+            .iter()
+            .map(|(name, count)| serde_json::json!({"name": name, "count": count}))
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else if labels.is_empty() {
+        println!("No labels in project");
+    } else {
+        println!("Labels in project:\n");
+        println!("{:<20} Count", "Label");
+        println!("{}", "-".repeat(30));
+        for (name, count) in &labels {
+            println!("{name:<20} {count}");
+        }
+        println!("\n{} label(s)", labels.len());
+    }
+    Ok(())
 }
