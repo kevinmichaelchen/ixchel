@@ -12,7 +12,7 @@ env:
 
 jobs:
   fmt:
-    name: Format
+    name: Format (Rust)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
   build:
-    name: Build
+    name: Build (Rust)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,10 +42,49 @@ jobs:
       - run: cargo build --all-features
 
   test:
-    name: Test
+    name: Test (Rust)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all-features
+
+  lint-ui:
+    name: Lint (UI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hbd-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run format:check
+      - run: bun run check
+
+  build-tauri:
+    name: Build (Tauri macOS)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: hbd-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: hbd-ui
