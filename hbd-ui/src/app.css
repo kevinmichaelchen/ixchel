@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+:root {
+	--status-open: #9ca3af;
+	--status-in-progress: #fbbf24;
+	--status-blocked: #ef4444;
+	--status-closed: #22c55e;
+
+	--dep-blocks: #ef4444;
+	--dep-waits-for: #f59e0b;
+	--dep-related: #6b7280;
+}
+
+html,
+body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+body {
+	font-family:
+		ui-sans-serif,
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
+	background-color: #111827;
+	color: #f9fafb;
+}

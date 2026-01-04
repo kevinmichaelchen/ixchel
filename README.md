@@ -16,12 +16,16 @@ provide that memory layer using HelixDB's unique combination of:
 
 ## Tools
 
-| Tool              | Description                                          | Status            |
-| ----------------- | ---------------------------------------------------- | ----------------- |
-| **[hbd](./hbd/)** | Git-first issue tracker for AI-supervised workflows  | 🚧 In Development |
-| **helix-docs**    | Local cache for fetched docs during agentic research | 📋 Planned        |
-| **helix-map**     | Codebase structure cache for fast exploration        | 📋 Planned        |
-| **helix-mail**    | Agent-to-agent messaging and coordination            | 📋 Planned        |
+| Tool                  | Description                                          | Status            |
+| --------------------- | ---------------------------------------------------- | ----------------- |
+| **[hbd][hbd]**        | Git-first issue tracker for AI-supervised workflows  | 🚧 In Development |
+| **[hbd-ui][hbd-ui]**  | 3D task graph visualizer for hbd                     | 🚧 In Development |
+| **helix-docs**        | Local cache for fetched docs during agentic research | 📋 Planned        |
+| **helix-map**         | Codebase structure cache for fast exploration        | 📋 Planned        |
+| **helix-mail**        | Agent-to-agent messaging and coordination            | 📋 Planned        |
+
+[hbd]: ./hbd/
+[hbd-ui]: ./hbd-ui/
 
 ## Architecture
 
@@ -126,11 +130,14 @@ hbd ready
 
 ```
 helix-tools/
-├── hbd/                    # Issue tracker
+├── hbd/                    # Issue tracker CLI (Rust)
 │   ├── specs/              # Kiro-style specifications
 │   │   ├── requirements.md
 │   │   ├── design.md
 │   │   └── tasks.md
+│   └── src/
+│
+├── hbd-ui/                 # 3D graph visualizer (Svelte + Threlte)
 │   └── src/
 │
 ├── shared/                 # Shared Rust crates
