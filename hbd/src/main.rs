@@ -419,6 +419,13 @@ fn run(cli: Cli) -> hbd::Result<()> {
             LabelCommands::List { id } => cmd_label_list(&id, cli.json),
             LabelCommands::ListAll => cmd_label_list_all(cli.json),
         },
+        Commands::Explain { id } => cmd_explain(&id, cli.json),
+        Commands::Stale {
+            days,
+            status,
+            limit,
+        } => cmd_stale(days, status.as_deref(), limit, cli.json),
+        Commands::Stats { project: _ } => cmd_stats(cli.json),
         _ => {
             eprintln!("Command not yet implemented. See specs/tasks.md for roadmap.");
             Ok(())
@@ -1212,6 +1219,231 @@ fn cmd_label_list_all(json: bool) -> hbd::Result<()> {
             println!("{name:<20} {count}");
         }
         println!("\n{} label(s)", labels.len());
+    }
+    Ok(())
+}
+
+fn cmd_explain(id: &str, json: bool) -> hbd::Result<()> {
+    #[derive(serde::Serialize)]
+    struct BlockerNode {
+        id: String,
+        title: String,
+        status: String,
+        depth: usize,
+        blockers: Vec<BlockerNode>,
+    }
+
+    fn build_tree(
+        issue_id: &str,
+        issues_map: &HashMap<String, Issue>,
+        visited: &mut HashSet<String>,
+        depth: usize,
+    ) -> Option<BlockerNode> {
+        if visited.contains(issue_id) {
+            return None;
+        }
+        visited.insert(issue_id.to_string());
+
+        let issue = issues_map.get(issue_id)?;
+        let blockers: Vec<_> = issue
+            .depends_on
+            .iter()
+            .filter(|d| d.dep_type == DepType::Blocks)
+            .filter_map(|d| build_tree(&d.id, issues_map, visited, depth + 1))
+            .collect();
+
+        Some(BlockerNode {
+            id: issue_id.to_string(),
+            title: issue.title.clone(),
+            status: issue.status.as_str().to_string(),
+            depth,
+            blockers,
+        })
+    }
+
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let issues_map = store.read_all_issues_map()?;
+
+    if !issues_map.contains_key(&id) {
+        return Err(hbd::HbdError::IssueNotFound(id));
+    }
+
+    let mut visited = HashSet::new();
+    let tree = build_tree(&id, &issues_map, &mut visited, 0);
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&tree)?);
+    } else {
+        fn print_tree(node: &BlockerNode, prefix: &str, is_last: bool) {
+            let connector = if node.depth == 0 {
+                ""
+            } else if is_last {
+                "└── "
+            } else {
+                "├── "
+            };
+            let status_icon = match node.status.as_str() {
+                "closed" => "✓",
+                "blocked" => "⊘",
+                "in_progress" => "◐",
+                _ => "○",
+            };
+            println!(
+                "{prefix}{connector}{status_icon} {} {}",
+                node.id,
+                truncate(&node.title, 40)
+            );
+
+            let child_prefix = if node.depth == 0 {
+                String::new()
+            } else if is_last {
+                format!("{prefix}    ")
+            } else {
+                format!("{prefix}│   ")
+            };
+
+            for (i, blocker) in node.blockers.iter().enumerate() {
+                let is_last_child = i == node.blockers.len() - 1;
+                print_tree(blocker, &child_prefix, is_last_child);
+            }
+        }
+
+        if let Some(ref tree) = tree {
+            println!("Blocker tree for {id}:\n");
+            print_tree(tree, "", true);
+
+            let open_blockers: usize = count_open_blockers(tree);
+            if open_blockers > 0 {
+                println!("\n{open_blockers} open blocker(s) in chain");
+            } else {
+                println!("\nNo open blockers - ready to work!");
+            }
+        }
+    }
+    Ok(())
+}
+
+fn count_open_blockers(node: &impl serde::Serialize) -> usize {
+    #[derive(serde::Deserialize)]
+    struct Node {
+        status: String,
+        blockers: Vec<Node>,
+    }
+    fn count_children(blockers: &[Node]) -> usize {
+        blockers
+            .iter()
+            .map(|n| {
+                let self_open = usize::from(n.status != "closed");
+                self_open + count_children(&n.blockers)
+            })
+            .sum()
+    }
+    let json = serde_json::to_string(node).unwrap();
+    let node: Node = serde_json::from_str(&json).unwrap();
+    count_children(&node.blockers)
+}
+
+fn cmd_stale(days: u32, status: Option<&str>, limit: Option<usize>, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let mut issues = store.read_all_issues()?;
+
+    let cutoff = chrono::Utc::now() - chrono::Duration::days(i64::from(days));
+    issues.retain(|i| i.updated_at < cutoff && i.status != Status::Closed);
+
+    if let Some(s) = status {
+        let s: Status = s.parse().map_err(hbd::HbdError::Other)?;
+        issues.retain(|i| i.status == s);
+    }
+
+    issues.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+
+    if let Some(limit) = limit {
+        issues.truncate(limit);
+    }
+
+    if json {
+        let result: Vec<_> = issues
+            .iter()
+            .map(|i| {
+                serde_json::json!({
+                    "id": i.id,
+                    "title": i.title,
+                    "status": i.status.as_str(),
+                    "updated_at": i.updated_at.to_rfc3339(),
+                    "days_stale": (chrono::Utc::now() - i.updated_at).num_days()
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else if issues.is_empty() {
+        println!("No stale issues (older than {days} days)");
+    } else {
+        println!("Stale issues (not updated in {days}+ days):\n");
+        println!("{:<12} {:<12} {:<8} Title", "ID", "Status", "Days");
+        println!("{}", "-".repeat(60));
+        for i in &issues {
+            let days_stale = (chrono::Utc::now() - i.updated_at).num_days();
+            println!(
+                "{:<12} {:<12} {:<8} {}",
+                i.id,
+                i.status,
+                days_stale,
+                truncate(&i.title, 30)
+            );
+        }
+        println!("\n{} stale issue(s)", issues.len());
+    }
+    Ok(())
+}
+
+fn cmd_stats(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let issues = store.read_all_issues()?;
+
+    let mut by_status: HashMap<String, usize> = HashMap::new();
+    let mut by_type: HashMap<String, usize> = HashMap::new();
+    let mut by_priority: HashMap<u8, usize> = HashMap::new();
+
+    for issue in &issues {
+        *by_status
+            .entry(issue.status.as_str().to_string())
+            .or_insert(0) += 1;
+        *by_type
+            .entry(issue.issue_type.as_str().to_string())
+            .or_insert(0) += 1;
+        *by_priority.entry(issue.priority.as_u8()).or_insert(0) += 1;
+    }
+
+    if json {
+        let result = serde_json::json!({
+            "total": issues.len(),
+            "by_status": by_status,
+            "by_type": by_type,
+            "by_priority": by_priority
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("Issue Statistics\n");
+        println!("Total: {}\n", issues.len());
+
+        println!("By Status:");
+        for (status, count) in &by_status {
+            println!("  {status:<12} {count}");
+        }
+
+        println!("\nBy Type:");
+        for (t, count) in &by_type {
+            println!("  {t:<12} {count}");
+        }
+
+        println!("\nBy Priority:");
+        let mut priorities: Vec<_> = by_priority.iter().collect();
+        priorities.sort_by_key(|(p, _)| *p);
+        for (p, count) in priorities {
+            let label = Priority::from_u8(*p).map_or("?", Priority::label);
+            println!("  P{p} ({label:<8}) {count}");
+        }
     }
     Ok(())
 }
