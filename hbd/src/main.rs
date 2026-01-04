@@ -1193,9 +1193,20 @@ fn cmd_label_remove(id: &str, label: &str, json: bool) -> hbd::Result<()> {
     issue.labels.retain(|l| l != &label);
 
     if issue.labels.len() == original_len {
-        return Err(hbd::HbdError::Other(format!(
-            "issue {id} does not have label '{label}'"
-        )));
+        // Warn and exit successfully if label not present (AC-005C.2)
+        if json {
+            let result = serde_json::json!({
+                "id": id,
+                "label": label,
+                "action": "unchanged",
+                "warning": format!("issue {id} does not have label '{label}'"),
+                "labels": issue.labels
+            });
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        } else {
+            eprintln!("warning: issue {id} does not have label '{label}'");
+        }
+        return Ok(());
     }
 
     issue.touch();

@@ -199,7 +199,7 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 - [x] **T1.6.2** Implement `hbd label remove <id> <label>`
   - ~~Remove TAGGED edge~~ (file-only)
   - Update Markdown frontmatter
-  - Error if label not present
+  - Warn (don't error) if label not present (AC-005C.2)
 
 - [x] **T1.6.3** Implement `hbd label list <id>`
   - Show all labels on issue
