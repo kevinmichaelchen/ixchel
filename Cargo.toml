@@ -51,6 +51,10 @@ uuid = { version = "1.10", features = ["v4"] }
 
 # Hashing
 blake3 = "1.5"
+hex = "0.4"
+
+# System info
+whoami = "1.5"
 
 # Markdown parsing
 pulldown-cmark = "0.12"

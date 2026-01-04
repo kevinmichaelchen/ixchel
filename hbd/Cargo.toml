@@ -51,6 +51,10 @@ uuid = { workspace = true }
 
 # Hashing
 blake3 = { workspace = true }
+hex = { workspace = true }
+
+# System info
+whoami = { workspace = true }
 
 # Markdown parsing
 pulldown-cmark = { workspace = true }

@@ -14,6 +14,13 @@ It combines the best of [Beads](https://github.com/steveyegge/beads) (AI
 compaction, gates, dependency graphs) with HelixDB's unique graph-vector
 capabilities (semantic search, path algorithms, hybrid reranking).
 
+## Acknowledgments
+
+The Markdown-first storage approach (`.tickets/*.md` with YAML frontmatter) is
+inspired by [wedow/ticket](https://github.com/wedow/ticket), which pioneered the
+idea of storing issues as individual Markdown files for better AI agent
+compatibility and IDE navigation.
+
 ## Goals
 
 1. **Git-first**: Issues stored as Markdown in `.tickets/`, synced via git

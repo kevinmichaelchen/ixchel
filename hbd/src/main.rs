@@ -1,19 +1,13 @@
-//! hbd - Git-first issue tracker powered by `HelixDB`
-//!
-//! A distributed issue tracker designed for AI-supervised coding workflows.
-//! Issues are stored as Markdown files in `.tickets/` and synced to `HelixDB`
-//! for fast graph traversal, vector search, and BM25 text search.
-//!
-//! See specs/ for full documentation.
+use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+use hbd::{CreatorType, Issue, IssueType, Priority, Status, TicketStore};
 
 #[derive(Parser)]
 #[command(name = "hbd")]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about = "Git-first issue tracker powered by HelixDB")]
 #[command(propagate_version = true)]
 struct Cli {
-    /// Output format
     #[arg(long, global = true)]
     json: bool,
 
@@ -23,326 +17,242 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Initialize hbd in the current directory
     Init,
 
-    /// Show system info and status
     Info,
 
-    /// Create a new issue
     Create {
-        /// Issue title
         title: String,
 
-        /// Issue description
         #[arg(short, long)]
         description: Option<String>,
 
-        /// Issue type: bug, feature, task, epic, chore, gate
         #[arg(short = 't', long, default_value = "task")]
         r#type: String,
 
-        /// Priority: 0 (critical) to 4 (backlog)
         #[arg(short, long, default_value = "2")]
-        priority: i32,
+        priority: u8,
 
-        /// Labels (comma-separated)
         #[arg(short, long)]
         labels: Option<String>,
 
-        /// Assignee
         #[arg(short, long)]
         assignee: Option<String>,
 
-        /// Agent ID (for AI agents)
         #[arg(long)]
         agent: Option<String>,
 
-        /// Session ID (for AI agents)
         #[arg(long)]
         session: Option<String>,
 
-        /// Create as ephemeral (not synced to git)
+        #[arg(long)]
+        parent: Option<String>,
+
         #[arg(long)]
         ephemeral: bool,
     },
 
-    /// Show issue details
     Show {
-        /// Issue ID
         id: String,
     },
 
-    /// List issues
     List {
-        /// Filter by status
         #[arg(short, long)]
         status: Option<String>,
 
-        /// Filter by type
         #[arg(short = 't', long)]
         r#type: Option<String>,
 
-        /// Filter by priority
         #[arg(short, long)]
-        priority: Option<i32>,
+        priority: Option<u8>,
 
-        /// Filter by label
         #[arg(short, long)]
         label: Option<String>,
 
-        /// Filter by assignee
         #[arg(short, long)]
         assignee: Option<String>,
 
-        /// Filter by project
         #[arg(long)]
         project: Option<String>,
 
-        /// Include ephemeral issues
         #[arg(long)]
         include_ephemeral: bool,
     },
 
-    /// Update an issue
     Update {
-        /// Issue ID
         id: String,
 
-        /// New status
         #[arg(long)]
         status: Option<String>,
 
-        /// New priority
         #[arg(long)]
-        priority: Option<i32>,
+        priority: Option<u8>,
 
-        /// New title
         #[arg(long)]
         title: Option<String>,
 
-        /// New assignee
         #[arg(long)]
         assignee: Option<String>,
     },
 
-    /// Close an issue
     Close {
-        /// Issue ID
         id: String,
 
-        /// Reason for closing
         #[arg(short, long)]
         reason: Option<String>,
 
-        /// Force close even with open children
         #[arg(long)]
         force: bool,
     },
 
-    /// Reopen a closed issue
     Reopen {
-        /// Issue ID
         id: String,
     },
 
-    /// Search issues
     Search {
-        /// Search query
         query: String,
 
-        /// Use semantic (vector) search
         #[arg(long)]
         semantic: bool,
 
-        /// Use hybrid search (BM25 + vector)
         #[arg(long)]
         hybrid: bool,
 
-        /// Maximum results
         #[arg(short, long, default_value = "20")]
         limit: usize,
     },
 
-    /// Find similar issues
     Similar {
-        /// Issue ID
         id: String,
 
-        /// Maximum results
         #[arg(short, long, default_value = "10")]
         limit: usize,
     },
 
-    /// Dependency management
     Dep {
         #[command(subcommand)]
         command: DepCommands,
     },
 
-    /// Label management
     Label {
         #[command(subcommand)]
         command: LabelCommands,
     },
 
-    /// Add a comment to an issue
     Comment {
-        /// Issue ID
         id: String,
-
-        /// Comment message
         message: String,
+
+        #[arg(long)]
+        agent: Option<String>,
     },
 
-    /// List comments on an issue
     Comments {
-        /// Issue ID
         id: String,
     },
 
-    /// Show ready (unblocked) issues
     Ready {
-        /// Filter by project
         #[arg(long)]
         project: Option<String>,
     },
 
-    /// Show blocked issues
     Blocked {
-        /// Filter by project
         #[arg(long)]
         project: Option<String>,
     },
 
-    /// Explain blockers for an issue
     Explain {
-        /// Issue ID
         id: String,
     },
 
-    /// Find critical path to an epic
     CriticalPath {
-        /// Epic issue ID
         id: String,
     },
 
-    /// Generate dependency graph visualization
     Graph {
-        /// Issue ID
         id: String,
 
-        /// Output file (default: stdout)
         #[arg(short, long)]
         output: Option<String>,
 
-        /// Max traversal depth
         #[arg(long, default_value = "5")]
         depth: usize,
     },
 
-    /// Find stale issues not updated recently
     Stale {
-        /// Days threshold (default: 14)
         #[arg(long, default_value = "14")]
         days: u32,
 
-        /// Filter by status
         #[arg(short, long)]
         status: Option<String>,
 
-        /// Maximum results
         #[arg(short, long)]
         limit: Option<usize>,
     },
 
-    /// Count issues with optional filters
     Count {
-        /// Filter by status
         #[arg(short, long)]
         status: Option<String>,
 
-        /// Filter by type
         #[arg(short = 't', long)]
         r#type: Option<String>,
     },
 
-    /// Merge duplicate issues into one
     Merge {
-        /// Source issue IDs to merge
         sources: Vec<String>,
 
-        /// Target issue ID to merge into
         #[arg(long)]
         into: String,
 
-        /// Preview without making changes
         #[arg(long)]
         dry_run: bool,
     },
 
-    /// Restore pre-compaction content from git history
     Restore {
-        /// Issue ID
         id: String,
     },
 
-    /// Administrative commands
     Admin {
         #[command(subcommand)]
         command: AdminCommands,
     },
 
-    /// Sync between git and `HelixDB`
     Sync {
-        /// Only import from files
         #[arg(long)]
         import_only: bool,
 
-        /// Only export to files
         #[arg(long)]
         export_only: bool,
     },
 
-    /// Project health metrics
     Health {
-        /// Show health for a specific label
         #[arg(long)]
         label: Option<String>,
     },
 
-    /// Issue statistics
     Stats {
-        /// Filter by project
         #[arg(long)]
         project: Option<String>,
     },
 
-    /// Get context for AI agents
     Context {
-        /// Search query for relevant issues
         #[arg(long)]
         query: Option<String>,
 
-        /// Maximum tokens in output
         #[arg(long)]
         limit: Option<usize>,
     },
 
-    /// Compact old closed issues
     Compact {
-        /// Show what would be compacted without making changes
         #[arg(long)]
         dry_run: bool,
     },
 
-    /// Configuration management
     Config {
         #[command(subcommand)]
         command: ConfigCommands,
     },
 
-    /// Daemon management
     Daemon {
         #[command(subcommand)]
         command: DaemonCommands,
@@ -351,102 +261,48 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum DepCommands {
-    /// Add a dependency
     Add {
-        /// Source issue ID
         from: String,
-
-        /// Dependency type (blocks, related, waits-for, duplicate-of)
         dep_type: String,
-
-        /// Target issue ID
         to: String,
     },
-
-    /// Remove a dependency
     Remove {
-        /// Source issue ID
         from: String,
-
-        /// Dependency type
         dep_type: String,
-
-        /// Target issue ID
         to: String,
     },
-
-    /// List dependencies for an issue
     List {
-        /// Issue ID
         id: String,
     },
-
-    /// Find all cycles in the dependency graph
     Cycles,
 }
 
 #[derive(Subcommand)]
 enum LabelCommands {
-    /// Add a label to an issue
-    Add {
-        /// Issue ID
-        id: String,
-
-        /// Label name (comma-separated for multiple)
-        label: String,
-    },
-
-    /// Remove a label from an issue
-    Remove {
-        /// Issue ID
-        id: String,
-
-        /// Label name
-        label: String,
-    },
-
-    /// List labels on an issue
-    List {
-        /// Issue ID
-        id: String,
-    },
-
-    /// List all labels in the project
+    Add { id: String, label: String },
+    Remove { id: String, label: String },
+    List { id: String },
     ListAll,
 }
 
 #[derive(Subcommand)]
 enum ConfigCommands {
-    /// Show current configuration
     Show,
-
-    /// Set a configuration value
-    Set {
-        /// Configuration key
-        key: String,
-
-        /// Configuration value
-        value: String,
-    },
+    Set { key: String, value: String },
 }
 
 #[derive(Subcommand)]
 enum AdminCommands {
-    /// Delete old closed issues
     Cleanup {
-        /// Only delete issues closed more than N days ago
         #[arg(long, default_value = "90")]
         older_than: u32,
 
-        /// Show what would be deleted without making changes
         #[arg(long)]
         dry_run: bool,
 
-        /// Actually perform deletion (required for safety)
         #[arg(long)]
         force: bool,
 
-        /// Also delete orphaned dependencies and comments
         #[arg(long)]
         cascade: bool,
     },
@@ -454,17 +310,12 @@ enum AdminCommands {
 
 #[derive(Subcommand, Clone, Copy)]
 enum DaemonCommands {
-    /// Start the daemon
     Start,
-
-    /// Stop the daemon
     Stop,
-
-    /// Check daemon status
     Status,
 }
 
-fn main() {
+fn main() -> ExitCode {
     let cli = Cli::parse();
 
     tracing_subscriber::fmt()
@@ -474,123 +325,524 @@ fn main() {
         )
         .init();
 
-    run_command(cli.command);
+    match run(cli) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("error: {e}");
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            ExitCode::from(e.exit_code() as u8)
+        }
+    }
 }
 
-fn run_command(command: Commands) {
-    match command {
-        Commands::Init => {
-            println!("TODO: Initialize hbd in current directory");
-            println!("See specs/tasks.md for implementation details");
-        }
-        Commands::Info => println!("TODO: Show system info (db path, daemon status, issue count)"),
-        Commands::Create { title, .. } => println!("TODO: Create issue: {title}"),
-        Commands::Show { id } => println!("TODO: Show issue: {id}"),
-        Commands::List { .. } => println!("TODO: List issues"),
-        Commands::Update { id, .. } => println!("TODO: Update issue: {id}"),
-        Commands::Close { id, .. } => println!("TODO: Close issue: {id}"),
-        Commands::Reopen { id } => println!("TODO: Reopen issue: {id}"),
-        Commands::Search { query, .. } => println!("TODO: Search for: {query}"),
-        Commands::Similar { id, .. } => println!("TODO: Find similar to: {id}"),
-        Commands::Dep { command } => run_dep_command(command),
-        Commands::Label { command } => run_label_command(command),
-        Commands::Comment { id, message } => println!("TODO: Add comment to {id}: {message}"),
-        Commands::Comments { id } => println!("TODO: List comments for: {id}"),
-        Commands::Ready { .. } => println!("TODO: Show ready issues"),
-        Commands::Blocked { .. } => println!("TODO: Show blocked issues"),
-        Commands::Explain { id } => println!("TODO: Explain blockers for: {id}"),
-        Commands::CriticalPath { id } => println!("TODO: Find critical path for: {id}"),
-        Commands::Graph { id, output, depth } => {
-            println!("TODO: Generate graph for {id} (depth={depth}, output={output:?})");
-        }
-        Commands::Stale {
-            days,
+fn run(cli: Cli) -> hbd::Result<()> {
+    match cli.command {
+        Commands::Init => cmd_init(),
+        Commands::Info => cmd_info(cli.json),
+        Commands::Create {
+            title,
+            description,
+            r#type,
+            priority,
+            labels,
+            assignee,
+            agent,
+            session,
+            parent,
+            ephemeral: _,
+        } => cmd_create(
+            &title,
+            description.as_deref(),
+            &r#type,
+            priority,
+            labels.as_deref(),
+            assignee.as_deref(),
+            agent.as_deref(),
+            session.as_deref(),
+            parent.as_deref(),
+            cli.json,
+        ),
+        Commands::Show { id } => cmd_show(&id, cli.json),
+        Commands::List {
             status,
-            limit,
-        } => {
-            println!("TODO: Find stale issues (days={days}, status={status:?}, limit={limit:?})");
+            r#type,
+            priority,
+            label: _,
+            assignee,
+            project: _,
+            include_ephemeral: _,
+        } => cmd_list(
+            status.as_deref(),
+            r#type.as_deref(),
+            priority,
+            assignee.as_deref(),
+            cli.json,
+        ),
+        Commands::Update {
+            id,
+            status,
+            priority,
+            title,
+            assignee,
+        } => cmd_update(
+            &id,
+            status.as_deref(),
+            priority,
+            title.as_deref(),
+            assignee.as_deref(),
+            cli.json,
+        ),
+        Commands::Close {
+            id,
+            reason,
+            force: _,
+        } => cmd_close(&id, reason.as_deref(), cli.json),
+        Commands::Reopen { id } => cmd_reopen(&id, cli.json),
+        Commands::Comment { id, message, agent } => {
+            cmd_comment(&id, &message, agent.as_deref(), cli.json)
         }
-        Commands::Count { status, r#type } => {
+        Commands::Comments { id } => cmd_comments(&id, cli.json),
+        Commands::Ready { project: _ } => cmd_ready(cli.json),
+        Commands::Blocked { project: _ } => cmd_blocked(cli.json),
+        _ => {
+            eprintln!("Command not yet implemented. See specs/tasks.md for roadmap.");
+            Ok(())
+        }
+    }
+}
+
+fn cmd_init() -> hbd::Result<()> {
+    let store = TicketStore::new(std::env::current_dir()?);
+    store.init()?;
+    println!("Initialized hbd in current directory");
+    println!("  Created .tickets/");
+    println!("  Created .helix/config.toml");
+    println!("  Updated .gitignore");
+    Ok(())
+}
+
+fn cmd_info(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let ids = store.list_issue_ids()?;
+    let open_count = ids
+        .iter()
+        .filter_map(|id| store.read_issue(id).ok())
+        .filter(|i| i.status != Status::Closed)
+        .count();
+
+    if json {
+        let info = serde_json::json!({
+            "initialized": store.is_initialized(),
+            "tickets_dir": store.tickets_dir(),
+            "total_issues": ids.len(),
+            "open_issues": open_count,
+        });
+        println!("{}", serde_json::to_string_pretty(&info)?);
+    } else {
+        println!("hbd status:");
+        println!("  Initialized: {}", store.is_initialized());
+        println!("  Tickets dir: {}", store.tickets_dir().display());
+        println!("  Total issues: {}", ids.len());
+        println!("  Open issues: {open_count}");
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_create(
+    title: &str,
+    description: Option<&str>,
+    issue_type: &str,
+    priority: u8,
+    labels: Option<&str>,
+    assignee: Option<&str>,
+    agent: Option<&str>,
+    session: Option<&str>,
+    parent: Option<&str>,
+    json: bool,
+) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+
+    let issue_type: IssueType = issue_type.parse().map_err(hbd::HbdError::Other)?;
+    let priority = Priority::from_u8(priority).unwrap_or(Priority::Medium);
+
+    let mut builder = Issue::builder(title)
+        .issue_type(issue_type)
+        .priority(priority);
+
+    if let Some(desc) = description {
+        builder = builder.body(desc);
+    }
+    if let Some(a) = assignee {
+        builder = builder.assignee(a);
+    }
+    if let Some(agent_id) = agent {
+        builder = builder.agent(agent_id);
+    }
+    if let Some(sess) = session {
+        builder = builder.session(sess);
+    }
+    if let Some(p) = parent {
+        let parent_id = store.resolve_id(p)?;
+        builder = builder.parent(parent_id);
+    }
+    if let Some(l) = labels {
+        builder = builder.labels(l.split(',').map(str::trim));
+    }
+
+    let issue = builder.build();
+    store.write_issue(&issue)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue)?);
+    } else {
+        println!("{}", issue.id);
+    }
+
+    Ok(())
+}
+
+fn cmd_show(id: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let issue = store.read_issue(&id)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue)?);
+    } else {
+        println!("{} {}", issue.id, issue.title);
+        println!(
+            "Status: {} | Priority: {} | Type: {}",
+            issue.status,
+            issue.priority.as_u8(),
+            issue.issue_type
+        );
+        if let Some(ref assignee) = issue.assignee {
+            println!("Assignee: {assignee}");
+        }
+        if let Some(ref parent) = issue.parent_id {
+            println!("Parent: {parent}");
+        }
+        if !issue.labels.is_empty() {
+            println!("Labels: {}", issue.labels.join(", "));
+        }
+        if !issue.depends_on.is_empty() {
+            println!("Depends on:");
+            for dep in &issue.depends_on {
+                println!("  - {} ({})", dep.id, dep.dep_type);
+            }
+        }
+        if !issue.body.is_empty() {
+            println!("\n{}", issue.body);
+        }
+        if !issue.comments.is_empty() {
+            println!("\nComments ({}):", issue.comments.len());
+            for c in &issue.comments {
+                println!(
+                    "  [{} — {}]",
+                    c.created_at.format("%Y-%m-%d %H:%M"),
+                    c.created_by
+                );
+                for line in c.body.lines().take(2) {
+                    println!("    {line}");
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_list(
+    status: Option<&str>,
+    issue_type: Option<&str>,
+    priority: Option<u8>,
+    assignee: Option<&str>,
+    json: bool,
+) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let mut issues = store.read_all_issues()?;
+
+    if let Some(s) = status {
+        let s: Status = s.parse().map_err(hbd::HbdError::Other)?;
+        issues.retain(|i| i.status == s);
+    }
+    if let Some(t) = issue_type {
+        let t: IssueType = t.parse().map_err(hbd::HbdError::Other)?;
+        issues.retain(|i| i.issue_type == t);
+    }
+    if let Some(p) = priority
+        && let Some(p) = Priority::from_u8(p)
+    {
+        issues.retain(|i| i.priority == p);
+    }
+    if let Some(a) = assignee {
+        issues.retain(|i| i.assignee.as_deref() == Some(a));
+    }
+
+    issues.sort_by(|a, b| {
+        a.priority
+            .cmp(&b.priority)
+            .then_with(|| b.created_at.cmp(&a.created_at))
+    });
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issues)?);
+    } else {
+        if issues.is_empty() {
+            println!("No issues found.");
+            return Ok(());
+        }
+        println!(
+            "{:<12} {:<4} {:<12} {:<10} Title",
+            "ID", "P", "Status", "Type"
+        );
+        println!("{}", "-".repeat(60));
+        for i in &issues {
             println!(
-                "TODO: Count issues (status={status:?}, type={type:?})",
-                r#type = r#type
+                "{:<12} {:<4} {:<12} {:<10} {}",
+                i.id,
+                i.priority.as_u8(),
+                i.status,
+                i.issue_type,
+                truncate(&i.title, 40)
             );
         }
-        Commands::Merge {
-            sources,
-            into,
-            dry_run,
-        } => {
-            println!("TODO: Merge {sources:?} into {into} (dry_run={dry_run})");
+        println!("\n{} issue(s)", issues.len());
+    }
+    Ok(())
+}
+
+fn cmd_update(
+    id: &str,
+    status: Option<&str>,
+    priority: Option<u8>,
+    title: Option<&str>,
+    assignee: Option<&str>,
+    json: bool,
+) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    if let Some(s) = status {
+        issue.status = s.parse().map_err(hbd::HbdError::Other)?;
+    }
+    if let Some(p) = priority
+        && let Some(p) = Priority::from_u8(p)
+    {
+        issue.priority = p;
+    }
+    if let Some(t) = title {
+        issue.title = t.to_string();
+    }
+    if let Some(a) = assignee {
+        issue.assignee = Some(a.to_string());
+    }
+
+    issue.touch();
+    store.write_issue(&issue)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue)?);
+    } else {
+        println!("Updated {}", issue.id);
+    }
+    Ok(())
+}
+
+fn cmd_close(id: &str, reason: Option<&str>, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    let user = whoami::username();
+    issue.close(reason.map(String::from), &user, CreatorType::Human);
+    store.write_issue(&issue)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue)?);
+    } else {
+        println!("Closed {}", issue.id);
+    }
+    Ok(())
+}
+
+fn cmd_reopen(id: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    issue.reopen();
+    store.write_issue(&issue)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue)?);
+    } else {
+        println!("Reopened {}", issue.id);
+    }
+    Ok(())
+}
+
+fn cmd_comment(id: &str, message: &str, agent: Option<&str>, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let mut issue = store.read_issue(&id)?;
+
+    let (author, creator_type) = agent.map_or_else(
+        || (whoami::username(), CreatorType::Human),
+        |agent_id| (agent_id.to_string(), CreatorType::Agent),
+    );
+
+    issue.add_comment(message, &author, creator_type);
+    store.write_issue(&issue)?;
+
+    if json {
+        let comment = issue.comments.last().unwrap();
+        println!("{}", serde_json::to_string_pretty(comment)?);
+    } else {
+        println!("Added comment to {}", issue.id);
+    }
+    Ok(())
+}
+
+fn cmd_comments(id: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let issue = store.read_issue(&id)?;
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&issue.comments)?);
+    } else {
+        if issue.comments.is_empty() {
+            println!("No comments on {}", issue.id);
+            return Ok(());
         }
-        Commands::Restore { id } => println!("TODO: Restore compacted issue: {id}"),
-        Commands::Admin { command } => run_admin_command(&command),
-        Commands::Sync { .. } => println!("TODO: Sync git <-> HelixDB"),
-        Commands::Health { .. } => println!("TODO: Show health metrics"),
-        Commands::Stats { .. } => println!("TODO: Show statistics"),
-        Commands::Context { .. } => println!("TODO: Get AI context"),
-        Commands::Compact { dry_run } => {
+        for c in &issue.comments {
+            let suffix = if c.created_by_type == CreatorType::Agent {
+                " (agent)"
+            } else {
+                ""
+            };
             println!(
-                "TODO: Compact old issues{}",
-                if dry_run { " (dry run)" } else { "" }
+                "### {} — {}{}",
+                c.created_at.format("%Y-%m-%d %H:%M:%S"),
+                c.created_by,
+                suffix
+            );
+            println!("{}\n", c.body);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_ready(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let issues = store.read_all_issues()?;
+    let issues_map = store.read_all_issues_map()?;
+
+    let ready: Vec<_> = issues
+        .into_iter()
+        .filter(|i| i.status == Status::Open)
+        .filter(|i| {
+            i.depends_on.iter().all(|dep| {
+                issues_map
+                    .get(&dep.id)
+                    .is_none_or(|blocker| blocker.status == Status::Closed)
+            })
+        })
+        .collect();
+
+    let mut ready = ready;
+    ready.sort_by(|a, b| {
+        a.priority
+            .cmp(&b.priority)
+            .then_with(|| b.created_at.cmp(&a.created_at))
+    });
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&ready)?);
+    } else {
+        if ready.is_empty() {
+            println!("No ready issues.");
+            return Ok(());
+        }
+        println!("Ready issues (no open blockers):\n");
+        println!("{:<12} {:<4} {:<10} Title", "ID", "P", "Type");
+        println!("{}", "-".repeat(50));
+        for i in &ready {
+            println!(
+                "{:<12} {:<4} {:<10} {}",
+                i.id,
+                i.priority.as_u8(),
+                i.issue_type,
+                truncate(&i.title, 35)
             );
         }
-        Commands::Config { command } => run_config_command(command),
-        Commands::Daemon { command } => run_daemon_command(command),
+        println!("\n{} issue(s) ready", ready.len());
     }
+    Ok(())
 }
 
-fn run_dep_command(command: DepCommands) {
-    match command {
-        DepCommands::Add { from, dep_type, to } => {
-            println!("TODO: Add dependency: {from} {dep_type} {to}");
+fn cmd_blocked(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let issues = store.read_all_issues()?;
+    let issues_map = store.read_all_issues_map()?;
+
+    let blocked: Vec<_> = issues
+        .into_iter()
+        .filter(|i| i.status != Status::Closed)
+        .filter(|i| {
+            i.depends_on.iter().any(|dep| {
+                issues_map
+                    .get(&dep.id)
+                    .is_some_and(|blocker| blocker.status != Status::Closed)
+            })
+        })
+        .collect();
+
+    if json {
+        let result: Vec<_> = blocked
+            .iter()
+            .map(|i| {
+                let blockers: Vec<_> = i
+                    .depends_on
+                    .iter()
+                    .filter_map(|d| issues_map.get(&d.id))
+                    .filter(|b| b.status != Status::Closed)
+                    .map(|b| serde_json::json!({"id": b.id, "title": b.title, "status": b.status.as_str()}))
+                    .collect();
+                serde_json::json!({
+                    "issue": {"id": i.id, "title": i.title},
+                    "blocked_by": blockers
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        if blocked.is_empty() {
+            println!("No blocked issues.");
+            return Ok(());
         }
-        DepCommands::Remove { from, dep_type, to } => {
-            println!("TODO: Remove dependency: {from} {dep_type} {to}");
-        }
-        DepCommands::List { id } => println!("TODO: List dependencies for: {id}"),
-        DepCommands::Cycles => println!("TODO: Find all cycles in dependency graph"),
-    }
-}
-
-fn run_label_command(command: LabelCommands) {
-    match command {
-        LabelCommands::Add { id, label } => println!("TODO: Add label '{label}' to issue: {id}"),
-        LabelCommands::Remove { id, label } => {
-            println!("TODO: Remove label '{label}' from issue: {id}");
-        }
-        LabelCommands::List { id } => println!("TODO: List labels for issue: {id}"),
-        LabelCommands::ListAll => println!("TODO: List all labels in project"),
-    }
-}
-
-fn run_admin_command(command: &AdminCommands) {
-    match command {
-        AdminCommands::Cleanup {
-            older_than,
-            dry_run,
-            force,
-            cascade,
-        } => {
-            println!(
-                "TODO: Cleanup issues older than {older_than} days \
-                 (dry_run={dry_run}, force={force}, cascade={cascade})"
-            );
+        println!("Blocked issues:\n");
+        for i in &blocked {
+            println!("{} {}", i.id, truncate(&i.title, 40));
+            for dep in &i.depends_on {
+                if let Some(blocker) = issues_map.get(&dep.id)
+                    && blocker.status != Status::Closed
+                {
+                    println!("  blocked by: {} ({})", blocker.id, blocker.status);
+                }
+            }
+            println!();
         }
     }
+    Ok(())
 }
 
-fn run_config_command(command: ConfigCommands) {
-    match command {
-        ConfigCommands::Show => println!("TODO: Show configuration"),
-        ConfigCommands::Set { key, value } => println!("TODO: Set {key} = {value}"),
-    }
-}
-
-fn run_daemon_command(command: DaemonCommands) {
-    match command {
-        DaemonCommands::Start => println!("TODO: Start daemon"),
-        DaemonCommands::Stop => println!("TODO: Stop daemon"),
-        DaemonCommands::Status => println!("TODO: Show daemon status"),
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max - 3])
     }
 }
