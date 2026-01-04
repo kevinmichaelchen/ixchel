@@ -1149,9 +1149,19 @@ fn cmd_label_add(id: &str, label: &str, json: bool) -> hbd::Result<()> {
 
     let label = label.trim().to_lowercase();
     if issue.labels.contains(&label) {
-        return Err(hbd::HbdError::Other(format!(
-            "issue {id} already has label '{label}'"
-        )));
+        // Idempotent: silently succeed if label already exists (AC-005B.3)
+        if json {
+            let result = serde_json::json!({
+                "id": id,
+                "label": label,
+                "action": "unchanged",
+                "labels": issue.labels
+            });
+            println!("{}", serde_json::to_string_pretty(&result)?);
+        } else {
+            println!("Label '{label}' already on {id}");
+        }
+        return Ok(());
     }
 
     issue.labels.push(label.clone());

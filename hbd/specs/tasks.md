@@ -150,7 +150,7 @@ This document breaks down the `hbd` implementation into phases with specific, tr
   - Support --json output
 
 - [x] **T1.4.4** Implement `hbd list`
-  - Support filters: --status, --type, --priority, ~~--label~~, --assignee, ~~--project~~
+  - Support filters: --status, --type, --priority, --label, --assignee, ~~--project~~
   - Sort by priority then created_at
   - Table output with columns: ID, Title, Status, Priority, Assignee
   - Support --json output
@@ -192,6 +192,7 @@ This document breaks down the `hbd` implementation into phases with specific, tr
   - ~~Create Label node if not exists~~ (labels stored inline in issue)
   - ~~Create TAGGED edge~~ (deferred - file-only)
   - ~~Support comma-separated labels~~ (single label at a time)
+  - Idempotent: silently succeeds if label already exists (AC-005B.3)
   - Update Markdown frontmatter
   - Support --json output
 
