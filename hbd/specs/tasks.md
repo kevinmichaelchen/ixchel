@@ -150,7 +150,9 @@ This document breaks down the `hbd` implementation into phases with specific, tr
   - Support --json output
 
 - [x] **T1.4.4** Implement `hbd list`
-  - Support filters: --status, --type, --priority, --label, --assignee, ~~--project~~
+  - Support filters: --status, --type, --priority, --label, --assignee
+  - ~~--project filter~~ (removed - will re-add when projects implemented)
+  - ~~--include-ephemeral~~ (removed - ephemeral requires HelixDB)
   - Default: exclude closed issues unless --status explicitly provided (AC-003.1)
   - Sort by priority then created_at
   - Table output with columns: ID, Title, Status, Priority, Assignee
@@ -254,11 +256,12 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 - [x] **T2.3.1** Implement `hbd ready`
   - Find issues with no open blockers
   - Sort by priority then age
-  - ~~Support --project filter~~ (flag exists but not implemented)
+  - ~~--project filter~~ (removed - will re-add when projects implemented)
 
 - [x] **T2.3.2** Implement `hbd blocked`
   - Find issues with open blockers
   - Show each blocker with status/assignee
+  - ~~--project filter~~ (removed - will re-add when projects implemented)
 
 - [x] **T2.3.3** Implement `hbd explain <id>`
   - Display full dependency tree
@@ -438,16 +441,21 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ### 5.2 Ephemeral Issues
 
+> **Note:** Ephemeral issues require HelixDB for non-file storage. CLI flags removed until HelixDB integration is complete.
+
 - [ ] **T5.2.1** Implement `hbd create --ephemeral`
   - Set ephemeral=true
-  - Store in HelixDB only (not exported)
+  - Store in HelixDB only (not exported to .tickets/)
+  - Requires: HelixDB integration
 
 - [ ] **T5.2.2** Exclude ephemeral from list by default
   - Add --include-ephemeral flag
+  - Requires: HelixDB integration
 
 - [ ] **T5.2.3** Clean up old closed ephemeral on sync
   - Delete if closed > 24 hours
   - Configurable retention
+  - Requires: HelixDB integration
 
 ### 5.3 Gate Coordination
 

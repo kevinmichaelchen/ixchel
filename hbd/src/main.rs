@@ -49,9 +49,6 @@ enum Commands {
 
         #[arg(long)]
         parent: Option<String>,
-
-        #[arg(long)]
-        ephemeral: bool,
     },
 
     Show {
@@ -73,12 +70,6 @@ enum Commands {
 
         #[arg(short, long)]
         assignee: Option<String>,
-
-        #[arg(long)]
-        project: Option<String>,
-
-        #[arg(long)]
-        include_ephemeral: bool,
     },
 
     Update {
@@ -153,15 +144,9 @@ enum Commands {
         id: String,
     },
 
-    Ready {
-        #[arg(long)]
-        project: Option<String>,
-    },
+    Ready,
 
-    Blocked {
-        #[arg(long)]
-        project: Option<String>,
-    },
+    Blocked,
 
     Explain {
         id: String,
@@ -351,7 +336,6 @@ fn run(cli: Cli) -> hbd::Result<()> {
             agent,
             session,
             parent,
-            ephemeral: _,
         } => cmd_create(
             &title,
             description.as_deref(),
@@ -371,8 +355,6 @@ fn run(cli: Cli) -> hbd::Result<()> {
             priority,
             label,
             assignee,
-            project: _,
-            include_ephemeral: _,
         } => cmd_list(
             status.as_deref(),
             r#type.as_deref(),
@@ -401,8 +383,8 @@ fn run(cli: Cli) -> hbd::Result<()> {
             cmd_comment(&id, &message, agent.as_deref(), cli.json)
         }
         Commands::Comments { id } => cmd_comments(&id, cli.json),
-        Commands::Ready { project: _ } => cmd_ready(cli.json),
-        Commands::Blocked { project: _ } => cmd_blocked(cli.json),
+        Commands::Ready => cmd_ready(cli.json),
+        Commands::Blocked => cmd_blocked(cli.json),
         Commands::Dep { command } => match command {
             DepCommands::Add { from, dep_type, to } => cmd_dep_add(&from, &dep_type, &to, cli.json),
             DepCommands::Remove { from, dep_type, to } => {
