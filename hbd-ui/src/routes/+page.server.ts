@@ -36,11 +36,17 @@ export const load: PageServerLoad = async ({ url }) => {
 		};
 	} catch (e) {
 		const errorMessage = e instanceof Error ? e.message : 'Failed to load issues';
+		const isCommandNotFound = errorMessage.includes('command not found') || errorMessage.includes('ENOENT');
+		
+		const hint = isCommandNotFound
+			? 'Install hbd with: cargo install --path hbd'
+			: '';
+		
 		return {
 			issues: DEMO_ISSUES,
 			demoMode: true,
 			projectPath,
-			error: `Error loading issues: ${errorMessage}. Running in demo mode.`
+			error: `hbd CLI not available. ${hint} Running in demo mode.`
 		};
 	}
 };
