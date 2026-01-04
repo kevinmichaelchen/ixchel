@@ -15,13 +15,22 @@
 		closed: 'bg-green-500'
 	};
 
-	const priorityLabels: Record<number, { label: string; color: string }> = {
-		0: { label: 'Critical', color: 'text-red-400' },
-		1: { label: 'High', color: 'text-orange-400' },
-		2: { label: 'Medium', color: 'text-yellow-400' },
-		3: { label: 'Low', color: 'text-blue-400' },
-		4: { label: 'Backlog', color: 'text-gray-400' }
+	const priorityLabels: Record<string, { label: string; color: string }> = {
+		'0': { label: 'Critical', color: 'text-red-400' },
+		'1': { label: 'High', color: 'text-orange-400' },
+		'2': { label: 'Medium', color: 'text-yellow-400' },
+		'3': { label: 'Low', color: 'text-blue-400' },
+		'4': { label: 'Backlog', color: 'text-gray-400' },
+		'Critical': { label: 'Critical', color: 'text-red-400' },
+		'High': { label: 'High', color: 'text-orange-400' },
+		'Medium': { label: 'Medium', color: 'text-yellow-400' },
+		'Low': { label: 'Low', color: 'text-blue-400' },
+		'Backlog': { label: 'Backlog', color: 'text-gray-400' }
 	};
+
+	const labels = $derived(issue.labels ?? []);
+	const dependsOn = $derived(issue.depends_on ?? []);
+	const comments = $derived(issue.comments ?? []);
 
 	function formatDate(dateStr: string): string {
 		return new Date(dateStr).toLocaleDateString('en-US', {
@@ -59,8 +68,8 @@
 			<span class="rounded bg-gray-800 px-2 py-1 text-xs capitalize text-gray-300">
 				{issue.issue_type}
 			</span>
-			<span class="rounded bg-gray-800 px-2 py-1 text-xs {priorityLabels[issue.priority]?.color}">
-				{priorityLabels[issue.priority]?.label}
+			<span class="rounded bg-gray-800 px-2 py-1 text-xs {priorityLabels[String(issue.priority)]?.color ?? 'text-gray-400'}">
+				{priorityLabels[String(issue.priority)]?.label ?? issue.priority}
 			</span>
 		</div>
 
@@ -71,22 +80,22 @@
 			</div>
 		{/if}
 
-		{#if issue.labels.length > 0}
+		{#if labels.length > 0}
 			<div class="mb-4">
 				<h4 class="mb-1 text-xs font-semibold uppercase text-gray-500">Labels</h4>
 				<div class="flex flex-wrap gap-1">
-					{#each issue.labels as label}
+					{#each labels as label}
 						<span class="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">{label}</span>
 					{/each}
 				</div>
 			</div>
 		{/if}
 
-		{#if issue.depends_on.length > 0}
+		{#if dependsOn.length > 0}
 			<div class="mb-4">
 				<h4 class="mb-1 text-xs font-semibold uppercase text-gray-500">Dependencies</h4>
 				<ul class="space-y-1">
-					{#each issue.depends_on as dep}
+					{#each dependsOn as dep}
 						<li class="flex items-center gap-2 text-sm">
 							<code class="rounded bg-gray-800 px-1 text-xs">{dep.id}</code>
 							<span class="text-xs text-gray-500">{dep.dep_type}</span>
@@ -117,13 +126,13 @@
 			</div>
 		</div>
 
-		{#if issue.comments.length > 0}
+		{#if comments.length > 0}
 			<div class="mt-4 border-t border-gray-700 pt-4">
 				<h4 class="mb-2 text-xs font-semibold uppercase text-gray-500">
-					Comments ({issue.comments.length})
+					Comments ({comments.length})
 				</h4>
 				<div class="space-y-2">
-					{#each issue.comments as comment}
+					{#each comments as comment}
 						<div class="rounded bg-gray-800 p-2">
 							<div class="mb-1 flex items-center gap-2 text-xs text-gray-500">
 								<span class="font-medium text-gray-300">{comment.created_by}</span>

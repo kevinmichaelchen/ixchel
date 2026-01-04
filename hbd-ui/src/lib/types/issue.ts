@@ -21,7 +21,7 @@ export interface Issue {
 	title: string;
 	body: string;
 	status: Status;
-	priority: number;
+	priority: number | string;
 	issue_type: IssueType;
 	created_at: string;
 	updated_at: string;

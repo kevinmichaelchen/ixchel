@@ -29,16 +29,16 @@
 		chore: 'sphere'
 	};
 
-	const prioritySizes: Record<number, number> = {
-		0: 1.8,
-		1: 1.4,
-		2: 1.0,
-		3: 0.8,
-		4: 0.6
+	const prioritySizes: Record<string, number> = {
+		'0': 1.8, 'Critical': 1.8,
+		'1': 1.4, 'High': 1.4,
+		'2': 1.0, 'Medium': 1.0,
+		'3': 0.8, 'Low': 0.8,
+		'4': 0.6, 'Backlog': 0.6
 	};
 
 	const color = $derived(statusColors[issue.status] || '#9ca3af');
-	const size = $derived(prioritySizes[issue.priority] ?? 1.0);
+	const size = $derived(prioritySizes[String(issue.priority)] ?? 1.0);
 	const shape = $derived(typeShapes[issue.issue_type] || 'sphere');
 	const scale = $derived(isSelected ? 1.3 : isHovered ? 1.15 : 1);
 	const emissiveIntensity = $derived(isSelected ? 0.4 : isHovered ? 0.2 : 0);

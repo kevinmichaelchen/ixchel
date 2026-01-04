@@ -7,6 +7,30 @@ import type { Issue } from '$lib/types/issue';
 
 const execAsync = promisify(exec);
 
+function isDev(): boolean {
+	return process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+}
+
+function findMonorepoRoot(startDir: string): string | null {
+	let currentDir = startDir;
+
+	while (currentDir !== path.dirname(currentDir)) {
+		const cargoTomlPath = path.join(currentDir, 'Cargo.toml');
+		if (fs.existsSync(cargoTomlPath)) {
+			try {
+				const content = fs.readFileSync(cargoTomlPath, 'utf-8');
+				if (content.includes('[workspace]') && content.includes('hbd')) {
+					return currentDir;
+				}
+			} catch {
+			}
+		}
+		currentDir = path.dirname(currentDir);
+	}
+
+	return null;
+}
+
 function findHbdBinary(): string | null {
 	const homeDir = os.homedir();
 	const possiblePaths = [
@@ -27,7 +51,11 @@ function findHbdBinary(): string | null {
 
 function getExecEnv(): NodeJS.ProcessEnv {
 	const homeDir = os.homedir();
+	const username = os.userInfo().username;
 	const extraPaths = [
+		`/etc/profiles/per-user/${username}/bin`,
+		'/run/current-system/sw/bin',
+		path.join(homeDir, '.nix-profile', 'bin'),
 		path.join(homeDir, '.cargo', 'bin'),
 		'/usr/local/bin',
 		'/opt/homebrew/bin'
@@ -39,13 +67,37 @@ function getExecEnv(): NodeJS.ProcessEnv {
 	};
 }
 
+let cachedMonorepoRoot: string | null | undefined = undefined;
+
+function getMonorepoRoot(): string | null {
+	if (cachedMonorepoRoot === undefined) {
+		cachedMonorepoRoot = findMonorepoRoot(process.cwd());
+	}
+	return cachedMonorepoRoot;
+}
+
 async function runHbd(args: string, cwd: string): Promise<string> {
-	const hbdPath = findHbdBinary();
-	const command = hbdPath ? `${hbdPath} ${args}` : `hbd ${args}`;
+	const monorepoRoot = getMonorepoRoot();
+	const useCargoRun = isDev() && monorepoRoot !== null;
+
+	let command: string;
+	let execCwd: string;
+
+	if (useCargoRun) {
+		command = `cargo run -p hbd --quiet -- ${args}`;
+		execCwd = monorepoRoot;
+	} else {
+		const hbdPath = findHbdBinary();
+		command = hbdPath ? `${hbdPath} ${args}` : `hbd ${args}`;
+		execCwd = cwd;
+	}
 
 	const { stdout } = await execAsync(command, {
-		cwd,
-		env: getExecEnv()
+		cwd: execCwd,
+		env: {
+			...getExecEnv(),
+			HBD_PROJECT_DIR: cwd
+		}
 	});
 
 	return stdout;

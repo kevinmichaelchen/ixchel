@@ -39,14 +39,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		const isCommandNotFound = errorMessage.includes('command not found') || errorMessage.includes('ENOENT');
 		
 		const hint = isCommandNotFound
-			? 'Install hbd with: cargo install --path hbd'
-			: '';
+			? 'Run: cargo install --path hbd'
+			: errorMessage.slice(0, 80);
 		
 		return {
 			issues: DEMO_ISSUES,
 			demoMode: true,
 			projectPath,
-			error: `hbd CLI not available. ${hint} Running in demo mode.`
+			error: `hbd CLI unavailable. ${hint}`
 		};
 	}
 };

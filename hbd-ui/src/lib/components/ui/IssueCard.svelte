@@ -24,13 +24,15 @@
 		chore: '🔧'
 	};
 
-	const priorityLabels: Record<number, string> = {
-		0: 'P0',
-		1: 'P1',
-		2: 'P2',
-		3: 'P3',
-		4: 'P4'
+	const priorityLabels: Record<string, string> = {
+		'0': 'P0', 'Critical': 'P0',
+		'1': 'P1', 'High': 'P1',
+		'2': 'P2', 'Medium': 'P2',
+		'3': 'P3', 'Low': 'P3',
+		'4': 'P4', 'Backlog': 'P4'
 	};
+
+	const labels = $derived(issue.labels ?? []);
 </script>
 
 <button
@@ -50,16 +52,16 @@
 				<span class="rounded px-1.5 py-0.5 text-white {statusColors[issue.status]}">
 					{issue.status.replace('_', ' ')}
 				</span>
-				<span class="text-gray-600">{priorityLabels[issue.priority]}</span>
+				<span class="text-gray-600">{priorityLabels[String(issue.priority)] ?? issue.priority}</span>
 			</div>
 
-			{#if issue.labels.length > 0}
+			{#if labels.length > 0}
 				<div class="mt-1.5 flex flex-wrap gap-1">
-					{#each issue.labels.slice(0, 3) as label}
+					{#each labels.slice(0, 3) as label}
 						<span class="rounded bg-gray-700 px-1.5 py-0.5 text-xs text-gray-300">{label}</span>
 					{/each}
-					{#if issue.labels.length > 3}
-						<span class="text-xs text-gray-500">+{issue.labels.length - 3}</span>
+					{#if labels.length > 3}
+						<span class="text-xs text-gray-500">+{labels.length - 3}</span>
 					{/if}
 				</div>
 			{/if}

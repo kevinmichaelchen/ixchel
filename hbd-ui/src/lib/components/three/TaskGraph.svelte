@@ -27,6 +27,18 @@
 
 	const issueMap = $derived(new Map(issues.map((i) => [i.id, i])));
 
+	const priorityToNumber: Record<string, number> = {
+		'0': 0, 'Critical': 0,
+		'1': 1, 'High': 1,
+		'2': 2, 'Medium': 2,
+		'3': 3, 'Low': 3,
+		'4': 4, 'Backlog': 4
+	};
+
+	function getPriorityNum(p: number | string): number {
+		return priorityToNumber[String(p)] ?? 2;
+	}
+
 	function computeHierarchicalLayout(issueList: Issue[]): GraphNode[] {
 		const epics = issueList.filter((i) => i.issue_type === 'epic');
 		const epicIds = new Set(epics.map((e) => e.id));
@@ -60,7 +72,7 @@
 			});
 
 			const children = childrenByParent.get(epic.id) || [];
-			children.sort((a, b) => a.priority - b.priority);
+			children.sort((a, b) => getPriorityNum(a.priority) - getPriorityNum(b.priority));
 
 			children.forEach((child, childIndex) => {
 				const childX = epicX + (childIndex - (children.length - 1) / 2) * spacing.x;
@@ -69,12 +81,12 @@
 					issue: child,
 					x: childX,
 					y: spacing.y,
-					z: (child.priority - 2) * spacing.z
+					z: (getPriorityNum(child.priority) - 2) * spacing.z
 				});
 			});
 		});
 
-		orphans.sort((a, b) => a.priority - b.priority);
+		orphans.sort((a, b) => getPriorityNum(a.priority) - getPriorityNum(b.priority));
 		const orphanStartX = epics.length > 0 ? (epics.length / 2 + 1) * spacing.x * 3 : 0;
 
 		orphans.forEach((orphan, index) => {
@@ -95,7 +107,8 @@
 		const result: GraphEdge[] = [];
 
 		for (const node of nodeList) {
-			for (const dep of node.issue.depends_on) {
+			const deps = node.issue.depends_on ?? [];
+			for (const dep of deps) {
 				if (nodeIds.has(dep.id)) {
 					result.push({
 						source: dep.id,

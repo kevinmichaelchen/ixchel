@@ -16,6 +16,18 @@
 
 	const statuses: Status[] = ['open', 'in_progress', 'blocked', 'closed'];
 
+	const priorityToNumber: Record<string, number> = {
+		'0': 0, 'Critical': 0,
+		'1': 1, 'High': 1,
+		'2': 2, 'Medium': 2,
+		'3': 3, 'Low': 3,
+		'4': 4, 'Backlog': 4
+	};
+
+	function getPriorityNum(p: number | string): number {
+		return priorityToNumber[String(p)] ?? 2;
+	}
+
 	const filteredIssues = $derived(
 		issues
 			.filter((i) => {
@@ -27,7 +39,7 @@
 			})
 			.filter((i) => !statusFilter || i.status === statusFilter)
 			.filter((i) => !showEpicsOnly || i.issue_type === 'epic')
-			.sort((a, b) => a.priority - b.priority)
+			.sort((a, b) => getPriorityNum(a.priority) - getPriorityNum(b.priority))
 	);
 
 	function getStatusColor(status: Status): string {
