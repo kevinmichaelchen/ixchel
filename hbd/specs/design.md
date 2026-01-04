@@ -2,6 +2,25 @@
 
 This document defines the technical architecture, data model, and query implementations for `hbd`.
 
+> **Implementation Status (2026-01-03)**
+>
+> The current implementation uses **file-based storage only** (Markdown files in `.tickets/`).
+> HelixDB integration, vector embeddings, and graph queries are **planned but not yet implemented**.
+>
+> What's working today:
+> - File-based CRUD via `.tickets/*.md`
+> - In-memory dependency traversal and cycle detection
+> - YAML frontmatter parsing and serialization
+>
+> What's planned:
+> - HelixDB embedded in the binary (like SQLite—no server to run) as query cache
+> - fastembed for local semantic search (no API calls needed)
+> - BM25 + vector hybrid search
+> - Sync daemon for file watching
+>
+> **Note:** Markdown files remain the source of truth. HelixDB acts as a fast query cache
+> that can be rebuilt from `.tickets/` at any time.
+
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
@@ -16,6 +35,63 @@ This document defines the technical architecture, data model, and query implemen
 
 ## Architecture Overview
 
+### Target Architecture (Planned)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              CLI Layer (hbd)                             │
+│   hbd create, list, search, similar, ready, blocked, dep, graph, ...    │
+│   - Rust CLI with clap                                                   │
+│   - All commands support --json for AI agents                            │
+│   - Tries daemon RPC first, falls back to direct DB access              │
+└──────────────────────────────────────┬──────────────────────────────────┘
+                                       │
+               ┌───────────────────────┼───────────────────┐
+               │                       │                   │
+               v                       v                   v
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│    Git Layer        │ │      HelixDB        │ │   Embedding Layer   │
+│  .tickets/*.md      │ │      (LMDB)         │ │                     │
+│                     │ │                     │ │  fastembed (local)  │
+│  - Source of truth  │ │  - Fast queries     │ │  BGE-small-en-v1.5  │
+│  - YAML frontmatter │ │  - Graph traversal  │ │                     │
+│  - Merge-friendly   │ │  - Vector search    │ │  Cloud fallback:    │
+│  - Human-readable   │ │  - BM25 index       │ │  OpenAI / Gemini    │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+               │                   │                   │
+               └───────────────────┼───────────────────┘
+                                   │
+                             ┌─────v─────┐
+                             │  Daemon   │
+                             │  (hbd-d)  │
+                             │           │
+                             │  - Sync   │
+                             │  - Watch  │
+                             │  - Embed  │
+                             └───────────┘
+```
+
+### Current Architecture (Implemented)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              CLI Layer (hbd)                             │
+│   hbd create, list, ready, blocked, dep, explain, stale, stats, ...     │
+│   - Rust CLI with clap                                                   │
+│   - All commands support --json for AI agents                            │
+│   - Direct file access (no daemon)                                       │
+└──────────────────────────────────────┬──────────────────────────────────┘
+                                       │
+                                       v
+                         ┌─────────────────────┐
+                         │    Git Layer        │
+                         │  .tickets/*.md      │
+                         │                     │
+                         │  - Source of truth  │
+                         │  - YAML frontmatter │
+                         │  - In-memory graphs │
+                         │  - Human-readable   │
+                         └─────────────────────┘
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              CLI Layer (hbd)                             │

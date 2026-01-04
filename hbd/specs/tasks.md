@@ -33,11 +33,21 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ---
 
+## Implementation Status
+
+> **Last Updated:** 2026-01-03
+>
+> This document tracks planned implementation phases. Checkboxes reflect actual completion status.
+> 
+> **Legend:** ✅ = Complete | 🚧 = In Progress | ⏳ = Blocked | ❌ = Cut from scope
+
+---
+
 ## Phase 1: Core Infrastructure (Weeks 1-2)
 
 ### 1.1 Project Setup
 
-- [ ] **T1.1.1** Create Rust workspace structure
+- [x] **T1.1.1** Create Rust workspace structure
   ```
   hbd/
   ├── Cargo.toml
@@ -51,58 +61,58 @@ This document breaks down the `hbd` implementation into phases with specific, tr
       └── types/         # Shared types
   ```
 
-- [ ] **T1.1.2** Configure Cargo.toml with workspace dependencies
+- [x] **T1.1.2** Configure Cargo.toml with workspace dependencies
   - clap for CLI
   - tokio for async
   - serde for serialization
-  - git2 for git operations
+  - gix for git operations (switched from git2)
   - fastembed for embeddings
 
-- [ ] **T1.1.3** Set up error handling with thiserror
+- [x] **T1.1.3** Set up error handling with thiserror
   - Define HbdError enum
   - Implement exit codes
   - Create error formatting helpers
 
-- [ ] **T1.1.4** Set up logging with tracing
+- [x] **T1.1.4** Set up logging with tracing
   - Console output for CLI
   - File output for daemon
   - Structured JSON logging option
 
 ### 1.2 Schema Implementation
 
-- [ ] **T1.2.1** Write `helix.toml` schema file
+- [x] **T1.2.1** Write `helix.toml` schema file
   - Issue node with all fields
   - Comment node
   - User, Label, Project, Team nodes
   - IssueEmbedding vector node
   - All edge definitions
 
-- [ ] **T1.2.2** Create Rust types matching schema
+- [x] **T1.2.2** Create Rust types matching schema
   ```rust
   pub struct Issue { ... }
   pub struct Comment { ... }
-  pub enum Status { Open, InProgress, Blocked, Deferred, Closed, Tombstone }
-  pub enum IssueType { Bug, Feature, Task, Epic, Chore, Gate }
+  pub enum Status { Open, InProgress, Blocked, Closed }  // Note: simplified from spec
+  pub enum IssueType { Bug, Feature, Task, Epic, Chore }  // Note: Gate deferred
   ```
 
-- [ ] **T1.2.3** Implement serialization
-  - HelixDB protocol serialization
+- [x] **T1.2.3** Implement serialization
+  - ~~HelixDB protocol serialization~~ (deferred - using file-based storage)
   - YAML frontmatter serialization
   - JSON output serialization
 
 ### 1.3 Git-First File Storage
 
-- [ ] **T1.3.1** Implement Markdown parser
+- [x] **T1.3.1** Implement Markdown parser
   - Parse YAML frontmatter with gray_matter
   - Extract body content
   - Handle malformed files gracefully
 
-- [ ] **T1.3.2** Implement Markdown writer
+- [x] **T1.3.2** Implement Markdown writer
   - Serialize Issue to YAML frontmatter
   - Format body with proper Markdown
   - Preserve custom sections
 
-- [ ] **T1.3.3** Implement hash-based ID generation
+- [x] **T1.3.3** Implement hash-based ID generation
   ```rust
   fn generate_id() -> String {
       let uuid = Uuid::new_v4();
@@ -111,90 +121,90 @@ This document breaks down the `hbd` implementation into phases with specific, tr
   }
   ```
 
-- [ ] **T1.3.4** Implement content hashing for sync
+- [x] **T1.3.4** Implement content hashing for sync
   - Hash title + body for change detection
   - Store hash in Issue struct
   - Compare on sync
 
 ### 1.4 Basic CRUD Commands
 
-- [ ] **T1.4.1** Implement `hbd init`
+- [x] **T1.4.1** Implement `hbd init`
   - Create `.tickets/` directory
   - Create `.helix/config.toml` with defaults
-  - Create `helix.toml` with schema
+  - ~~Create `helix.toml` with schema~~ (helix.toml exists but not auto-created by init)
   - Add `.helix/helix.db/` to `.gitignore`
   - Abort if already initialized
 
-- [ ] **T1.4.2** Implement `hbd create`
+- [x] **T1.4.2** Implement `hbd create`
   - Parse arguments: title, --description, --type, --priority, --labels, --assignee
   - Generate hash-based ID
   - Write `.tickets/bd-xxxx.md`
-  - Insert Issue node in HelixDB
+  - ~~Insert Issue node in HelixDB~~ (deferred - file-only for now)
   - Support --json output
   - Support --agent flag
 
-- [ ] **T1.4.3** Implement `hbd show`
+- [x] **T1.4.3** Implement `hbd show`
   - Load issue by ID
   - Display formatted output
   - Include labels, comments, dependencies
   - Support --json output
 
-- [ ] **T1.4.4** Implement `hbd list`
-  - Support filters: --status, --type, --priority, --label, --assignee, --project
+- [x] **T1.4.4** Implement `hbd list`
+  - Support filters: --status, --type, --priority, ~~--label~~, --assignee, ~~--project~~
   - Sort by priority then created_at
   - Table output with columns: ID, Title, Status, Priority, Assignee
   - Support --json output
 
-- [ ] **T1.4.5** Implement `hbd update`
+- [x] **T1.4.5** Implement `hbd update`
   - Update specified fields
   - Set updated_at timestamp
-  - Write to file and DB
-  - Queue re-embedding if title/body changed
+  - Write to file ~~and DB~~
+  - ~~Queue re-embedding if title/body changed~~ (deferred)
 
-- [ ] **T1.4.6** Implement `hbd close`
+- [x] **T1.4.6** Implement `hbd close`
   - Set status to closed
   - Set closed_at timestamp
   - Add closing comment with reason
-  - Warn if open children exist (require --force)
+  - ~~Warn if open children exist (require --force)~~ (--force flag exists but warning not implemented)
 
-- [ ] **T1.4.7** Implement `hbd reopen`
+- [x] **T1.4.7** Implement `hbd reopen`
   - Set status to open
   - Clear closed_at
-  - Add reopening comment
+  - ~~Add reopening comment~~ (status change only)
 
 ### 1.5 Comment Support
 
-- [ ] **T1.5.1** Implement `hbd comment <id> "message"`
-  - Add Comment node
-  - Create COMMENT_ON edge
+- [x] **T1.5.1** Implement `hbd comment <id> "message"`
+  - ~~Add Comment node~~ (stored in issue file, not separate node)
+  - ~~Create COMMENT_ON edge~~ (deferred - file-only)
   - Update issue's updated_at
   - Append to Markdown file
   - Support --agent flag for agent comments
 
-- [ ] **T1.5.2** Implement `hbd comments <id>`
+- [x] **T1.5.2** Implement `hbd comments <id>`
   - List all comments for an issue
   - Show author and timestamp
   - Support --json output
 
 ### 1.6 Label Management
 
-- [ ] **T1.6.1** Implement `hbd label add <id> <label>`
-  - Create Label node if not exists
-  - Create TAGGED edge
-  - Support comma-separated labels
+- [x] **T1.6.1** Implement `hbd label add <id> <label>`
+  - ~~Create Label node if not exists~~ (labels stored inline in issue)
+  - ~~Create TAGGED edge~~ (deferred - file-only)
+  - ~~Support comma-separated labels~~ (single label at a time)
   - Update Markdown frontmatter
   - Support --json output
 
-- [ ] **T1.6.2** Implement `hbd label remove <id> <label>`
-  - Remove TAGGED edge
+- [x] **T1.6.2** Implement `hbd label remove <id> <label>`
+  - ~~Remove TAGGED edge~~ (file-only)
   - Update Markdown frontmatter
-  - Warn if label not present
+  - Error if label not present
 
-- [ ] **T1.6.3** Implement `hbd label list <id>`
+- [x] **T1.6.3** Implement `hbd label list <id>`
   - Show all labels on issue
   - Support --json output
 
-- [ ] **T1.6.4** Implement `hbd label list-all`
+- [x] **T1.6.4** Implement `hbd label list-all`
   - Show all labels in project
   - Include usage count per label
   - Support --json output
@@ -205,53 +215,53 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ### 2.1 Dependency Management
 
-- [ ] **T2.1.1** Implement `hbd dep add <from> <type> <to>`
-  - Types: blocks, related, waits_for, duplicate_of
-  - Create DEPENDS_ON edge with properties
-  - Update both issue Markdown files
+- [x] **T2.1.1** Implement `hbd dep add <from> <type> <to>`
+  - Types: blocks, related, waits_for ~~, duplicate_of~~ (cut)
+  - ~~Create DEPENDS_ON edge with properties~~ (stored in issue file)
+  - Update ~~both issue~~ blocked issue Markdown file
   - Prevent self-referential deps
 
-- [ ] **T2.1.2** Implement `hbd dep remove <from> <type> <to>`
-  - Remove DEPENDS_ON edge
+- [x] **T2.1.2** Implement `hbd dep remove <from> <type> <to>`
+  - ~~Remove DEPENDS_ON edge~~ (file-only)
   - Update Markdown files
 
-- [ ] **T2.1.3** Implement `hbd dep list <id>`
+- [x] **T2.1.3** Implement `hbd dep list <id>`
   - Show outgoing dependencies (this blocks X)
   - Show incoming dependencies (blocked by Y)
-  - Group by dependency type
+  - ~~Group by dependency type~~ (flat list)
 
 ### 2.2 Cycle Detection
 
-- [ ] **T2.2.1** Implement cycle detection algorithm
+- [x] **T2.2.1** Implement cycle detection algorithm
   - BFS from target to source
   - If path exists, adding edge would create cycle
   - Return cycle path for error message
 
-- [ ] **T2.2.2** Integrate cycle check into `hbd dep add`
+- [x] **T2.2.2** Integrate cycle check into `hbd dep add`
   - Check before creating edge
   - Reject with error and cycle path display
-  - Exit code 4
+  - ~~Exit code 4~~ (uses general error exit code)
 
-- [ ] **T2.2.3** Implement `hbd dep cycles`
+- [x] **T2.2.3** Implement `hbd dep cycles`
   - Find all cycles in the dependency graph
   - Display each cycle path
   - Support --json output
 
 ### 2.3 Ready/Blocked Queries
 
-- [ ] **T2.3.1** Implement `hbd ready`
+- [x] **T2.3.1** Implement `hbd ready`
   - Find issues with no open blockers
   - Sort by priority then age
-  - Support --project filter
+  - ~~Support --project filter~~ (flag exists but not implemented)
 
-- [ ] **T2.3.2** Implement `hbd blocked`
+- [x] **T2.3.2** Implement `hbd blocked`
   - Find issues with open blockers
   - Show each blocker with status/assignee
 
-- [ ] **T2.3.3** Implement `hbd explain <id>`
+- [x] **T2.3.3** Implement `hbd explain <id>`
   - Display full dependency tree
   - Show transitive blockers
-  - Highlight critical path
+  - ~~Highlight critical path~~ (shows tree only)
 
 ### 2.4 Path Algorithms
 
@@ -270,6 +280,8 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 ---
 
 ## Phase 3: Search & Vectors (Weeks 4-5)
+
+> **Status:** Not started. Requires HelixDB integration.
 
 ### 3.1 BM25 Text Search
 
@@ -340,6 +352,8 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ## Phase 4: Sync & Daemon (Week 6)
 
+> **Status:** Not started. CLI commands defined but not implemented.
+
 ### 4.1 File Watcher
 
 - [ ] **T4.1.1** Implement file watcher with notify
@@ -405,9 +419,11 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ## Phase 5: AI Agent Features (Weeks 7-8)
 
+> **Status:** Basic agent tracking implemented. Advanced features not started.
+
 ### 5.1 Agent Tracking
 
-- [ ] **T5.1.1** Implement --agent and --session flags
+- [x] **T5.1.1** Implement --agent and --session flags
   - Set created_by_type="agent"
   - Set agent_id and session_id fields
 
@@ -495,7 +511,7 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ### 6.0 Stale Issue Detection
 
-- [ ] **T6.0.1** Implement `hbd stale`
+- [x] **T6.0.1** Implement `hbd stale`
   - Find issues not updated in N days (default: 14)
   - Support --days flag for custom threshold
   - Support --status filter
@@ -517,12 +533,12 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ### 6.2 Statistics
 
-- [ ] **T6.2.1** Implement `hbd stats`
+- [x] **T6.2.1** Implement `hbd stats`
   - Counts by status, type, priority
-  - This week's created/closed
-  - Net change
+  - ~~This week's created/closed~~ (not yet)
+  - ~~Net change~~ (not yet)
 
-- [ ] **T6.2.2** Implement `hbd stats --json`
+- [x] **T6.2.2** Implement `hbd stats --json`
   - Machine-readable output
   - Include all aggregations
 
@@ -541,13 +557,13 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ### 7.0 Maintenance Commands
 
-- [ ] **T7.0.1** Implement `hbd info`
-  - Display database path
-  - Display issue prefix
-  - Display daemon status (running/stopped)
+- [x] **T7.0.1** Implement `hbd info`
+  - Display ~~database path~~ tickets directory
+  - ~~Display issue prefix~~ (not yet)
+  - ~~Display daemon status (running/stopped)~~ (not yet)
   - Display total issue count
-  - Display embedding model status
-  - Display last sync time
+  - ~~Display embedding model status~~ (not yet)
+  - ~~Display last sync time~~ (not yet)
   - Support --json output
 
 - [ ] **T7.0.2** Implement `hbd merge <source-ids...> --into <target-id>`

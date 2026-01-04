@@ -1,238 +1,74 @@
-# hbd - Helix Issue Tracker Specification
+# hbd - Git-First Issue Tracker
 
-**Version:** 0.1.0  
-**Status:** Draft  
-**Last Updated:** 2026-01-03
+A local-first issue tracker that stores issues as Markdown files in your repository. Designed for AI-assisted development workflows where issues need to be readable by both humans and AI agents.
 
-## Overview
+The name pays homage to both **H**elix and **B**ea**d**s.
 
-`hbd` is a distributed, git-first issue tracker built on
-[HelixDB](https://github.com/HelixDB/helix-db), designed for AI-supervised
-coding workflows. The name pays homage to both **H**elix and **B**ea**d**s.
-
-It combines the best of [Beads](https://github.com/steveyegge/beads) (AI
-compaction, gates, dependency graphs) with HelixDB's unique graph-vector
-capabilities (semantic search, path algorithms, hybrid reranking).
-
-## Acknowledgments
-
-The Markdown-first storage approach (`.tickets/*.md` with YAML frontmatter) is
-inspired by [wedow/ticket](https://github.com/wedow/ticket), which pioneered the
-idea of storing issues as individual Markdown files for better AI agent
-compatibility and IDE navigation.
-
-## Goals
-
-1. **Git-first**: Issues stored as Markdown in `.tickets/`, synced via git
-2. **Offline-first**: Full functionality without network using local embeddings
-   (`fastembed`)
-3. **AI-native**: Agent coordination, context compaction, semantic discovery
-4. **Graph-powered**: Dependency analysis, cycle detection, critical path
-   finding
-
-## Non-Goals (MVP)
-
-- Full Agile/Scrum board UI (use external tools)
-- Real-time collaboration (git is the sync mechanism)
-- External integrations (GitHub Issues, Jira, Linear sync)
-- Multi-tenant SaaS hosting
-
-## Specification Documents
-
-| Document                             | Purpose                                    |
-| ------------------------------------ | ------------------------------------------ |
-| [requirements.md](./requirements.md) | User stories with EARS acceptance criteria |
-| [design.md](./design.md)             | Data model, HelixQL queries, architecture  |
-| [tasks.md](./tasks.md)               | Implementation phases and task breakdown   |
-
-## Why Not Just Use Beads?
-
-[Beads](https://github.com/steveyegge/beads) is excellent. Steve Yegge's vision
-of git-backed, AI-native issue tracking inspired this project, and we share many
-of the same goals: offline-first, dependency-aware, agent-friendly. If you're
-happy with beads, keep using it!
-
-**hbd exists because we wanted capabilities that SQLite can't provide.**
-
-### Semantic Search
-
-Beads finds issues by keywords. hbd finds issues by _meaning_.
+## Quick Start
 
 ```bash
-# Beads: exact match only
-bd list --title-contains "auth"
+# Initialize in your project
+cd your-project
+hbd init
 
-# hbd: understands "login", "authentication", "sign-in" are related
-hbd search "user can't log in" --semantic
-hbd similar bd-a1b2   # Find issues like this one
+# Create issues
+hbd create "Fix login bug" --type bug --priority 1
+hbd create "Add dark mode" --type feature --labels ui,frontend
+
+# View and manage
+hbd list                          # List all open issues
+hbd show bd-a1b2c3                 # View issue details
+hbd update bd-a1b2 --status in_progress
+hbd close bd-a1b2 --reason "Fixed in commit abc123"
+
+# Track dependencies
+hbd dep add bd-blocker blocks bd-blocked
+hbd ready                         # Issues with no open blockers
+hbd blocked                       # Issues waiting on others
+hbd explain bd-a1b2               # Show blocker tree
+
+# Labels and comments
+hbd label add bd-a1b2 urgent
+hbd comment bd-a1b2 "Started investigating"
 ```
 
-When you create an issue, hbd warns you about potential duplicates—even if they
-use completely different words.
+## Features
 
-### Hybrid Search with Reranking
+### Currently Implemented
 
-Why choose between keyword and semantic search? hbd fuses them.
+- **Issue CRUD** - Create, show, list, update, close, reopen
+- **Markdown storage** - Issues stored as `.tickets/*.md` with YAML frontmatter
+- **Dependencies** - Track blocking relationships with cycle detection
+- **Labels** - Add, remove, list labels on issues
+- **Comments** - Add comments with human/agent attribution
+- **Ready/Blocked** - Find unblocked issues ready for work
+- **Stale detection** - Find issues not updated in N days
+- **Statistics** - Issue counts by status, type, priority
+- **Agent tracking** - `--agent` and `--session` flags for AI workflows
+- **JSON output** - `--json` flag on all commands for programmatic access
+- **Partial ID matching** - Use `bd-a1b` instead of full `bd-a1b2c3`
+
+### Planned (Not Yet Implemented)
+
+- **HelixDB integration** - Embedded graph database for fast queries (no server needed—like SQLite)
+- **Semantic search** - Find issues by meaning, not just keywords (via local embeddings)
+- **Hybrid search** - BM25 + vector fusion with reranking
+- **Critical path analysis** - Find longest blocking chain to an epic
+- **Sync daemon** - Background file watching and auto-sync
+- **AI compaction** - Summarize old closed issues to save context
+
+## Installation
 
 ```bash
-hbd search "memory leak in parser" --hybrid
+# From source
+git clone https://github.com/kevinmichaelchen/helix-tools.git
+cd helix-tools
+cargo install --path hbd
 ```
 
-This runs BM25 (keywords) + vector search (meaning), fuses results with
-[Reciprocal Rank Fusion](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf),
-then applies
-[MMR](https://www.cs.cmu.edu/~jgc/publication/The_Use_MMR_Diversity_Based_LTMIR_1998.pdf)
-for diversity. You get precise matches AND conceptually related issues.
+## File Format
 
-### Graph Algorithms
-
-Beads tracks dependencies. hbd _analyzes_ them.
-
-```bash
-# Find the longest chain blocking your epic
-hbd critical-path bd-epic-123
-
-# Output:
-# Critical path (est. 12.5 hours):
-#   bd-f1a2 [P0, 2h] → bd-b3c4 [P1, 4h] → bd-d5e6 [P2, 3h] → bd-epic-123
-#   ↑ Start here for maximum impact
-```
-
-This uses Dijkstra's algorithm with weights based on priority × estimated time.
-Beads can show you _what's_ blocked; hbd tells you _where to focus_.
-
-### Native Graph Storage
-
-Beads uses SQLite with recursive CTEs for dependency traversal. hbd uses
-HelixDB—a purpose-built graph database.
-
-| Operation                 | Beads (SQLite)   | hbd (HelixDB)         |
-| ------------------------- | ---------------- | --------------------- |
-| "What blocks X?"          | Recursive CTE    | Single edge traversal |
-| "All transitive blockers" | Complex SQL      | `::Out<DEPENDS_ON>*`  |
-| Cycle detection           | Application code | Native BFS            |
-| Weighted paths            | Not supported    | Dijkstra built-in     |
-
-### What We Kept from Beads
-
-We're not replacing beads—we're building on its foundation:
-
-- Git-backed storage (`.tickets/*.md`)
-- Hash-based IDs (`bd-a1b2c3`) for conflict-free merging
-- Dependency tracking with blocking semantics
-- AI compaction for context window management
-- Gate coordination for async workflows
-- Agent tracking with `--agent` and `--session` flags
-- `ready` and `blocked` commands
-- Full offline support
-
-### What We Skipped
-
-Beads has features we intentionally left out:
-
-- **Molecular Chemistry** (templates, wisps, bonds) — Powerful but complex. We
-  use simple epics + labels.
-- **12+ issue types** — We have 6: bug, feature, task, epic, chore, gate.
-- **Multi-daemon coordination** — Single daemon is simpler.
-- **Editor integrations** — Add AGENTS.md yourself; we focus on the core.
-
-### The Bottom Line
-
-| Use Beads if...              | Use hbd if...                 |
-| ---------------------------- | ----------------------------- |
-| SQLite simplicity is enough  | You want semantic search      |
-| You need molecular templates | You need graph algorithms     |
-| Mature, battle-tested        | You want vector + BM25 hybrid |
-| More editor integrations     | You're already using HelixDB  |
-
-## Key Differentiators vs. Traditional Trackers
-
-| Feature           | GitHub Issues   | Linear          | hbd                       |
-| ----------------- | --------------- | --------------- | ------------------------- |
-| Storage           | Cloud DB        | Cloud DB        | Local git + HelixDB       |
-| Offline           | Read-only cache | Read-only cache | Full read/write           |
-| AI context        | None            | AI features     | First-class agent support |
-| Semantic search   | None            | Basic           | Vector + BM25 hybrid      |
-| Dependency graphs | Basic           | Basic           | Full graph traversal      |
-| Self-hosted       | Enterprise only | No              | Yes (default)             |
-
-## Quick Reference
-
-### CLI Commands (Planned)
-
-```bash
-# Project setup
-hbd init                          # Initialize in current directory
-hbd sync                          # Sync git <-> HelixDB
-hbd info                          # Show system status
-
-# Issue CRUD
-hbd create "Title" --type bug     # Create issue
-hbd show <id>                     # Display issue details
-hbd list --status open            # List with filters
-hbd update <id> --priority 1      # Modify issue
-hbd close <id> --reason "Done"    # Close issue
-
-# Labels
-hbd label add <id> bug,urgent     # Add labels
-hbd label remove <id> bug         # Remove label
-hbd label list <id>               # Show issue labels
-hbd label list-all                # Show all project labels
-
-# Comments
-hbd comment <id> "message"        # Add comment
-hbd comments <id>                 # List comments
-
-# Dependencies
-hbd dep add <from> blocks <to>    # Add dependency
-hbd dep remove <from> blocks <to> # Remove dependency
-hbd dep list <id>                 # Show dependencies
-hbd dep cycles                    # Find all dependency cycles
-hbd ready                         # Unblocked issues
-hbd blocked                       # Blocked issues
-hbd explain <id>                  # Show blocker chain
-hbd critical-path <epic-id>       # Longest blocking chain
-hbd graph <id>                    # DOT format visualization
-
-# Search & Discovery
-hbd search "query"                # BM25 text search
-hbd search "query" --semantic     # Vector similarity search
-hbd search "query" --hybrid       # BM25 + vector fusion
-hbd similar <id>                  # Find similar issues
-hbd stale --days 14               # Find forgotten issues
-
-# AI/Agent features
-hbd compact                       # Summarize old issues
-hbd context --query "topic"       # Get context for LLM
-hbd wait <gate-id>                # Wait for gate condition
-hbd restore <id>                  # View pre-compaction content
-
-# Analytics
-hbd health                        # Project health signals
-hbd stats                         # Issue statistics
-hbd count --status open           # Quick count
-
-# Maintenance
-hbd merge <ids> --into <target>   # Merge duplicates
-hbd admin cleanup --older-than 90 # Delete old closed issues
-```
-
-### File Structure
-
-```
-your-project/
-├── .tickets/
-│   ├── bd-a1b2c3.md             # Issue files (YAML frontmatter + Markdown)
-│   ├── bd-d4e5f6.md
-│   └── ...
-├── .helix/
-│   ├── config.toml              # hbd configuration
-│   ├── helix.db/                # HelixDB data directory
-│   └── models/                  # Cached embedding models
-└── helix.toml                   # HelixDB schema
-```
-
-### Issue File Format
+Issues are stored as Markdown files with YAML frontmatter:
 
 ```markdown
 ---
@@ -240,39 +76,157 @@ id: bd-a1b2c3
 title: Fix memory leak in parser
 status: open
 priority: 1
-type: bug
+issue_type: bug
 created_at: 2026-01-03T10:30:00Z
 created_by: kevin
 labels:
   - performance
   - parser
 depends_on:
-  - bd-x7y8z9
+  - id: bd-x7y8z9
+    dep_type: blocks
 ---
 
 ## Description
 
 The parser leaks memory when processing large files...
 
-## Acceptance Criteria
+## Comments
 
-- [ ] No memory growth over 1000 file parses
-- [ ] Add regression test
+### 2026-01-03 14:22 - kevin
+
+Started investigating, appears to be in the tokenizer.
 ```
 
-## Technology Stack
+## Project Structure
 
-| Component  | Technology | Why                                        |
-| ---------- | ---------- | ------------------------------------------ |
-| Language   | Rust       | Performance, safety, HelixDB compatibility |
-| Database   | HelixDB    | Graph + vector + BM25 in one               |
-| Embeddings | fastembed  | Native Rust, offline, no server            |
-| CLI        | clap       | Standard Rust CLI framework                |
-| Git ops    | git2       | Native Rust git bindings                   |
-| File watch | notify     | Cross-platform file watching               |
+```
+your-project/
+├── .tickets/
+│   ├── bd-a1b2c3.md    # Issue files
+│   ├── bd-d4e5f6.md
+│   └── ...
+├── .helix/
+│   └── config.toml     # hbd configuration
+└── .gitignore          # .helix/helix.db/ auto-added
+```
 
-## Related Documents
+## CLI Reference
 
-- [HelixDB Documentation](https://github.com/HelixDB/helix-db)
-- [Beads Architecture](https://github.com/steveyegge/beads/blob/main/docs/ARCHITECTURE.md)
-- [Kiro Specs Concept](https://kiro.dev/docs/specs/concepts/)
+### Project Setup
+| Command | Description |
+|---------|-------------|
+| `hbd init` | Initialize hbd in current directory |
+| `hbd info` | Show project status and statistics |
+
+### Issue Management
+| Command | Description |
+|---------|-------------|
+| `hbd create "Title"` | Create new issue |
+| `hbd show <id>` | Display issue details |
+| `hbd list` | List issues (filterable) |
+| `hbd update <id>` | Modify issue properties |
+| `hbd close <id>` | Close an issue |
+| `hbd reopen <id>` | Reopen a closed issue |
+
+### Dependencies
+| Command | Description |
+|---------|-------------|
+| `hbd dep add <a> blocks <b>` | A blocks B |
+| `hbd dep remove <a> blocks <b>` | Remove dependency |
+| `hbd dep list <id>` | Show issue dependencies |
+| `hbd dep cycles` | Find circular dependencies |
+| `hbd ready` | List unblocked issues |
+| `hbd blocked` | List blocked issues |
+| `hbd explain <id>` | Show blocker tree |
+
+### Labels & Comments
+| Command | Description |
+|---------|-------------|
+| `hbd label add <id> <label>` | Add label to issue |
+| `hbd label remove <id> <label>` | Remove label |
+| `hbd label list <id>` | List labels on issue |
+| `hbd label list-all` | List all project labels |
+| `hbd comment <id> "msg"` | Add comment |
+| `hbd comments <id>` | List comments |
+
+### Analytics
+| Command | Description |
+|---------|-------------|
+| `hbd stats` | Issue statistics |
+| `hbd stale --days 14` | Find stale issues |
+
+### Common Flags
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON |
+| `--agent <id>` | Mark as agent-created |
+| `--session <id>` | Group agent actions |
+
+## Why hbd?
+
+### Standing on the Shoulders of Giants
+
+hbd builds on excellent prior art in the git-backed issue tracking space:
+
+**[Beads](https://github.com/steveyegge/beads)** (Steve Yegge) pioneered the vision of git-backed, AI-native issue tracking. Beads introduced hash-based IDs for conflict-free merging, dependency graphs with blocking semantics, AI compaction for context management, and agent coordination via gates. If you're happy with Beads, keep using it—it's battle-tested and feature-rich.
+
+**[wedow/ticket](https://github.com/wedow/ticket)** took a radically minimal approach: a single shell script, no database, just Markdown files with YAML frontmatter in `.tickets/`. No daemon, no SQLite sync headaches. We adopted this Markdown-first storage approach directly.
+
+### What hbd Adds
+
+hbd exists because we wanted capabilities that file-based storage alone can't efficiently provide:
+
+| Capability | Beads | ticket | hbd |
+|------------|-------|--------|-----|
+| Git-backed storage | ✅ | ✅ | ✅ |
+| Markdown files | ❌ (JSONL) | ✅ | ✅ |
+| No daemon required | ❌ | ✅ | ✅ |
+| Dependency tracking | ✅ | ✅ | ✅ |
+| Cycle detection | ✅ | ❌ | ✅ |
+| **Semantic search** | ❌ | ❌ | 🚧 Planned |
+| **Graph algorithms** | ❌ | ❌ | 🚧 Planned |
+| **Critical path analysis** | ❌ | ❌ | 🚧 Planned |
+
+**Semantic Search** — Find issues by *meaning*, not just keywords. Search for "user can't log in" and find issues about "authentication", "sign-in", and "login failures" even if they use different words. Get duplicate warnings when creating issues that are semantically similar to existing ones.
+
+**Graph Algorithms** — Beads tracks dependencies; hbd *analyzes* them. Find the critical path blocking your epic. Compute weighted paths based on priority × estimated time. Answer "where should I focus for maximum impact?"
+
+**Native Graph Storage** — HelixDB is an embedded database (like SQLite—no server to run) purpose-built for graph + vector workloads. Instead of recursive SQL CTEs for transitive dependencies, we get single-hop traversals. Instead of application-level cycle detection, we get native BFS.
+
+### What We Kept, What We Skipped
+
+**From Beads, we kept:**
+- Hash-based IDs (`bd-a1b2c3`) for conflict-free merging
+- Dependency tracking with blocking semantics
+- Agent tracking with `--agent` and `--session` flags
+- `ready` and `blocked` commands
+- Full offline support
+
+**From Beads, we skipped:**
+- Molecular chemistry (templates, wisps, bonds) — simpler epics + labels instead
+- 12+ issue types — we have 5: bug, feature, task, epic, chore
+- Background daemon — direct file access instead
+- SQLite — Markdown files are the source of truth
+
+### When to Use What
+
+| Use case | Recommendation |
+|----------|----------------|
+| Want mature, battle-tested | **Beads** |
+| Want absolute minimalism (single shell script) | **wedow/ticket** |
+| Want semantic search + graph algorithms | **hbd** (when implemented) |
+| Already using HelixDB | **hbd** |
+| Need molecular templates | **Beads** |
+
+## Specifications
+
+For detailed requirements, architecture, and implementation plans:
+
+- [specs/requirements.md](./specs/requirements.md) - User stories and acceptance criteria
+- [specs/design.md](./specs/design.md) - Technical architecture and data model
+- [specs/tasks.md](./specs/tasks.md) - Implementation roadmap
+
+## License
+
+MIT

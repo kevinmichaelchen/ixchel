@@ -2,6 +2,21 @@
 
 This document defines user stories and acceptance criteria for `hbd` using [EARS notation](https://www.iaria.org/conferences2015/filesICCGI15/EARS.pdf) (Easy Approach to Requirements Syntax).
 
+> **Implementation Notes (2026-01-03)**
+>
+> The current implementation has made the following simplifications from this spec:
+>
+> | Spec | Implementation |
+> |------|----------------|
+> | 6 statuses (open, in_progress, blocked, deferred, closed, tombstone) | 4 statuses (open, in_progress, blocked, closed) |
+> | 6 issue types (bug, feature, task, epic, chore, gate) | 5 types (bug, feature, task, epic, chore) |
+> | 4 dependency types (blocks, related, waits_for, duplicate_of) | 3 types (blocks, related, waits_for) |
+> | HelixDB for storage and queries | File-based storage only |
+> | Async embedding generation | Not implemented |
+> | Daemon mode with file watching | Not implemented |
+>
+> These requirements remain the target specification. Implementation will align as features are added.
+
 ## EARS Notation Reference
 
 | Pattern | Template |
