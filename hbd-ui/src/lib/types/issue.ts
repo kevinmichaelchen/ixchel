@@ -1,6 +1,7 @@
 export type Status = 'open' | 'in_progress' | 'blocked' | 'closed';
 export type IssueType = 'bug' | 'feature' | 'task' | 'epic' | 'chore';
 export type DepType = 'blocks' | 'related' | 'waits_for';
+export type Priority = 0 | 1 | 2 | 3 | 4;
 export type CreatorType = 'human' | 'agent';
 
 export interface Dependency {
@@ -39,26 +40,6 @@ export interface Issue {
 	estimated_minutes?: number;
 }
 
-export interface GraphNode {
-	id: string;
-	issue: Issue;
-	x: number;
-	y: number;
-	z: number;
-	vx?: number;
-	vy?: number;
-	vz?: number;
-}
-
-export interface GraphEdge {
-	source: string | GraphNode;
-	target: string | GraphNode;
-	dep_type: DepType;
-}
-
-export interface GraphData {
-	nodes: GraphNode[];
-	edges: GraphEdge[];
-}
+// Note: Graph node/edge types are now handled by @xyflow/svelte's Node and Edge types
 
 export type LayoutMode = 'hierarchical' | 'force';

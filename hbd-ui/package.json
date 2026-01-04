@@ -19,10 +19,8 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^1.1.8",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.15.1",
-    "@xyflow/svelte": "^1.5.0",
     "clsx": "^2.1.1",
     "svelte": "^5.16.0",
     "tailwind-merge": "^3.4.0"
