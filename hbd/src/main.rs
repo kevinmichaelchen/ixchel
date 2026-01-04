@@ -3,6 +3,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use hbd::{CreatorType, DepType, Issue, IssueType, Priority, Status, TicketStore};
+use tabled::{Table, Tabled, settings::Style};
 
 #[derive(Parser)]
 #[command(name = "hbd")]
@@ -368,7 +369,7 @@ fn run(cli: Cli) -> hbd::Result<()> {
             status,
             r#type,
             priority,
-            label: _,
+            label,
             assignee,
             project: _,
             include_ephemeral: _,
@@ -376,6 +377,7 @@ fn run(cli: Cli) -> hbd::Result<()> {
             status.as_deref(),
             r#type.as_deref(),
             priority,
+            label.as_deref(),
             assignee.as_deref(),
             cli.json,
         ),
@@ -578,6 +580,7 @@ fn cmd_list(
     status: Option<&str>,
     issue_type: Option<&str>,
     priority: Option<u8>,
+    label: Option<&str>,
     assignee: Option<&str>,
     json: bool,
 ) -> hbd::Result<()> {
@@ -597,6 +600,10 @@ fn cmd_list(
     {
         issues.retain(|i| i.priority == p);
     }
+    if let Some(l) = label {
+        let l = l.trim().to_lowercase();
+        issues.retain(|i| i.labels.iter().any(|lbl| lbl.to_lowercase() == l));
+    }
     if let Some(a) = assignee {
         issues.retain(|i| i.assignee.as_deref() == Some(a));
     }
@@ -614,21 +621,36 @@ fn cmd_list(
             println!("No issues found.");
             return Ok(());
         }
-        println!(
-            "{:<12} {:<4} {:<12} {:<10} Title",
-            "ID", "P", "Status", "Type"
-        );
-        println!("{}", "-".repeat(60));
-        for i in &issues {
-            println!(
-                "{:<12} {:<4} {:<12} {:<10} {}",
-                i.id,
-                i.priority.as_u8(),
-                i.status,
-                i.issue_type,
-                truncate(&i.title, 40)
-            );
+
+        #[derive(Tabled)]
+        #[allow(clippy::items_after_statements)]
+        struct Row {
+            #[tabled(rename = "ID")]
+            id: String,
+            #[tabled(rename = "P")]
+            priority: u8,
+            #[tabled(rename = "Status")]
+            status: String,
+            #[tabled(rename = "Type")]
+            issue_type: String,
+            #[tabled(rename = "Title")]
+            title: String,
         }
+
+        let rows: Vec<Row> = issues
+            .iter()
+            .map(|i| Row {
+                id: i.id.clone(),
+                priority: i.priority.as_u8(),
+                status: i.status.to_string(),
+                issue_type: i.issue_type.to_string(),
+                title: truncate(&i.title, 40),
+            })
+            .collect();
+
+        let mut table = Table::new(rows);
+        table.with(Style::rounded());
+        println!("{table}");
         println!("\n{} issue(s)", issues.len());
     }
     Ok(())
@@ -788,18 +810,34 @@ fn cmd_ready(json: bool) -> hbd::Result<()> {
             println!("No ready issues.");
             return Ok(());
         }
-        println!("Ready issues (no open blockers):\n");
-        println!("{:<12} {:<4} {:<10} Title", "ID", "P", "Type");
-        println!("{}", "-".repeat(50));
-        for i in &ready {
-            println!(
-                "{:<12} {:<4} {:<10} {}",
-                i.id,
-                i.priority.as_u8(),
-                i.issue_type,
-                truncate(&i.title, 35)
-            );
+
+        #[derive(Tabled)]
+        #[allow(clippy::items_after_statements)]
+        struct Row {
+            #[tabled(rename = "ID")]
+            id: String,
+            #[tabled(rename = "P")]
+            priority: u8,
+            #[tabled(rename = "Type")]
+            issue_type: String,
+            #[tabled(rename = "Title")]
+            title: String,
         }
+
+        let rows: Vec<Row> = ready
+            .iter()
+            .map(|i| Row {
+                id: i.id.clone(),
+                priority: i.priority.as_u8(),
+                issue_type: i.issue_type.to_string(),
+                title: truncate(&i.title, 40),
+            })
+            .collect();
+
+        println!("Ready issues (no open blockers):\n");
+        let mut table = Table::new(rows);
+        table.with(Style::rounded());
+        println!("{table}");
         println!("\n{} issue(s) ready", ready.len());
     }
     Ok(())
@@ -1212,12 +1250,27 @@ fn cmd_label_list_all(json: bool) -> hbd::Result<()> {
     } else if labels.is_empty() {
         println!("No labels in project");
     } else {
-        println!("Labels in project:\n");
-        println!("{:<20} Count", "Label");
-        println!("{}", "-".repeat(30));
-        for (name, count) in &labels {
-            println!("{name:<20} {count}");
+        #[derive(Tabled)]
+        #[allow(clippy::items_after_statements)]
+        struct Row {
+            #[tabled(rename = "Label")]
+            name: String,
+            #[tabled(rename = "Count")]
+            count: usize,
         }
+
+        let rows: Vec<Row> = labels
+            .iter()
+            .map(|(name, count)| Row {
+                name: name.clone(),
+                count: *count,
+            })
+            .collect();
+
+        println!("Labels in project:\n");
+        let mut table = Table::new(rows);
+        table.with(Style::rounded());
+        println!("{table}");
         println!("\n{} label(s)", labels.len());
     }
     Ok(())
@@ -1379,19 +1432,33 @@ fn cmd_stale(days: u32, status: Option<&str>, limit: Option<usize>, json: bool) 
     } else if issues.is_empty() {
         println!("No stale issues (older than {days} days)");
     } else {
-        println!("Stale issues (not updated in {days}+ days):\n");
-        println!("{:<12} {:<12} {:<8} Title", "ID", "Status", "Days");
-        println!("{}", "-".repeat(60));
-        for i in &issues {
-            let days_stale = (chrono::Utc::now() - i.updated_at).num_days();
-            println!(
-                "{:<12} {:<12} {:<8} {}",
-                i.id,
-                i.status,
-                days_stale,
-                truncate(&i.title, 30)
-            );
+        #[derive(Tabled)]
+        #[allow(clippy::items_after_statements)]
+        struct Row {
+            #[tabled(rename = "ID")]
+            id: String,
+            #[tabled(rename = "Status")]
+            status: String,
+            #[tabled(rename = "Days")]
+            days_stale: i64,
+            #[tabled(rename = "Title")]
+            title: String,
         }
+
+        let rows: Vec<Row> = issues
+            .iter()
+            .map(|i| Row {
+                id: i.id.clone(),
+                status: i.status.to_string(),
+                days_stale: (chrono::Utc::now() - i.updated_at).num_days(),
+                title: truncate(&i.title, 40),
+            })
+            .collect();
+
+        println!("Stale issues (not updated in {days}+ days):\n");
+        let mut table = Table::new(rows);
+        table.with(Style::rounded());
+        println!("{table}");
         println!("\n{} stale issue(s)", issues.len());
     }
     Ok(())
