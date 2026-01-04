@@ -1,7 +1,8 @@
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use hbd::{CreatorType, Issue, IssueType, Priority, Status, TicketStore};
+use hbd::{CreatorType, DepType, Issue, IssueType, Priority, Status, TicketStore};
 
 #[derive(Parser)]
 #[command(name = "hbd")]
@@ -404,6 +405,14 @@ fn run(cli: Cli) -> hbd::Result<()> {
         Commands::Comments { id } => cmd_comments(&id, cli.json),
         Commands::Ready { project: _ } => cmd_ready(cli.json),
         Commands::Blocked { project: _ } => cmd_blocked(cli.json),
+        Commands::Dep { command } => match command {
+            DepCommands::Add { from, dep_type, to } => cmd_dep_add(&from, &dep_type, &to, cli.json),
+            DepCommands::Remove { from, dep_type, to } => {
+                cmd_dep_remove(&from, &dep_type, &to, cli.json)
+            }
+            DepCommands::List { id } => cmd_dep_list(&id, cli.json),
+            DepCommands::Cycles => cmd_dep_cycles(cli.json),
+        },
         _ => {
             eprintln!("Command not yet implemented. See specs/tasks.md for roadmap.");
             Ok(())
@@ -845,4 +854,239 @@ fn truncate(s: &str, max: usize) -> String {
     } else {
         format!("{}...", &s[..max - 3])
     }
+}
+
+fn cmd_dep_add(from: &str, dep_type: &str, to: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let from_id = store.resolve_id(from)?;
+    let to_id = store.resolve_id(to)?;
+    let dep_type: DepType = dep_type.parse().map_err(hbd::HbdError::Other)?;
+
+    if from_id == to_id {
+        return Err(hbd::HbdError::Other(
+            "cannot add self-dependency".to_string(),
+        ));
+    }
+
+    if dep_type == DepType::Blocks {
+        let issues_map = store.read_all_issues_map()?;
+        if would_create_cycle(&issues_map, &from_id, &to_id) {
+            return Err(hbd::HbdError::Other(format!(
+                "adding this dependency would create a cycle: {from_id} -> {to_id} -> ... -> {from_id}"
+            )));
+        }
+    }
+
+    let mut issue = store.read_issue(&from_id)?;
+    issue.add_dependency(&to_id, dep_type);
+    store.write_issue(&issue)?;
+
+    if json {
+        let result = serde_json::json!({
+            "from": from_id,
+            "to": to_id,
+            "dep_type": dep_type.as_str(),
+            "action": "added"
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("{from_id} now {dep_type} {to_id}");
+    }
+    Ok(())
+}
+
+fn cmd_dep_remove(from: &str, dep_type: &str, to: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let from_id = store.resolve_id(from)?;
+    let to_id = store.resolve_id(to)?;
+    let _: DepType = dep_type.parse().map_err(hbd::HbdError::Other)?;
+
+    let mut issue = store.read_issue(&from_id)?;
+    let removed = issue.remove_dependency(&to_id);
+
+    if !removed {
+        return Err(hbd::HbdError::Other(format!(
+            "no dependency from {from_id} to {to_id}"
+        )));
+    }
+
+    store.write_issue(&issue)?;
+
+    if json {
+        let result = serde_json::json!({
+            "from": from_id,
+            "to": to_id,
+            "action": "removed"
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("Removed dependency: {from_id} -> {to_id}");
+    }
+    Ok(())
+}
+
+fn cmd_dep_list(id: &str, json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let id = store.resolve_id(id)?;
+    let issue = store.read_issue(&id)?;
+    let issues_map = store.read_all_issues_map()?;
+    let blocks: Vec<_> = issues_map
+        .values()
+        .filter(|i| i.depends_on.iter().any(|d| d.id == id))
+        .collect();
+
+    if json {
+        let depends_on: Vec<_> = issue
+            .depends_on
+            .iter()
+            .map(|d| {
+                let title = issues_map
+                    .get(&d.id)
+                    .map_or("(unknown)", |i| i.title.as_str());
+                serde_json::json!({
+                    "id": d.id,
+                    "dep_type": d.dep_type.as_str(),
+                    "title": title
+                })
+            })
+            .collect();
+        let blocked_by_this: Vec<_> = blocks
+            .iter()
+            .map(|i| serde_json::json!({"id": i.id, "title": i.title}))
+            .collect();
+        let result = serde_json::json!({
+            "id": id,
+            "depends_on": depends_on,
+            "blocks": blocked_by_this
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        println!("Dependencies for {id}:\n");
+        if issue.depends_on.is_empty() {
+            println!("  Depends on: (none)");
+        } else {
+            println!("  Depends on:");
+            for dep in &issue.depends_on {
+                let title = issues_map
+                    .get(&dep.id)
+                    .map_or_else(|| "(unknown)".to_string(), |i| truncate(&i.title, 30));
+                println!("    {} ({}) - {}", dep.id, dep.dep_type, title);
+            }
+        }
+        println!();
+        if blocks.is_empty() {
+            println!("  Blocks: (none)");
+        } else {
+            println!("  Blocks:");
+            for i in &blocks {
+                println!("    {} - {}", i.id, truncate(&i.title, 30));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn cmd_dep_cycles(json: bool) -> hbd::Result<()> {
+    let store = TicketStore::from_current_dir()?;
+    let issues_map = store.read_all_issues_map()?;
+
+    let cycles = find_all_cycles(&issues_map);
+
+    if json {
+        let result = serde_json::json!({
+            "cycles": cycles,
+            "count": cycles.len()
+        });
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else if cycles.is_empty() {
+        println!("No dependency cycles found.");
+    } else {
+        println!("Found {} dependency cycle(s):\n", cycles.len());
+        for (i, cycle) in cycles.iter().enumerate() {
+            println!("  Cycle {}: {}", i + 1, cycle.join(" -> "));
+        }
+    }
+    Ok(())
+}
+
+fn would_create_cycle(issues_map: &HashMap<String, Issue>, from_id: &str, to_id: &str) -> bool {
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+    queue.push_back(to_id.to_string());
+
+    while let Some(current) = queue.pop_front() {
+        if current == from_id {
+            return true;
+        }
+        if visited.contains(&current) {
+            continue;
+        }
+        visited.insert(current.clone());
+
+        if let Some(issue) = issues_map.get(&current) {
+            for dep in &issue.depends_on {
+                if dep.dep_type == DepType::Blocks && !visited.contains(&dep.id) {
+                    queue.push_back(dep.id.clone());
+                }
+            }
+        }
+    }
+    false
+}
+
+fn find_all_cycles(issues_map: &HashMap<String, Issue>) -> Vec<Vec<String>> {
+    fn dfs(
+        node: &str,
+        issues_map: &HashMap<String, Issue>,
+        visited: &mut HashSet<String>,
+        rec_stack: &mut HashSet<String>,
+        path: &mut Vec<String>,
+        cycles: &mut Vec<Vec<String>>,
+    ) {
+        if rec_stack.contains(node) {
+            if let Some(pos) = path.iter().position(|n| n == node) {
+                let cycle: Vec<_> = path[pos..].to_vec();
+                cycles.push(cycle);
+            }
+            return;
+        }
+        if visited.contains(node) {
+            return;
+        }
+
+        visited.insert(node.to_string());
+        rec_stack.insert(node.to_string());
+        path.push(node.to_string());
+
+        if let Some(issue) = issues_map.get(node) {
+            for dep in &issue.depends_on {
+                if dep.dep_type == DepType::Blocks {
+                    dfs(&dep.id, issues_map, visited, rec_stack, path, cycles);
+                }
+            }
+        }
+
+        path.pop();
+        rec_stack.remove(node);
+    }
+
+    let mut cycles = Vec::new();
+    let mut visited = HashSet::new();
+    let mut rec_stack = HashSet::new();
+    let mut path = Vec::new();
+
+    for id in issues_map.keys() {
+        if !visited.contains(id) {
+            dfs(
+                id,
+                issues_map,
+                &mut visited,
+                &mut rec_stack,
+                &mut path,
+                &mut cycles,
+            );
+        }
+    }
+
+    cycles
 }
