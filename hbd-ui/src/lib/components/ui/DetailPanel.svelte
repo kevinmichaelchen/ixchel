@@ -43,24 +43,15 @@
 	}
 </script>
 
-<div class="absolute bottom-4 right-4 z-20 w-96 rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+<div class="h-full flex flex-col bg-gray-900">
 	<header class="flex items-start justify-between border-b border-gray-700 p-4">
 		<div class="min-w-0 flex-1">
 			<h3 class="text-lg font-semibold text-white">{issue.title}</h3>
 			<code class="mt-1 block text-sm text-gray-500">{issue.id}</code>
 		</div>
-		<button
-			onclick={onClose}
-			aria-label="Close panel"
-			class="ml-2 rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-white"
-		>
-			<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-			</svg>
-		</button>
 	</header>
 
-	<div class="max-h-80 overflow-y-auto p-4">
+	<div class="flex-1 overflow-y-auto p-4">
 		<div class="mb-4 flex flex-wrap gap-2">
 			<span class="rounded px-2 py-1 text-xs text-white {statusColors[issue.status]}">
 				{issue.status.replace('_', ' ')}
