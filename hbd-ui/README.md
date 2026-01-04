@@ -55,20 +55,24 @@ http://localhost:5173?demo=true
 ## Visual Legend
 
 ### Node Colors (Status)
+
 - Gray: Open
 - Yellow: In Progress
 - Red: Blocked
 - Green: Closed
 
 ### Node Shapes (Type)
+
 - Box: Epic
 - Sphere: All other types
 
 ### Node Size (Priority)
+
 - Largest: P0 (Critical)
 - Smallest: P4 (Backlog)
 
 ### Edge Colors (Dependency Type)
+
 - Red: Blocks
 - Orange: Waits For
 - Gray: Related

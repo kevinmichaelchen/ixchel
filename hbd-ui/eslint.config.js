@@ -19,7 +19,7 @@ export default [
     },
     rules: {
       ...svelte.configs.recommended.rules,
-      
+
       'svelte/no-unused-svelte-ignore': 'error',
       'svelte/valid-compile': 'error',
       'svelte/no-at-html-tags': 'warn',
@@ -28,7 +28,7 @@ export default [
       'svelte/button-has-type': 'warn',
       'svelte/no-at-debug-tags': 'warn',
       'svelte/require-each-key': 'error',
-      
+
       'svelte/prefer-class-directive': 'warn',
       'svelte/prefer-style-directive': 'warn',
       'svelte/shorthand-attribute': 'warn',
@@ -37,11 +37,6 @@ export default [
     },
   },
   {
-    ignores: [
-      'node_modules/**',
-      '.svelte-kit/**',
-      'build/**',
-      'dist/**',
-    ],
+    ignores: ['node_modules/**', '.svelte-kit/**', 'build/**', 'dist/**'],
   },
 ];

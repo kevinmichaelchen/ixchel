@@ -4,49 +4,48 @@ import { DEMO_ISSUES } from '$lib/services/demo-data';
 import type { Issue } from '$lib/types/issue';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const demoMode = url.searchParams.get('demo') === 'true';
+  const demoMode = url.searchParams.get('demo') === 'true';
 
-	if (demoMode) {
-		return {
-			issues: DEMO_ISSUES,
-			demoMode: true,
-			projectPath: null,
-			error: null
-		};
-	}
+  if (demoMode) {
+    return {
+      issues: DEMO_ISSUES,
+      demoMode: true,
+      projectPath: null,
+      error: null,
+    };
+  }
 
-	const projectPath = findTicketsDir(process.cwd());
+  const projectPath = findTicketsDir(process.cwd());
 
-	if (!projectPath) {
-		return {
-			issues: DEMO_ISSUES,
-			demoMode: true,
-			projectPath: null,
-			error: 'No .tickets directory found. Running in demo mode.'
-		};
-	}
+  if (!projectPath) {
+    return {
+      issues: DEMO_ISSUES,
+      demoMode: true,
+      projectPath: null,
+      error: 'No .tickets directory found. Running in demo mode.',
+    };
+  }
 
-	try {
-		const issues: Issue[] = await listIssues(projectPath);
-		return {
-			issues,
-			demoMode: false,
-			projectPath,
-			error: null
-		};
-	} catch (e) {
-		const errorMessage = e instanceof Error ? e.message : 'Failed to load issues';
-		const isCommandNotFound = errorMessage.includes('command not found') || errorMessage.includes('ENOENT');
-		
-		const hint = isCommandNotFound
-			? 'Run: cargo install --path hbd'
-			: errorMessage.slice(0, 80);
-		
-		return {
-			issues: DEMO_ISSUES,
-			demoMode: true,
-			projectPath,
-			error: `hbd CLI unavailable. ${hint}`
-		};
-	}
+  try {
+    const issues: Issue[] = await listIssues(projectPath);
+    return {
+      issues,
+      demoMode: false,
+      projectPath,
+      error: null,
+    };
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : 'Failed to load issues';
+    const isCommandNotFound =
+      errorMessage.includes('command not found') || errorMessage.includes('ENOENT');
+
+    const hint = isCommandNotFound ? 'Run: cargo install --path hbd' : errorMessage.slice(0, 80);
+
+    return {
+      issues: DEMO_ISSUES,
+      demoMode: true,
+      projectPath,
+      error: `hbd CLI unavailable. ${hint}`,
+    };
+  }
 };

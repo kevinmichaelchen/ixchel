@@ -1,11 +1,11 @@
 <script lang="ts">
-	import '../app.css';
+  import '../app.css';
 
-	let { children } = $props();
+  let { children } = $props();
 </script>
 
 <svelte:head>
-	<title>hbd-ui | Task Graph Visualizer</title>
+  <title>hbd-ui | Task Graph Visualizer</title>
 </svelte:head>
 
 {@render children()}

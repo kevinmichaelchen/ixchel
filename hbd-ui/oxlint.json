@@ -12,11 +12,5 @@
     "unicorn": true,
     "import": true
   },
-  "ignorePatterns": [
-    "**/*.svelte",
-    "node_modules",
-    ".svelte-kit",
-    "build",
-    "dist"
-  ]
+  "ignorePatterns": ["**/*.svelte", "node_modules", ".svelte-kit", "build", "dist"]
 }
