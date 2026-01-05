@@ -7,7 +7,8 @@ import styles from './Contributors.module.css';
 export interface Contributor {
   name: string;
   project: string;
-  role: string;
+  description: string;
+  url: string;
   color: string;
   tweetId?: string;
 }
@@ -26,8 +27,11 @@ export function Contributors({ contributors }: ContributorsProps) {
 
       <div className={styles.grid}>
         {contributors.map((contributor, idx) => (
-          <div
+          <a
             key={idx}
+            href={contributor.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className={styles.card}
             style={{
               '--accent-color': contributor.color,
@@ -38,15 +42,18 @@ export function Contributors({ contributors }: ContributorsProps) {
               <div className={styles.accent} />
               <h3>{contributor.name}</h3>
               <p className={styles.project}>{contributor.project}</p>
-              <span className={styles.role}>{contributor.role}</span>
+              <p className={styles.description}>{contributor.description}</p>
 
               {contributor.tweetId && (
-                <div className={styles.tweetContainer}>
+                <div
+                  className={styles.tweetContainer}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Tweet id={contributor.tweetId} />
                 </div>
               )}
             </div>
-          </div>
+          </a>
         ))}
       </div>
     </div>

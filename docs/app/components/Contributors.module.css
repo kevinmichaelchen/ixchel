@@ -50,6 +50,7 @@
 
 .card {
   position: relative;
+  display: block;
   background: var(--color-fd-card);
   border: 1px solid var(--color-fd-border);
   border-radius: 16px;
@@ -60,6 +61,9 @@
   /* Masonry layout support */
   break-inside: avoid;
   margin-bottom: 1.5rem;
+  /* Remove link styling */
+  text-decoration: none;
+  color: inherit;
 }
 
 @keyframes cardSlideUp {
@@ -147,7 +151,7 @@
   font-size: 0.9rem;
   color: var(--accent-color);
   font-weight: 600;
-  margin: 0.4rem 0;
+  margin: 0.4rem 0 0.75rem;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
   opacity: 0.95;
 }
@@ -157,17 +161,12 @@
   text-shadow: 0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent);
 }
 
-.role {
-  font-size: 0.85rem;
+.description {
+  font-size: 0.9rem;
   color: var(--color-fd-muted-foreground);
-  margin-top: 0.25rem;
-  display: block;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.card:hover .role {
-  color: color-mix(in srgb, var(--accent-color) 80%, var(--color-fd-foreground));
+  margin: 0;
+  line-height: 1.5;
+  flex-grow: 1;
 }
 
 .tweetContainer {
