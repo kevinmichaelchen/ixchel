@@ -8,6 +8,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 # Planned Tools
 
 Beyond `hbd`, we're building a suite of tools for agentic development workflows.
+For active tools, see [hbd](/docs/tools/hbd) and [helix-map](/docs/tools/helix-map).
 
 <Callout type="info">
   These tools are in the planning stage. APIs and features may change.
@@ -35,28 +36,6 @@ helix-docs search "async runtime configuration"
 
 # Get context for an LLM
 helix-docs context --query "error handling" --limit 2000
-```
-
-## helix-map
-
-**Codebase structure cache for fast exploration.**
-
-AI agents spend significant time re-discovering codebase structure. helix-map will maintain an always-current index of:
-
-- File and directory structure
-- Symbol definitions and references  
-- Import/export relationships
-- Module boundaries
-
-```bash
-# Index the codebase
-helix-map index
-
-# Find where something is defined
-helix-map find "UserService"
-
-# Get structure context for an LLM
-helix-map context --path src/auth/
 ```
 
 ## helix-mail

@@ -1,0 +1,96 @@
+---
+title: helix-map - Codebase Skeleton Indexer
+description: Compact symbol skeletons for LLM context and fast code exploration
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Cards, Card } from 'fumadocs-ui/components/card';
+
+# helix-map
+
+**A codebase indexer that builds a compact skeleton of symbols and structure.**
+
+<Callout type="info">
+  helix-map is a tracer-bullet proof of concept. Rust parsing is supported today
+  and storage is JSON.
+</Callout>
+
+## Why helix-map?
+
+LLM context windows are too expensive for full source. helix-map produces a
+high-signal outline of a repo so tools can navigate structure without reading
+every file.
+
+## What it builds
+
+- Symbol graph: functions, types, traits, methods, fields, constants
+- Edges: exports, imports, implements, extends, calls (when resolvable)
+- Skeleton views: per-file compact signatures
+- Repo summary: public surface area and entry points (planned)
+
+## Quick start
+
+```bash
+# Index a repository into .helix-map/index.json
+cargo run -p helix-map -- index .
+
+# Emit a skeleton (indexes if missing)
+cargo run -p helix-map -- skeleton . --output -
+```
+
+## Commands
+
+### helix-map index
+
+Indexes a repository and stores the result in `.helix-map/index.json` by
+default.
+
+| Flag | Description |
+|------|-------------|
+| `--store <path>` | Override the default store path. |
+
+### helix-map skeleton
+
+Renders a compact skeleton from an existing index. If no index exists, it will
+index first.
+
+| Flag | Description |
+|------|-------------|
+| `--store <path>` | Override the default store path. |
+| `--output <path>` | Write skeleton output to a file (use `-` for stdout). |
+| `--include-private` | Include private symbols. |
+| `--refresh` | Rebuild the index before rendering. |
+
+## Output format
+
+Skeletons are grouped by file and sorted by symbol kind:
+
+```text
+# src/lib.rs
+- pub struct Indexer { ... }
+- pub fn index(root: &Path) -> Result<Index>
+
+# src/main.rs
+- fn main() -> Result<()>
+```
+
+## Current scope
+
+- Language support: Rust (`.rs`) only
+- Storage: JSON file at `.helix-map/index.json`
+- Output: per-file signatures (non-private by default)
+
+## Roadmap highlights
+
+<Callout type="warn">Planned work, not implemented yet.</Callout>
+
+- HelixDB-backed storage and symbol queries
+- Multi-language extractors (TypeScript, JavaScript, Svelte)
+- Import and export graphing with re-export mapping
+- Incremental indexing and watch mode
+- Deterministic truncation for token budgets
+
+<Cards>
+  <Card title="Design Principles" href="/docs/principles" />
+  <Card title="Architecture" href="/docs/architecture" />
+</Cards>
