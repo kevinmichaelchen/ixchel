@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "hbd",
     "hbd-ui/src-tauri",
+    "helix-map",
     # "shared/helix-embed",
     # "shared/helix-sync",
 ]
