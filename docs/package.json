@@ -18,6 +18,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-static-tweets": "^2.0.0",
+    "react-tweet": "^3.3.0",
     "static-tweets": "^2.0.0"
   },
   "devDependencies": {
