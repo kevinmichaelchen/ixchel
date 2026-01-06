@@ -9,7 +9,9 @@
 > | Phase | Status | Description |
 > |-------|--------|-------------|
 > | Phase 1-2 (Core) | ✅ Complete | Types, loader, embeddings, HelixDB storage, CLI, hooks |
-> | Phase 3 (Indexer + Daemon) | 🚧 Planned | Incremental indexing, background sync |
+> | Phase 3.4 (Daemon) | ✅ Complete | IPC client, `--sync` flag, daemon integration |
+> | Phase 3.1-3.3 (HelixDB Backend) | 🚧 Planned | Manifest, incremental indexing, graph storage |
+> | Phase 4 (Advanced) | 📋 Future | BM25 hybrid search, query language |
 
 ---
 
@@ -239,26 +241,36 @@
 
 #### Task 3.4: Indexer Daemon and Consistency
 
-##### Task 3.4.1: Daemon Process
-- [ ] Add `helix-decisions daemon` subcommand (or dedicated binary)
-- [ ] Implement a global per-user daemon with `{repo_root, tool}` namespacing
-- [ ] Define a stable socket naming scheme for helix-tools
-- [ ] Use Unix socket path `~/.helix/run/helixd.sock` (named pipe equivalent on Windows)
-- [ ] Auto-start daemon on first CLI invocation if socket is missing
-- [ ] Maintain a single-writer lock for LMDB
-- [ ] Process a queue of sync requests (repo path + decision dir)
-- [ ] Exit cleanly after idle timeout (configurable)
+##### Task 3.4.1: Daemon Process ✅
+- [x] ~~Add `helix-decisions daemon` subcommand~~ → Implemented as shared `helixd` binary
+- [x] Implement a global per-user daemon with `{repo_root, tool}` namespacing
+- [x] Define a stable socket naming scheme for helix-tools
+- [x] Use Unix socket path `~/.helix/run/helixd.sock` (named pipe equivalent on Windows)
+- [x] Auto-start daemon on first CLI invocation if socket is missing
+- [x] Maintain a single-writer lock for LMDB (via SyncQueue namespacing)
+- [x] Process a queue of sync requests (repo path + decision dir)
+- [x] Exit cleanly after idle timeout (configurable, default 5 min)
 
-##### Task 3.4.2: IPC + Queue
-- [ ] Use `shared/helix-daemon` IPC client
-- [ ] CLI sends `enqueue_sync` on each invocation
-- [ ] CLI uses `wait_sync` for `--sync`
+> **Note:** Daemon implemented in `shared/helix-daemon` crate, not helix-decisions specific.
+> See `shared/helix-daemon/specs/tasks.md` for daemon implementation details.
 
-##### Task 3.4.3: Strong Consistency Flag
-- [ ] Add `--sync` to block until the queued sync completes
-- [ ] Implement `wait_sync` with timeout and clear error reporting
-- [ ] If daemon is unavailable, run a direct sync under the writer lock
-- [ ] Emit a warning when serving potentially stale results
+##### Task 3.4.2: IPC + Queue ✅
+- [x] Use `shared/helix-daemon` IPC client
+- [x] CLI sends `enqueue_sync` on each invocation
+- [x] CLI uses `wait_sync` for `--sync`
+
+##### Task 3.4.3: Strong Consistency Flag ✅
+- [x] Add `--sync` to block until the queued sync completes
+- [x] Implement `wait_sync` with timeout and clear error reporting
+- [x] If daemon is unavailable, run a direct sync under the writer lock
+- [x] Emit a warning when serving potentially stale results
+
+##### Task 3.4.4: Sync Worker (PLANNED)
+> The daemon currently stubs sync execution. This task implements actual sync logic.
+
+- [ ] Implement sync callback registration in daemon
+- [ ] Wire helix-decisions sync logic (load decisions, embed, store) to daemon worker
+- [ ] Handle incremental updates (manifest-based delta detection)
 
 ---
 
@@ -305,10 +317,11 @@
 | **M3: Storage** | 1.5 | ✅ Complete | - |
 | **M4: Search** | 1.6-1.7 | ✅ Complete | - |
 | **M5: Hooks** | 1.8-1.9 | ✅ Complete | - |
-| **M6: Phase 3 Foundation** | 3.1 | 🚧 Planned | Session 1 (2-3 hrs) |
-| **M7: Phase 3 Backend** | 3.2 | 🚧 Planned | Session 2 (2-3 hrs) |
-| **M8: Phase 3 Integration** | 3.3 | 🚧 Planned | Session 3 (1-2 hrs) |
-| **M9: v1.0.0 Release** | All Phase 3 | 🚧 Planned | Total: 6-8 hrs |
+| **M6: Daemon Integration** | 3.4 | ✅ Complete | - |
+| **M7: Phase 3 Foundation** | 3.1 | 🚧 Planned | Session 1 (2-3 hrs) |
+| **M8: Phase 3 Backend** | 3.2 | 🚧 Planned | Session 2 (2-3 hrs) |
+| **M9: Phase 3 Integration** | 3.3 | 🚧 Planned | Session 3 (1-2 hrs) |
+| **M10: v1.0.0 Release** | All Phase 3 | 🚧 Planned | Total: 6-8 hrs |
 
 ---
 

@@ -1,35 +1,55 @@
 # Tasks
 
-## Phase 1: Crate Skeleton
+**Status:** Phase 1-4 Complete, Phase 5 Complete  
+**Updated:** 2026-01-06
 
-- [ ] Create `shared/helix-daemon` crate with `lib.rs`
-- [ ] Define protocol structs (request/response/envelope)
-- [ ] Add serde serialization + validation helpers
+## Phase 1: Crate Skeleton ✅
 
-## Phase 2: IPC Server
+- [x] Create `shared/helix-daemon` crate with `lib.rs`
+- [x] Define protocol structs (Request, Response, Command enum)
+- [x] Add serde serialization + validation helpers
 
-- [ ] Implement Unix socket server (`~/.helix/run/helixd.sock`)
+## Phase 2: IPC Server ✅
+
+- [x] Implement Unix socket server (`~/.helix/run/helixd.sock`)
 - [ ] Implement Windows named pipe server (placeholder or feature-gated)
-- [ ] Parse JSON line messages with size limits
-- [ ] Route commands to handlers
+- [x] Parse JSON line messages with size limits
+- [x] Route commands to handlers
 
-## Phase 3: Queue + Locks
+## Phase 3: Queue + Locks ✅
 
-- [ ] Implement per `{repo_root, tool}` queue
-- [ ] Coalesce duplicate `enqueue_sync` requests
-- [ ] Add per-repo writer lock abstraction
-- [ ] Track sync states (queued, running, done, error)
+- [x] Implement per `{repo_root, tool}` queue
+- [x] Coalesce duplicate `enqueue_sync` requests
+- [x] Add per-repo writer lock abstraction (via SyncQueue namespacing)
+- [x] Track sync states (queued, running, done, error)
 
-## Phase 4: helixd Binary
+## Phase 4: helixd Binary ✅
 
-- [ ] Add `helixd` binary entrypoint
-- [ ] Implement auto-start + retry behavior for CLI clients
-- [ ] Add idle timeout configuration
-- [ ] Implement `status`, `ping`, `shutdown`
+- [x] Add `helixd` binary entrypoint
+- [x] Implement auto-start + retry behavior for CLI clients
+- [x] Add idle timeout configuration (default 5 min, `--idle-timeout` flag)
+- [x] Implement `status`, `ping`, `shutdown`
 
-## Phase 5: Tests
+## Phase 5: Tests ✅
 
-- [ ] Protocol round-trip tests
-- [ ] Queue coalescing tests
-- [ ] `wait_sync` timeout tests
-- [ ] Multi-repo lock isolation tests
+- [x] Protocol round-trip tests
+- [x] Queue coalescing tests
+- [x] `wait_sync` timeout tests
+- [x] Multi-repo lock isolation tests
+- [x] Integration tests (20 tests total)
+
+## Phase 6: Sync Worker (PLANNED)
+
+> The daemon currently stubs `enqueue_sync` and `wait_sync` with "not yet implemented".
+> This phase adds actual sync execution.
+
+- [ ] Implement sync worker thread/task pool
+- [ ] Call tool-specific sync logic (e.g., helix-decisions embeddings)
+- [ ] Handle sync errors gracefully (retry, backoff)
+- [ ] Emit progress updates for long-running syncs
+
+## Notes
+
+- Windows named pipe support deferred (Unix socket works on macOS/Linux)
+- Sync worker is the main remaining piece for end-to-end functionality
+- Client auto-starts daemon on first connection attempt
