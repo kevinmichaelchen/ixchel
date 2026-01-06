@@ -1,5 +1,5 @@
 use clap::Parser;
-use helix_daemon::{DEFAULT_SOCKET_PATH, Server};
+use helix_daemon::{DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_SOCKET_PATH, Server};
 use std::process::ExitCode;
 
 #[derive(Parser)]
@@ -7,6 +7,9 @@ use std::process::ExitCode;
 struct Args {
     #[arg(long, default_value = DEFAULT_SOCKET_PATH)]
     socket: String,
+
+    #[arg(long, default_value_t = DEFAULT_IDLE_TIMEOUT_MS, help = "Idle timeout in milliseconds (0 to disable)")]
+    idle_timeout: u64,
 }
 
 #[tokio::main]
@@ -19,7 +22,7 @@ async fn main() -> ExitCode {
         .init();
 
     let args = Args::parse();
-    let server = Server::new(&args.socket);
+    let server = Server::with_idle_timeout(&args.socket, args.idle_timeout);
 
     tracing::info!("Starting helixd with socket: {}", args.socket);
 

@@ -1,12 +1,13 @@
 use crate::queue::SyncQueue;
 use crate::{
-    Command, DaemonError, EnqueueSyncPayload, EnqueueSyncResponse, ErrorCode, PROTOCOL_VERSION,
-    PingResponse, Request, Response, ResponsePayload, ShutdownResponse, StatusPayload,
-    StatusResponse, WaitSyncPayload, WaitSyncResponse,
+    Command, DEFAULT_IDLE_TIMEOUT_MS, DaemonError, EnqueueSyncPayload, EnqueueSyncResponse,
+    ErrorCode, PROTOCOL_VERSION, PingResponse, Request, Response, ResponsePayload,
+    ShutdownResponse, StatusPayload, StatusResponse, WaitSyncPayload, WaitSyncResponse,
 };
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::broadcast;
@@ -15,24 +16,49 @@ const MAX_MESSAGE_SIZE: usize = 1024 * 1024;
 
 pub struct Server {
     socket_path: String,
-    start_time: std::time::Instant,
+    idle_timeout_ms: u64,
+    start_time: Instant,
     shutdown_tx: broadcast::Sender<()>,
     queue: Arc<SyncQueue>,
+    last_activity: Arc<AtomicU64>,
 }
 
 impl Server {
     pub fn new(socket_path: impl Into<String>) -> Self {
+        Self::with_idle_timeout(socket_path, DEFAULT_IDLE_TIMEOUT_MS)
+    }
+
+    pub fn with_idle_timeout(socket_path: impl Into<String>, idle_timeout_ms: u64) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         Self {
             socket_path: socket_path.into(),
-            start_time: std::time::Instant::now(),
+            idle_timeout_ms,
+            start_time: Instant::now(),
             shutdown_tx,
             queue: Arc::new(SyncQueue::new()),
+            last_activity: Arc::new(AtomicU64::new(0)),
         }
     }
 
     pub fn expanded_socket_path(&self) -> String {
         expand_tilde(&self.socket_path)
+    }
+
+    fn touch_activity(&self) {
+        #[allow(clippy::cast_possible_truncation)]
+        let now = self.start_time.elapsed().as_millis() as u64;
+        self.last_activity.store(now, Ordering::Relaxed);
+    }
+
+    fn is_idle(&self) -> bool {
+        if self.idle_timeout_ms == 0 {
+            return false;
+        }
+
+        #[allow(clippy::cast_possible_truncation)]
+        let now = self.start_time.elapsed().as_millis() as u64;
+        let last = self.last_activity.load(Ordering::Relaxed);
+        now.saturating_sub(last) > self.idle_timeout_ms
     }
 
     pub async fn run(&self) -> Result<(), DaemonError> {
@@ -49,18 +75,27 @@ impl Server {
         let listener = UnixListener::bind(&socket_path)?;
         tracing::info!("helixd listening on {}", socket_path);
 
+        if self.idle_timeout_ms > 0 {
+            tracing::info!("Idle timeout: {}ms", self.idle_timeout_ms);
+        }
+
+        self.touch_activity();
+
         let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let idle_check_interval = Duration::from_secs(10);
 
         loop {
             tokio::select! {
                 accept_result = listener.accept() => {
                     match accept_result {
                         Ok((stream, _)) => {
+                            self.touch_activity();
                             let queue = Arc::clone(&self.queue);
                             let start_time = self.start_time;
                             let shutdown_tx = self.shutdown_tx.clone();
+                            let last_activity = Arc::clone(&self.last_activity);
                             tokio::spawn(async move {
-                                if let Err(e) = handle_connection(stream, queue, start_time, shutdown_tx).await {
+                                if let Err(e) = handle_connection(stream, queue, start_time, shutdown_tx, last_activity).await {
                                     tracing::error!("Connection error: {}", e);
                                 }
                             });
@@ -73,6 +108,12 @@ impl Server {
                 _ = shutdown_rx.recv() => {
                     tracing::info!("Shutdown signal received");
                     break;
+                }
+                () = tokio::time::sleep(idle_check_interval), if self.idle_timeout_ms > 0 => {
+                    if self.is_idle() && self.queue.list_queues().await.is_empty() {
+                        tracing::info!("Idle timeout reached, shutting down");
+                        break;
+                    }
                 }
             }
         }
@@ -89,8 +130,9 @@ impl Server {
 async fn handle_connection(
     stream: tokio::net::UnixStream,
     queue: Arc<SyncQueue>,
-    start_time: std::time::Instant,
+    start_time: Instant,
     shutdown_tx: broadcast::Sender<()>,
+    last_activity: Arc<AtomicU64>,
 ) -> Result<(), DaemonError> {
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -103,6 +145,10 @@ async fn handle_connection(
         if bytes_read == 0 {
             break;
         }
+
+        #[allow(clippy::cast_possible_truncation)]
+        let now = start_time.elapsed().as_millis() as u64;
+        last_activity.store(now, Ordering::Relaxed);
 
         if line.len() > MAX_MESSAGE_SIZE {
             let resp = Response::error("", ErrorCode::InvalidRequest, "Message too large");
@@ -142,7 +188,7 @@ async fn handle_connection(
 async fn handle_command(
     req: &Request,
     queue: &SyncQueue,
-    start_time: std::time::Instant,
+    start_time: Instant,
     shutdown_tx: &broadcast::Sender<()>,
 ) -> Response {
     match &req.command {
