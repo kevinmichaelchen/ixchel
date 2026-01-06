@@ -1,8 +1,18 @@
 # helix-decisions: Design Specification
 
 **Document:** design.md  
-**Status:** In Progress (2026-01-05)  
+**Status:** In Progress (2026-01-06)  
 **Author:** Kevin Chen
+
+> **Implementation Status**
+>
+> | Phase | Status | Description |
+> |-------|--------|-------------|
+> | **Phase 1-2 (MVP)** | ✅ Complete | JSON file storage, semantic search, git hooks |
+> | **Phase 3 (HelixDB)** | 🚧 Planned | LMDB graph storage, incremental indexing |
+>
+> The MVP uses `helix-storage` (JSON files). Phase 3 replaces this with native HelixDB
+> for graph traversal and incremental indexing. See [Phase 3 Implementation](#phase-3-helixdb-implementation) below.
 
 ## Design Philosophy
 
@@ -450,239 +460,41 @@ impl Embedder {
 }
 ```
 
-### storage.rs
-```rust
-use crate::types::{Decision, RelationType, Relationship, ChainNode};
-use anyhow::Result;
-use helix_db::helix_engine::{
-    storage_core::HelixGraphStorage,
-    traversal_core::config::Config,
-    vector_core::hnsw::HNSW,
-};
-use std::collections::HashMap;
-use std::path::Path;
+### storage.rs (MVP Implementation)
 
-/// Graph-vector storage for decisions using embedded HelixDB
-pub struct DecisionStorage {
-    storage: HelixGraphStorage,
-    /// Map from decision ID (u32) to HelixDB node ID (u128)
-    decision_id_map: HashMap<u32, u128>,
+> **Note:** This is the MVP implementation using `helix-storage` (JSON files).
+> See [Phase 3 Implementation](#phase-3-helixdb-implementation) for the HelixDB version.
+
+```rust
+use crate::types::{ChainNode, Decision, DecisionMetadata, RelatedDecision, RelationType};
+use anyhow::Result;
+use helix_storage::{JsonFileBackend, StorageConfig, StorageNode, VectorStorage};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+pub trait DecisionStorage: Send + Sync {
+    fn index(&mut self, decisions: Vec<Decision>) -> Result<()>;
+    fn remove(&mut self, paths: Vec<String>) -> Result<()>;
+    fn search(&self, embedding: Vec<f32>, limit: usize) -> Result<Vec<(Decision, f32)>>;
+    fn get_hashes(&self) -> Result<HashMap<String, String>>;
+    fn get_chain(&self, decision_id: u32) -> Result<Vec<ChainNode>>;
+    fn get_related(&self, decision_id: u32) -> Result<Vec<RelatedDecision>>;
 }
 
-impl DecisionStorage {
-    /// Open or create the HelixDB storage at ~/.helix/data/decisions/
+pub struct PersistentDecisionStorage {
+    backend: JsonFileBackend<StoredDecision>,
+    decisions_cache: Vec<Decision>,
+    decision_id_to_idx: HashMap<u32, usize>,
+}
+
+impl PersistentDecisionStorage {
     pub fn open() -> Result<Self> {
-        let data_dir = dirs::home_dir()
-            .ok_or_else(|| anyhow::anyhow!("Cannot find home directory"))?
-            .join(".helix/data/decisions");
-        
-        Self::open_at(&data_dir)
+        let config = StorageConfig::project_local("decisions")?;
+        Self::open_with_config(config)
     }
     
-    /// Open at a specific path (useful for testing)
-    pub fn open_at(path: &Path) -> Result<Self> {
-        std::fs::create_dir_all(path)?;
-        
-        let config = Config {
-            vector_config: Some(VectorConfig {
-                m: Some(16),
-                ef_construction: Some(128),
-                ef_search: Some(64),  // Smaller for local use
-            }),
-            graph_config: Some(GraphConfig {
-                secondary_indices: Some(vec!["decision_id".to_string()]),
-            }),
-            db_max_size_gb: Some(1),  // 1GB is plenty for decisions
-            bm25: Some(false),        // Don't need BM25 for decisions
-            ..Default::default()
-        };
-        
-        let version_info = VersionInfo::current();
-        let storage = HelixGraphStorage::new(
-            path.to_str().unwrap(),
-            config,
-            version_info,
-        )?;
-        
-        Ok(Self {
-            storage,
-            decision_id_map: HashMap::new(),
-        })
-    }
-    
-    /// Index a decision as a node with vector embedding
-    pub fn index_decision(&mut self, decision: &Decision) -> Result<u128> {
-        let arena = bumpalo::Bump::new();
-        let mut txn = self.storage.graph_env.write_txn()?;
-        
-        // Create properties map
-        let properties = self.decision_to_properties(decision, &arena);
-        
-        // Insert vector (embedding)
-        let embedding: Vec<f64> = decision.embedding
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Decision missing embedding"))?
-            .iter()
-            .map(|&f| f as f64)
-            .collect();
-        
-        let vector = self.storage.vectors.insert::<fn(&_, &_) -> bool>(
-            &mut txn,
-            "decision",
-            &embedding,
-            Some(properties),
-            &arena,
-        )?;
-        
-        // Track mapping
-        self.decision_id_map.insert(decision.metadata.id, vector.id);
-        
-        txn.commit()?;
-        Ok(vector.id)
-    }
-    
-    /// Create edges for decision relationships
-    pub fn index_relationships(&mut self, decision: &Decision) -> Result<()> {
-        let arena = bumpalo::Bump::new();
-        let mut txn = self.storage.graph_env.write_txn()?;
-        
-        let from_node_id = self.decision_id_map
-            .get(&decision.metadata.id)
-            .ok_or_else(|| anyhow::anyhow!("Decision {} not indexed", decision.metadata.id))?;
-        
-        for rel in decision.metadata.relationships() {
-            if let Some(&to_node_id) = self.decision_id_map.get(&rel.target_id) {
-                // Create edge: from_decision --[RELATION]--> to_decision
-                self.storage.add_edge(
-                    &mut txn,
-                    *from_node_id,
-                    to_node_id,
-                    rel.relation_type.as_edge_label(),
-                    None,  // No edge properties
-                    &arena,
-                )?;
-            }
-            // Skip if target decision doesn't exist (might be external reference)
-        }
-        
-        txn.commit()?;
-        Ok(())
-    }
-    
-    /// Search by vector similarity
-    pub fn vector_search(&self, embedding: &[f32], limit: usize) -> Result<Vec<(u128, f32)>> {
-        let arena = bumpalo::Bump::new();
-        let txn = self.storage.graph_env.read_txn()?;
-        
-        let query: Vec<f64> = embedding.iter().map(|&f| f as f64).collect();
-        
-        let results = self.storage.vectors.search::<fn(&_, &_) -> bool>(
-            &txn,
-            &query,
-            limit,
-            "decision",
-            None,
-            false,
-            &arena,
-        )?;
-        
-        Ok(results
-            .into_iter()
-            .map(|v| (v.id, v.get_distance() as f32))
-            .collect())
-    }
-    
-    /// Traverse supersedes chain from a given decision
-    pub fn get_supersedes_chain(&self, decision_id: u32) -> Result<Vec<ChainNode>> {
-        let arena = bumpalo::Bump::new();
-        let txn = self.storage.graph_env.read_txn()?;
-        
-        let mut chain = Vec::new();
-        let mut current_id = self.decision_id_map.get(&decision_id).copied();
-        
-        while let Some(node_id) = current_id {
-            let node = self.storage.get_node(&txn, &node_id, &arena)?;
-            chain.push(self.node_to_chain_node(&node)?);
-            
-            // Follow SUPERSEDES edge (this decision supersedes which?)
-            current_id = self.get_outgoing_edge(&txn, node_id, "SUPERSEDES", &arena)?;
-        }
-        
-        // Mark the last one as current
-        if let Some(last) = chain.last_mut() {
-            last.is_current = true;
-        }
-        
-        Ok(chain)
-    }
-    
-    /// Find decisions related to a given decision (1-hop)
-    pub fn get_related(&self, decision_id: u32) -> Result<Vec<(u128, RelationType)>> {
-        let arena = bumpalo::Bump::new();
-        let txn = self.storage.graph_env.read_txn()?;
-        
-        let node_id = self.decision_id_map
-            .get(&decision_id)
-            .ok_or_else(|| anyhow::anyhow!("Decision {} not found", decision_id))?;
-        
-        let mut related = Vec::new();
-        
-        // Check all relationship types (both directions)
-        for rel_type in [
-            RelationType::Supersedes,
-            RelationType::Amends,
-            RelationType::DependsOn,
-            RelationType::RelatedTo,
-        ] {
-            // Outgoing
-            for target in self.get_all_outgoing(&txn, *node_id, rel_type.as_edge_label(), &arena)? {
-                related.push((target, rel_type));
-            }
-            // Incoming (for bidirectional relationships or reverse lookups)
-            for source in self.get_all_incoming(&txn, *node_id, rel_type.as_edge_label(), &arena)? {
-                related.push((source, rel_type));
-            }
-        }
-        
-        Ok(related)
-    }
-    
-    /// Get stored content hashes for delta detection
-    pub fn get_hashes(&self) -> Result<HashMap<String, String>> {
-        let arena = bumpalo::Bump::new();
-        let txn = self.storage.graph_env.read_txn()?;
-        
-        let mut hashes = HashMap::new();
-        
-        // Iterate all decision vectors and extract file_path -> content_hash
-        let vectors = self.storage.vectors.get_all_vectors(&txn, None, &arena)?;
-        
-        for vector in vectors {
-            if let Some(props) = &vector.properties {
-                if let (Some(path), Some(hash)) = (
-                    props.get("file_path").and_then(|v| v.as_str()),
-                    props.get("content_hash").and_then(|v| v.as_str()),
-                ) {
-                    hashes.insert(path.to_string(), hash.to_string());
-                }
-            }
-        }
-        
-        Ok(hashes)
-    }
-    
-    /// Remove a decision and its edges
-    pub fn remove_decision(&mut self, decision_id: u32) -> Result<()> {
-        let arena = bumpalo::Bump::new();
-        
-        if let Some(node_id) = self.decision_id_map.remove(&decision_id) {
-            let mut txn = self.storage.graph_env.write_txn()?;
-            self.storage.drop_vector(&mut txn, &node_id)?;
-            txn.commit()?;
-        }
-        
-        Ok(())
-    }
+    // ... implementation delegates to helix-storage JsonFileBackend
 }
 ```
 
@@ -939,59 +751,34 @@ helix-decisions search "authentication" --json
 
 ## Storage Schema
 
-### HelixDB Graph-Vector Structure
+### MVP Storage (JSON-based)
 
-Decisions are stored as vectors with properties (combining node + vector storage):
+The MVP uses `helix-storage` with `JsonFileBackend`:
 
 ```
-Vector "decision" {
-    id: u128                  // HelixDB internal ID
-    label: "decision"         // Vector label for search
-    embedding: [f64; 384]     // MiniLM-L6-v2 embedding
-    
-    properties: {
-        decision_id: u32,      // Decision number (1, 2, 3...)
-        uuid: String,          // Global hash-based ID
-        title: String,
-        status: String,        // "proposed"|"accepted"|"superseded"|"deprecated"
-        date: String,          // ISO 8601
-        deciders: String,      // JSON array as string
-        tags: String,          // JSON array as string
-        file_path: String,
-        content_hash: String,
-        git_commit: String,    // Commit hash for immutability
-        body: String,          // Full markdown for display
-    }
-}
-
-Edge "SUPERSEDES" {
-    from: decision.id,
-    to: decision.id,
-}
-
-Edge "AMENDS" {
-    from: decision.id,
-    to: decision.id,
-}
-
-Edge "DEPENDS_ON" {
-    from: decision.id,
-    to: decision.id,
-}
-
-Edge "RELATED_TO" {
-    from: decision.id,
-    to: decision.id,
-    // Note: Store both directions for bidirectional lookup
-}
+.helix/data/decisions/
+└── storage.json     # All decisions + embeddings serialized as JSON
 ```
 
-### Index Location
+### Phase 3 Storage (HelixDB)
+
+See [Phase 3: HelixDB Implementation](#phase-3-helixdb-implementation) for the corrected
+graph schema with proper arena allocation, 3-DB edge writes, and vector mapping.
+
 ```
-~/.helix/data/decisions/
-├── data.mdb         # LMDB data file
+.helixdb/
+├── data.mdb         # LMDB data file (nodes, edges, vectors, metadata)
 └── lock.mdb         # LMDB lock file
 ```
+
+### Edge Types
+
+| Edge Label | Direction | Meaning |
+|------------|-----------|---------|
+| `SUPERSEDES` | A → B | A replaces B (B is obsolete) |
+| `AMENDS` | A → B | A modifies B (B still valid) |
+| `DEPENDS_ON` | A → B | A requires B to be accepted |
+| `RELATED_TO` | A ↔ B | Bidirectional topic relationship |
 
 ### Decision Frontmatter Format
 
@@ -1050,3 +837,421 @@ Using `fastembed` with `AllMiniLML6V2`:
 | HelixDB error | Exit 2 with message |
 | Embedding error | Exit 2 with message |
 | No results | Exit 1, show "No results" |
+
+---
+
+## Phase 3: HelixDB Implementation
+
+> **Status:** Planned  
+> **Documents:** See `docs/phase3/PHASE_3_PLAN.md` and `docs/phase3/PHASE_3_CORRECTIONS.md`
+
+Phase 3 replaces the JSON file backend with native HelixDB for:
+- **Incremental indexing** via 3-stage change detection
+- **Native graph traversal** for chain/related queries
+- **LMDB persistence** (no re-scanning on restart)
+
+### Architecture (Phase 3)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    helix-decisions CLI                           │
+│  • search <query>     - Semantic vector search                   │
+│  • chain <id>         - Show supersedes chain                    │
+│  • related <id>       - Find related decisions                   │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────────┐
+│                     DecisionSearcher                             │
+│  • sync()    - 3-stage incremental indexing                      │
+│  • search()  - Vector similarity via HNSW                        │
+│  • chain()   - Traverse out_edges_db for SUPERSEDES              │
+│  • related() - Query all edge types (both directions)            │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+┌────────▼─────────┐   ┌───────▼───────┐   ┌────────▼────────┐
+│   git_utils.rs   │   │  Embedder     │   │ HelixDB Backend │
+│                  │   │ (fastembed)   │   │                 │
+│ • git ls-files   │   │               │   │ • nodes_db      │
+│ • Respects       │   │ • 384-dim     │   │ • edges_db      │
+│   .gitignore     │   │ • f32 → f64   │   │ • out_edges_db  │
+│                  │   │               │   │ • in_edges_db   │
+└──────────────────┘   └───────────────┘   │ • vectors (HNSW)│
+                                           │ • metadata_db   │
+                                           └─────────────────┘
+```
+
+### Graph Schema (Phase 3 - Corrected)
+
+**Node Label:** `DECISION`
+
+Nodes are stored using arena-allocated labels and `ImmutablePropertiesMap`:
+
+```rust
+Node<'arena> {
+    id: u128,                    // HelixDB node ID (UUID v4)
+    label: &'arena str,          // "DECISION" (arena-allocated)
+    version: u8,                 // Schema version
+    properties: Option<ImmutablePropertiesMap<'arena>>,
+}
+
+// Properties stored in node:
+{
+    "id": i64,                   // Local sequential ID (1, 2, 3...)
+    "title": String,
+    "status": String,            // "proposed"|"accepted"|"superseded"|"deprecated"
+    "date": String,              // ISO 8601
+    "file_path": String,
+    "content_hash": String,      // SHA256 of file content
+    "tags": String,              // JSON array as string
+    "deciders": String,          // JSON array as string
+    "vector_id": String,         // UUID of associated vector (for search mapping)
+}
+```
+
+**Edge Storage (3 Databases per Edge):**
+
+Edges MUST be written to THREE databases for traversal to work:
+
+```rust
+// For edge: A --[SUPERSEDES]--> B
+
+// 1. Edge data
+edges_db.put(edge_key(&edge_id), edge.to_bincode_bytes()?)
+
+// 2. Outgoing adjacency (for traversal FROM node A)
+let label_hash = hash_label("SUPERSEDES", None);
+out_edges_db.put(
+    out_edge_key(&node_a_id, &label_hash),
+    pack_edge_data(edge_id, node_b_id)
+)
+
+// 3. Incoming adjacency (for traversal TO node A)
+in_edges_db.put(
+    in_edge_key(&node_b_id, &label_hash),
+    pack_edge_data(edge_id, node_a_id)
+)
+```
+
+**Vector Storage:**
+
+Vectors are stored separately from nodes. The `vector_id` property links them:
+
+```rust
+// 1. Insert vector (generates its own UUID)
+let vector_id = Uuid::new_v4().as_u128();
+let embedding_f64: Vec<f64> = embedding.iter().map(|&x| x as f64).collect();
+vectors.insert(&mut wtxn, vector_id, &embedding_f64)?;
+
+// 2. Store vector_id in node properties for mapping
+properties.push(("vector_id", Value::String(arena.alloc(vector_id.to_string()))));
+
+// 3. Create secondary index on vector_id for reverse lookup
+storage.create_secondary_index("vector_id")?;
+```
+
+**Manifest (in metadata_db):**
+
+```rust
+const MANIFEST_KEY: &str = "manifest:helix-decisions:v1";
+
+#[derive(Serialize, Deserialize)]
+pub struct ManifestEntry {
+    pub file_path: String,
+    pub mtime: u64,
+    pub size: u64,
+    pub content_hash: String,
+    pub node_id: u128,           // HelixDB node ID
+    pub vector_id: u128,         // HNSW vector ID
+    pub embedding_model: String,
+    pub indexer_version: String,
+}
+
+pub struct IndexManifest {
+    pub entries: HashMap<String, ManifestEntry>,
+}
+```
+
+### 3-Stage Incremental Indexing
+
+```
+sync() {
+    1. Load manifest from metadata_db
+    2. Get file list via git ls-files
+    3. For each file:
+    
+       ╔══ STAGE 1: Stat Check (FAST) ════════════════════════════╗
+       ║ if file.mtime == manifest.mtime && file.size == manifest.size:
+       ║     SKIP (no change)
+       ╚══════════════════════════════════════════════════════════╝
+                          ↓
+       ╔══ STAGE 2: Content Hash (SLOWER) ════════════════════════╗
+       ║ content_hash = sha256(file_content)
+       ║ if content_hash == manifest.content_hash:
+       ║     UPDATE mtime+size in manifest
+       ║     SKIP embedding (content unchanged)
+       ╚══════════════════════════════════════════════════════════╝
+                          ↓
+       ╔══ STAGE 3: Full Re-index (THOROUGH) ═════════════════════╗
+       ║ Parse YAML frontmatter
+       ║ Generate embedding (384-dim, f32 → f64)
+       ║ Upsert decision node (arena + ImmutablePropertiesMap)
+       ║ Create relationship edges (3 DBs per edge)
+       ╚══════════════════════════════════════════════════════════╝
+    
+    4. Delete nodes + vectors for removed files
+    5. Save manifest back to metadata_db
+}
+```
+
+### Module: helix_backend.rs (Phase 3)
+
+```rust
+use bumpalo::Bump;
+use helix_db::{
+    helix_engine::{
+        storage_core::HelixGraphStorage,
+        traversal_core::{HelixGraphEngine, HelixGraphEngineOpts, config::Config},
+    },
+    utils::{items::{Node, Edge}, properties::ImmutablePropertiesMap, label_hash::hash_label},
+    protocol::value::Value,
+};
+use uuid::Uuid;
+
+pub struct HelixDecisionBackend {
+    engine: HelixGraphEngine,
+    manifest: IndexManifest,
+    embedding_model: String,
+}
+
+impl HelixDecisionBackend {
+    pub fn new(repo_root: &Path) -> Result<Self> {
+        // Determine DB path (respect HELIX_DB_PATH env var)
+        let db_path = std::env::var("HELIX_DB_PATH")
+            .unwrap_or_else(|_| repo_root.join(".helixdb").to_string_lossy().to_string());
+        
+        // Create engine with path passed through opts
+        let opts = HelixGraphEngineOpts {
+            path: db_path,
+            config: Config {
+                vector_config: Some(VectorConfig {
+                    m: Some(16),
+                    ef_construction: Some(128),
+                    ef_search: Some(64),
+                }),
+                graph_config: Some(GraphConfig {
+                    secondary_indices: Some(vec![
+                        "decision_id".to_string(),
+                        "vector_id".to_string(),
+                    ]),
+                }),
+                db_max_size_gb: Some(1),
+                ..Default::default()
+            },
+            version_info: VersionInfo::default(),
+        };
+        
+        let engine = HelixGraphEngine::new(opts)?;
+        let manifest = IndexManifest::load(&engine)?;
+        
+        Ok(Self {
+            engine,
+            manifest,
+            embedding_model: "BAAI/bge-small-en-v1.5".to_string(),
+        })
+    }
+    
+    /// Upsert a decision node with proper arena allocation
+    fn upsert_decision_node(
+        &mut self,
+        decision: &Decision,
+        embedding: &[f32],
+    ) -> Result<(u128, u128)> {
+        let arena = Bump::new();
+        let mut wtxn = self.engine.storage.graph_env.write_txn()?;
+        
+        // 1. Insert vector first (get vector_id)
+        let vector_id = Uuid::new_v4().as_u128();
+        let embedding_f64: Vec<f64> = embedding.iter().map(|&x| x as f64).collect();
+        self.engine.storage.vectors.insert(&mut wtxn, vector_id, &embedding_f64)?;
+        
+        // 2. Build properties in arena
+        let mut props = Vec::new();
+        props.push(("id", Value::I64(decision.metadata.id as i64)));
+        props.push(("title", Value::String(arena.alloc_str(&decision.metadata.title))));
+        props.push(("status", Value::String(arena.alloc_str(&decision.metadata.status.to_string()))));
+        props.push(("date", Value::String(arena.alloc_str(&decision.metadata.date.to_string()))));
+        props.push(("file_path", Value::String(arena.alloc_str(&decision.file_path.to_string_lossy()))));
+        props.push(("content_hash", Value::String(arena.alloc_str(&decision.content_hash))));
+        props.push(("vector_id", Value::String(arena.alloc_str(&vector_id.to_string()))));
+        // ... tags, deciders as JSON strings ...
+        
+        let properties = ImmutablePropertiesMap::from_items(props, &arena)?;
+        
+        // 3. Create node with arena-allocated label
+        let node_id = Uuid::new_v4().as_u128();
+        let label = arena.alloc_str("DECISION");
+        let node = Node {
+            id: node_id,
+            label,
+            version: 1,
+            properties: Some(properties),
+        };
+        
+        // 4. Store node using key helper
+        let key = HelixGraphStorage::node_key(&node_id);
+        self.engine.storage.nodes_db.put(&mut wtxn, &key, &node.to_bincode_bytes()?)?;
+        
+        wtxn.commit()?;
+        Ok((node_id, vector_id))
+    }
+    
+    /// Create relationship edges (writes to 3 databases)
+    fn create_relationship_edges(
+        &mut self,
+        from_node_id: u128,
+        metadata: &DecisionMetadata,
+    ) -> Result<()> {
+        let arena = Bump::new();
+        let mut wtxn = self.engine.storage.graph_env.write_txn()?;
+        
+        for rel in metadata.relationships() {
+            // Look up target node_id from manifest
+            if let Some(target_entry) = self.find_node_by_decision_id(rel.target_id) {
+                let to_node_id = target_entry.node_id;
+                let edge_id = Uuid::new_v4().as_u128();
+                
+                // Create edge struct
+                let edge_label = arena.alloc_str(rel.relation_type.as_edge_label());
+                let edge = Edge {
+                    id: edge_id,
+                    label: edge_label,
+                    version: 1,
+                    from_node: from_node_id,
+                    to_node: to_node_id,
+                    properties: None,
+                };
+                
+                // 1. Write edge data
+                let edge_key = HelixGraphStorage::edge_key(&edge_id);
+                self.engine.storage.edges_db.put(&mut wtxn, &edge_key, &edge.to_bincode_bytes()?)?;
+                
+                // 2. Write outgoing adjacency
+                let label_hash = hash_label(edge_label, None);
+                let out_key = HelixGraphStorage::out_edge_key(&from_node_id, &label_hash);
+                let out_val = pack_edge_data(edge_id, to_node_id);
+                self.engine.storage.out_edges_db.put(&mut wtxn, &out_key, &out_val)?;
+                
+                // 3. Write incoming adjacency
+                let in_key = HelixGraphStorage::in_edge_key(&to_node_id, &label_hash);
+                let in_val = pack_edge_data(edge_id, from_node_id);
+                self.engine.storage.in_edges_db.put(&mut wtxn, &in_key, &in_val)?;
+            }
+        }
+        
+        wtxn.commit()?;
+        Ok(())
+    }
+    
+    /// Delete a decision node and its vector
+    fn delete_decision_node(&mut self, node_id: u128, vector_id: u128) -> Result<()> {
+        let mut wtxn = self.engine.storage.graph_env.write_txn()?;
+        
+        // 1. Delete node (drops edges + indices)
+        self.engine.storage.drop_node(&mut wtxn, &node_id)?;
+        
+        // 2. Tombstone vector
+        self.engine.storage.drop_vector(&mut wtxn, &vector_id)?;
+        
+        wtxn.commit()?;
+        Ok(())
+    }
+    
+    /// Search vectors and map back to decisions
+    pub fn search(&self, embedding: &[f32], limit: usize) -> Result<Vec<(Decision, f32)>> {
+        let arena = Bump::new();
+        let rtxn = self.engine.storage.graph_env.read_txn()?;
+        
+        // Convert f32 → f64 for HNSW
+        let query_f64: Vec<f64> = embedding.iter().map(|&x| x as f64).collect();
+        
+        // Search vectors
+        let vector_results = self.engine.storage.vectors.search(&rtxn, &query_f64, limit)?;
+        
+        // Map vector_id → node → Decision
+        let mut results = Vec::new();
+        for result in vector_results {
+            // Lookup node by vector_id secondary index
+            if let Some(node) = self.lookup_node_by_vector_id(&rtxn, result.id, &arena)? {
+                let decision = self.node_to_decision(&node)?;
+                results.push((decision, result.distance as f32));
+            }
+        }
+        
+        Ok(results)
+    }
+}
+```
+
+### Performance Targets (Phase 3)
+
+| Operation | MVP | Phase 3 | Notes |
+|-----------|-----|---------|-------|
+| First sync | 2-5s | 2-5s | Embedding dominates |
+| Delta sync (no changes) | ~100ms | <50ms | 3-stage skip |
+| Delta sync (1 file changed) | ~500ms | <100ms | Single re-embed |
+| Query embedding | 50-100ms | 50-100ms | fastembed unchanged |
+| Vector search | <100ms | <50ms | HNSW optimized |
+| Graph traversal | N/A (in-memory) | <50ms | Native LMDB |
+| Total search | <200ms | <100ms | After first run |
+
+### Index Location (Phase 3)
+
+```
+your-repo/
+├── .decisions/          # Source of truth (Markdown files)
+│   ├── 001-arch.md
+│   └── 002-db.md
+├── .helixdb/            # HelixDB storage (Phase 3)
+│   ├── data.mdb         # LMDB data file
+│   └── lock.mdb         # LMDB lock file
+└── .helix/
+    └── data/decisions/  # JSON storage (MVP - deprecated)
+        └── storage.json
+```
+
+### Migration Path
+
+```rust
+pub fn open_storage() -> Result<Box<dyn DecisionStorage>> {
+    let repo_root = find_git_root()?;
+    
+    if helixdb_exists(&repo_root) {
+        // Phase 3: Use HelixDB
+        Ok(Box::new(HelixDecisionStorage::open(&repo_root)?))
+    } else if legacy_json_exists(&repo_root) {
+        // MVP: Use JSON backend (deprecated)
+        eprintln!("Warning: Using legacy JSON storage. Run 'helix-decisions migrate' to upgrade.");
+        Ok(Box::new(PersistentDecisionStorage::open()?))
+    } else {
+        // Fresh install: Use HelixDB
+        Ok(Box::new(HelixDecisionStorage::open(&repo_root)?))
+    }
+}
+```
+
+### Key Corrections from HelixDB API Review
+
+See `docs/phase3/PHASE_3_CORRECTIONS.md` for full details. Key issues fixed:
+
+| Issue | Correction |
+|-------|-----------|
+| Edge insertion | Must write to 3 DBs (edges_db, out_edges_db, in_edges_db) |
+| Node construction | Must use arena allocation + ImmutablePropertiesMap |
+| Vector insertion | HNSW generates UUID; store vector_id in node properties |
+| Vector deletion | Must tombstone both node and vector |
+| Label hashing | Must hash labels for adjacency DB keys |
+| Config path | Must plumb through HelixGraphEngineOpts.path |
+| Secondary indices | Must create explicitly for decision_id, vector_id |
+| Metadata namespace | Use "manifest:helix-decisions:v1" to avoid collisions |

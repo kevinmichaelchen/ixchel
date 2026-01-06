@@ -1,8 +1,12 @@
 # helix-decisions: Requirements Specification
 
 **Document:** requirements.md  
-**Status:** In Progress (2026-01-05)  
+**Status:** In Progress (2026-01-06)  
 **Author:** Kevin Chen
+
+> **Implementation Status:**  
+> - **MVP (Phase 1-2):** Complete — JSON file storage with fastembed  
+> - **Phase 3 (Planned):** Native HelixDB integration for sub-50ms delta sync
 
 ## Vision
 
@@ -129,14 +133,46 @@ So that deployments align with architectural decisions.
   - Search options: `--limit`, `--status`, `--tags`
   - Help: `helix-decisions --help`
 
+### FR-9: Incremental Indexing (Phase 3)
+- **Input:** Git working tree state + manifest of indexed decisions
+- **Output:** Minimal set of re-indexing operations
+- **Requirements:**
+  - **Stage 1 - Git Detection:** Use `gix` to detect changed files since last indexed commit
+  - **Stage 2 - Manifest Comparison:** Compare file content hashes against stored manifest
+  - **Stage 3 - Vector Sync:** Re-embed only changed content, tombstone deleted decisions
+  - Skip re-embedding when only metadata changed (frontmatter without body change)
+  - Track `git_commit` of last full index for baseline comparison
+  - Handle force-pushes and rebases gracefully (fall back to full manifest scan)
+
 ## Non-Functional Requirements
 
 ### Performance
-- First search: 2-5 seconds (indexing)
-- Subsequent search: < 100ms
-- Query embedding: 50-100ms
-- HelixDB search: < 50ms
-- Graph traversal: < 50ms
+
+#### MVP (Phase 1-2) — JSON File Storage
+| Operation | Target | Notes |
+|-----------|--------|-------|
+| First search | 2-5s | Full indexing |
+| Subsequent search | < 200ms | File hash comparison + search |
+| Delta sync (no changes) | ~100ms | Full file scan for hash comparison |
+| Delta sync (1 file changed) | ~500ms | Re-embed + write JSON |
+| Query embedding | 50-100ms | fastembed |
+| Graph traversal | < 50ms | In-memory |
+
+#### Phase 3 — Native HelixDB
+| Operation | Target | Improvement | Notes |
+|-----------|--------|-------------|-------|
+| First search | 2-5s | Same | Embedding is bottleneck |
+| Subsequent search | < 100ms | 2x faster | Native HNSW |
+| Delta sync (no changes) | < 50ms | 2x faster | Git-based detection |
+| Delta sync (1 file changed) | < 100ms | 5x faster | Incremental graph update |
+| Query embedding | 50-100ms | Same | fastembed |
+| HelixDB search | < 20ms | 2.5x faster | Native vector index |
+| Graph traversal | < 20ms | 2.5x faster | Native edge traversal |
+
+**Phase 3 Key Improvements:**
+- **Git-first detection:** Use `gix` to skip unchanged files before hashing
+- **Incremental updates:** Update only changed nodes/edges, not full rewrite
+- **Native HNSW:** HelixDB's built-in vector index vs JSON serialization
 
 ### Reliability
 - Handle missing `.decisions/` gracefully

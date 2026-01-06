@@ -1,171 +1,306 @@
-# adr-search: Implementation Tasks
+# helix-decisions: Implementation Tasks
 
 **Document:** tasks.md  
-**Status:** Concept (2026-01-05)  
+**Status:** In Progress (2026-01-06)  
 **Author:** Kevin Chen
 
-## Phase 1: Core (MVP)
+> **Implementation Status**
+>
+> | Phase | Status | Description |
+> |-------|--------|-------------|
+> | Phase 1-2 (MVP) | ✅ Complete | Types, loader, embeddings, storage, CLI, hooks |
+> | Phase 3 (HelixDB) | 🚧 Planned | Native graph storage, incremental indexing |
 
-### Task 1.1: Project Setup
-- [x] Create `adr-search/` directory structure
+---
+
+## Phase 1-2: MVP (COMPLETE)
+
+### Task 1.1: Project Setup ✅
+- [x] Create `helix-decisions/` directory structure
 - [x] Write `Cargo.toml` with dependencies
 - [x] Write `README.md`
 - [x] Write `specs/requirements.md`
 - [x] Write `specs/design.md`
 - [x] Write `specs/tasks.md`
-- [ ] Add to workspace `Cargo.toml`
+- [x] Add to workspace `Cargo.toml`
 
-### Task 1.2: Types Module
-- [ ] Define `Status` enum
-- [ ] Define `ADRMetadata` struct (serde)
-- [ ] Define `ADR` struct
-- [ ] Define `SearchResult` struct
-- [ ] Define `SearchResponse` struct
-- [ ] Unit tests for serialization
+### Task 1.2: Types Module ✅
+- [x] Define `Status` enum
+- [x] Define `DecisionMetadata` struct (serde)
+- [x] Define `Decision` struct
+- [x] Define `SearchResult` struct
+- [x] Define `SearchResponse` struct
+- [x] Define `RelationType` enum and `Relationship` struct
+- [x] Unit tests for serialization
 
-### Task 1.3: Loader Module
-- [ ] Implement `load_adrs(dir)` function
-- [ ] Parse YAML frontmatter with `gray_matter`
-- [ ] Extract body text
-- [ ] Compute content hash (SHA256)
-- [ ] Handle malformed files gracefully
-- [ ] Unit tests with fixture ADRs
+### Task 1.3: Loader Module ✅
+- [x] Implement `load_decisions(dir)` function
+- [x] Parse YAML frontmatter with `gray_matter`
+- [x] Extract body text
+- [x] Compute content hash (SHA256)
+- [x] Handle malformed files gracefully
+- [x] Unit tests with fixture decisions
 
-### Task 1.4: Embeddings Module
-- [ ] Implement `Embedder` struct
-- [ ] Initialize fastembed with `AllMiniLML6V2`
-- [ ] Implement `embed(text)` method
-- [ ] Implement `embed_batch(texts)` method
-- [ ] Integration test with sample text
+### Task 1.4: Embeddings Module ✅
+- [x] Implement `Embedder` struct (wraps helix-embeddings)
+- [x] Initialize fastembed with BGE-small-en-v1.5
+- [x] Implement `embed(text)` method
+- [x] Implement `embed_batch(texts)` method
+- [x] Integration test with sample text
 
-### Task 1.5: Storage Module
-- [ ] Define `ADRStorage` trait
-- [ ] Implement `HelixDBStorage` struct
-- [ ] Implement `open()` for embedded HelixDB
-- [ ] Implement `index(adrs)` method
-- [ ] Implement `search(embedding, limit)` method
-- [ ] Implement `get_hashes()` method
-- [ ] Integration tests
+### Task 1.5: Storage Module ✅
+- [x] Define `DecisionStorage` trait
+- [x] Implement `PersistentDecisionStorage` (JSON backend)
+- [x] Implement `open()` for project-local storage
+- [x] Implement `index(decisions)` method
+- [x] Implement `search(embedding, limit)` method
+- [x] Implement `get_hashes()` method
+- [x] Implement `get_chain()` and `get_related()` methods
+- [x] Integration tests
 
-### Task 1.6: Searcher Module
-- [ ] Implement `ADRSearcher` struct
-- [ ] Implement `new()` constructor
-- [ ] Implement `sync(dir)` method (no delta yet)
-- [ ] Implement `search(query, limit, filters)` method
-- [ ] Integration test end-to-end
+### Task 1.6: Searcher Module ✅
+- [x] Implement `DecisionSearcher` struct
+- [x] Implement `new()` constructor
+- [x] Implement `sync(dir)` method with delta detection
+- [x] Implement `search(query, limit, filters)` method
+- [x] Integration test end-to-end
 
-### Task 1.7: CLI
-- [ ] Define `Cli` struct with clap derive
-- [ ] Parse arguments: query, directory, limit, json
-- [ ] Call `ADRSearcher::sync()` then `search()`
-- [ ] Output pretty format (table)
-- [ ] Output JSON format
-- [ ] Help text and examples
-- [ ] Integration test CLI
+### Task 1.7: CLI ✅
+- [x] Define `Cli` struct with clap derive
+- [x] Parse arguments: query, directory, limit, json
+- [x] Commands: search, chain, related
+- [x] Output pretty format
+- [x] Output JSON format
+- [x] Auto-discovery of `.decisions/` directory
+- [x] Help text and examples
 
-### Task 1.8: Testing
-- [ ] Create fixture ADRs in `tests/fixtures/.decisions/`
-- [ ] Unit tests for each module
-- [ ] Integration tests for full workflow
-- [ ] Test edge cases (empty dir, malformed YAML)
+### Task 1.8: Git Hooks ✅
+- [x] Implement `hooks.rs` module
+- [x] `init-hooks` command to install pre-commit hook
+- [x] `remove-hooks` command to uninstall
+- [x] Block modifications to accepted decisions
+- [x] Allow amendments via `amends: [id]` pattern
+- [x] Bypass options: `--no-verify`, env var
 
----
-
-## Phase 2: Polish
-
-### Task 2.1: Delta Indexing
-- [ ] Implement `delta.rs` module
-- [ ] Implement `compute_delta()` function
-- [ ] Store hashes in HelixDB metadata
-- [ ] Update `ADRSearcher::sync()` to use delta
-- [ ] Implement `remove()` in storage
-- [ ] Performance test (should be < 100ms with no changes)
-
-### Task 2.2: Metadata Filtering
-- [ ] Add `--status` filter to CLI
-- [ ] Add `--tags` filter to CLI
-- [ ] Implement filtering in `search()` method
-- [ ] Test filtering combinations
-
-### Task 2.3: Output Formatting
-- [ ] Improve pretty output with colors
-- [ ] Add box drawing for table
-- [ ] Detect TTY vs pipe for default format
-- [ ] Add `--format` option (pretty/json)
-
-### Task 2.4: Error Handling
-- [ ] Use `thiserror` for typed errors
-- [ ] Clear error messages with suggestions
-- [ ] Proper exit codes (0, 1, 2)
-- [ ] Test all error paths
-
-### Task 2.5: Documentation
-- [ ] Update README with final CLI
-- [ ] Add examples for common use cases
-- [ ] Document ADR format requirements
-- [ ] Add troubleshooting section
+### Task 1.9: Configuration ✅
+- [x] Implement `config.rs` module
+- [x] Load from `~/.helix/config/helix-decisions.toml`
+- [x] Load from `.helix/helix-decisions.toml` (repo override)
+- [x] `strict` mode toggle
 
 ---
 
-## Phase 3: Advanced (Optional)
+## Phase 3: HelixDB Integration (PLANNED)
 
-### Task 3.1: Performance Optimization
-- [ ] Benchmark embedding time
-- [ ] Benchmark search time
-- [ ] Profile and optimize hot paths
-- [ ] Consider batch embedding
+> **Reference Documents:**
+> - `docs/phase3/PHASE_3_PLAN.md` - Detailed architecture
+> - `docs/phase3/PHASE_3_CORRECTIONS.md` - API alignment fixes
+> - `docs/phase3/CORRECTIONS_QUICK_REFERENCE.txt` - Quick lookup
 
-### Task 3.2: Full-Text Fallback
-- [ ] Add BM25 search on title/tags
+### Task 3.1: Foundation Modules (Session 1)
+
+#### Task 3.1.1: manifest.rs (~250 lines)
+- [ ] Define `ManifestEntry` struct
+  - file_path, mtime, size, content_hash, node_id, vector_id, embedding_model, indexer_version
+- [ ] Define `IndexManifest` struct (HashMap of entries)
+- [ ] Define `MANIFEST_KEY` constant: `"manifest:helix-decisions:v1"`
+- [ ] Implement `load()` from HelixDB metadata
+- [ ] Implement `save()` to HelixDB metadata
+- [ ] Implement CRUD: `get()`, `contains()`, `upsert()`, `remove()`
+- [ ] Unit tests (6 tests):
+  - Serialization/deserialization
+  - CRUD operations
+  - Vector ID field handling
+  - Metadata persistence
+  - Key namespace verification
+
+#### Task 3.1.2: git_utils.rs (~100 lines)
+- [ ] Implement `git_ls_files(repo_root, glob)` function
+- [ ] Run `git ls-files '.decisions/**/*.md'`
+- [ ] Implement directory walk fallback if git unavailable
+- [ ] Return sorted `Vec<PathBuf>`
+- [ ] Unit tests (4 tests):
+  - Git-based listing
+  - Directory walk fallback
+  - .gitignore respect
+  - Error handling
+
+### Task 3.2: Backend Implementation (Session 2)
+
+#### Task 3.2.1: helix_backend.rs (~600 lines)
+- [ ] Define `HelixDecisionBackend` struct
+  - engine: HelixGraphEngine
+  - manifest: IndexManifest
+  - embedding_model: String
+- [ ] Implement `new(repo_root)` constructor
+  - Respect `HELIX_DB_PATH` env var
+  - Pass path through `HelixGraphEngineOpts`
+  - Create secondary indices on `decision_id`, `vector_id`
+  - Load manifest from metadata
+- [ ] Implement 3-stage incremental `sync()`:
+  - Stage 1: Stat check (mtime + size)
+  - Stage 2: Content hash check
+  - Stage 3: Full re-index (parse, embed, upsert)
+  - Handle deletions (tombstone node + vector)
+  - Save manifest after sync
+  - Return `SyncStats` (files_scanned, added, modified, deleted, duration_ms)
+- [ ] Implement `upsert_decision_node()`:
+  - Allocate arena with `Bump::new()`
+  - Insert vector first, get vector_id
+  - Build `ImmutablePropertiesMap` in arena
+  - Create `Node<'arena>` with arena-allocated label
+  - Use `HelixGraphStorage::node_key()` helper
+  - Store node with `nodes_db.put()`
+- [ ] Implement `create_relationship_edges()`:
+  - Write to 3 databases per edge:
+    - `edges_db.put()` for edge data
+    - `out_edges_db.put()` for outgoing adjacency
+    - `in_edges_db.put()` for incoming adjacency
+  - Use `hash_label()` for adjacency keys
+  - Use `pack_edge_data()` helper
+- [ ] Implement `delete_decision_node()`:
+  - Extract vector_id from node properties BEFORE deletion
+  - Call `storage.drop_node()` (drops edges + indices)
+  - Call `storage.drop_vector()` (tombstone)
+- [ ] Implement `search()`:
+  - Convert f32 → f64 for HNSW
+  - Search vectors
+  - Map vector_id → node via secondary index
+  - Return `Vec<(Decision, f32)>`
+- [ ] Implement `get_chain()`:
+  - Traverse `out_edges_db` for SUPERSEDES edges
+  - Follow chain to leaf
+  - Return `Vec<ChainNode>`
+- [ ] Implement `get_related()`:
+  - Query all edge types (both directions)
+  - Return `Vec<RelatedDecision>`
+- [ ] Unit tests (20+ tests):
+  - Arena allocation
+  - Properties round-trip
+  - Key helper usage
+  - Vector f32→f64 conversion
+  - Vector ID storage in properties
+  - Delete tombstones vector
+  - Edge creation (all 3 DBs)
+  - Label hashing
+  - Adjacency keys correct
+  - Traversal finds edges
+  - All 3 stages of change detection
+  - Secondary index lookups
+
+#### Task 3.2.2: Update storage.rs
+- [ ] Add `HelixDecisionStorage` wrapper struct
+- [ ] Implement `DecisionStorage` trait for `HelixDecisionStorage`
+- [ ] Delegate methods to `HelixDecisionBackend`
+- [ ] Keep `PersistentDecisionStorage` for backward compatibility
+- [ ] Add deprecation warning when using JSON backend
+- [ ] Unit tests (5 tests):
+  - Trait implementation
+  - Search with filters
+  - Chain queries
+  - Related queries
+  - Secondary index usage
+
+#### Task 3.2.3: Update lib.rs and Cargo.toml
+- [ ] Export new modules: `manifest`, `git_utils`, `helix_backend`
+- [ ] Add `helix-db` dependency
+- [ ] Add `bumpalo` dependency (for arena allocation)
+- [ ] Verify workspace version alignment
+
+### Task 3.3: Integration & Polish (Session 3)
+
+#### Task 3.3.1: Integration Tests
+- [ ] Scenario 1: Initial indexing (10 decisions)
+- [ ] Scenario 2: Modify 1 decision (delta detected)
+- [ ] Scenario 3: Add 3 decisions (only new files indexed)
+- [ ] Scenario 4: Delete 1 decision (node + vector removed)
+- [ ] Scenario 5: Embedding model change (re-embed all)
+- [ ] Scenario 6: Large repo (100+ decisions, <100ms delta)
+- [ ] Scenario 7: Chain traversal across supersedes
+- [ ] Scenario 8: Related query with all edge types
+
+#### Task 3.3.2: Performance Benchmarks
+- [ ] First sync (10 decisions): < 5 seconds
+- [ ] Delta sync (no changes): < 50ms
+- [ ] Delta sync (1 file changed): < 100ms
+- [ ] Search (k=10): < 50ms
+- [ ] Graph traversal: < 50ms
+
+#### Task 3.3.3: Documentation
+- [ ] Update README.md with HelixDB architecture section
+- [ ] Add migration guide (JSON → HelixDB)
+- [ ] Document graph schema
+- [ ] Add code comments on complex methods
+
+#### Task 3.3.4: Cleanup
+- [ ] Run `cargo test --all`
+- [ ] Run `cargo clippy` (0 warnings)
+- [ ] Run `cargo fmt`
+- [ ] Verify backward compatibility
+
+---
+
+## Phase 4: Advanced (Future)
+
+### Task 4.1: BM25 Hybrid Search
+- [ ] Enable HelixDB BM25 index on title/body
 - [ ] Combine with vector search (RRF)
 - [ ] Useful when semantic search misses keywords
 
-### Task 3.3: Multi-Directory Support
-- [ ] Support multiple `--directory` args
-- [ ] Merge results across directories
-- [ ] Useful for monorepos
+### Task 4.2: Query Language
+- [ ] Support HelixQL for complex queries
+- [ ] Find all decisions in a status chain
+- [ ] Find decisions with specific tag combinations
 
-### Task 3.4: Agent Integration
-- [ ] Test with Claude/agent workflows
-- [ ] Document MCP integration (if needed)
-- [ ] Add `--agent` output mode (if different from JSON)
+### Task 4.3: Migration CLI
+- [ ] `helix-decisions migrate` command
+- [ ] Auto-migrate from JSON to HelixDB
+- [ ] Preserve all data and relationships
+- [ ] Remove legacy JSON files after migration
+
+### Task 4.4: Daemon Mode (Optional)
+- [ ] File watching for automatic re-indexing
+- [ ] Background embedding
+- [ ] RPC interface for faster CLI
 
 ---
 
 ## Dependencies
 
-### Blocked by:
-- HelixDB embedded mode availability
-- HelixDB Rust client API
+### Phase 3 Requires:
+- HelixDB embedded mode (available in helix-db crate)
+- Understanding of LMDB transaction model
+- Arena allocation patterns (bumpalo)
 
-### Parallel with:
-- Can develop loader, embeddings, CLI in parallel
-- Storage module blocked by HelixDB
-
-### Fallback:
-- If HelixDB not ready, use simple JSON file storage
-- Replace with HelixDB when available
+### Reference Files:
+- `helix-db/src/helix_engine/tests/storage_tests.rs` - Canonical examples
+- `helix-db/src/helix_engine/storage_core/mod.rs` - Key helpers
+- `helix-db/src/utils/items.rs` - Node/Edge structs
+- `helix-db/src/utils/properties.rs` - ImmutablePropertiesMap
 
 ---
 
 ## Milestones
 
-| Milestone | Tasks | Target |
-|-----------|-------|--------|
-| **M1: Skeleton** | 1.1-1.2 | Day 1 |
-| **M2: Load & Embed** | 1.3-1.4 | Day 2-3 |
-| **M3: Storage** | 1.5 | Day 4-5 |
-| **M4: Search** | 1.6-1.7 | Day 6-7 |
-| **M5: MVP Complete** | 1.8 | Day 8 |
-| **M6: Delta & Filters** | 2.1-2.2 | Day 9-10 |
-| **M7: Polish** | 2.3-2.5 | Day 11-12 |
-| **M8: v0.1.0 Release** | All Phase 2 | Week 2 |
+| Milestone | Tasks | Status | Target |
+|-----------|-------|--------|--------|
+| **M1: MVP Types** | 1.1-1.2 | ✅ Complete | - |
+| **M2: Load & Embed** | 1.3-1.4 | ✅ Complete | - |
+| **M3: Storage** | 1.5 | ✅ Complete | - |
+| **M4: Search** | 1.6-1.7 | ✅ Complete | - |
+| **M5: Hooks** | 1.8-1.9 | ✅ Complete | - |
+| **M6: Phase 3 Foundation** | 3.1 | 🚧 Planned | Session 1 (2-3 hrs) |
+| **M7: Phase 3 Backend** | 3.2 | 🚧 Planned | Session 2 (2-3 hrs) |
+| **M8: Phase 3 Integration** | 3.3 | 🚧 Planned | Session 3 (1-2 hrs) |
+| **M9: v1.0.0 Release** | All Phase 3 | 🚧 Planned | Total: 6-8 hrs |
 
 ---
 
 ## Notes
 
-- Start with JSON file storage if HelixDB not ready
-- Focus on end-to-end workflow first
-- Optimize after correctness
-- Test with real `.decisions/` directories
+- MVP complete with JSON storage - fully functional for small-medium repos
+- Phase 3 adds HelixDB for performance at scale (100+ decisions)
+- HelixDB patterns MUST follow corrections in `docs/phase3/PHASE_3_CORRECTIONS.md`
+- Key insight: Edges require 3 DB writes (edges_db, out_edges_db, in_edges_db)
+- Key insight: Vectors stored separately, linked via vector_id property
+- Test with real `.decisions/` directories before marking complete
