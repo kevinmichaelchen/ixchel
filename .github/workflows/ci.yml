@@ -9,6 +9,8 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  SCCACHE_GHA_ENABLED: true
+  RUSTC_WRAPPER: sccache
 
 jobs:
   fmt:
@@ -29,9 +31,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
-      # Exclude Tauri crates (hbd-ui) - they have GTK deps and are tested in build-tauri
-      - run: cargo clippy -p hbd -p helix-map --all-targets --all-features -- -D warnings
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Clippy (exclude Tauri - needs GTK)
+        run: cargo clippy --workspace --exclude hbd-ui --all-targets --all-features -- -D warnings
+        env:
+          CARGO_INCREMENTAL: 0
+      - run: sccache --show-stats
 
   build:
     name: Build (Rust)
@@ -39,9 +44,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # Exclude Tauri crates (hbd-ui) - they have GTK deps and are tested in build-tauri
-      - run: cargo build -p hbd -p helix-map --all-features
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Build (exclude Tauri - needs GTK)
+        run: cargo build --workspace --exclude hbd-ui --all-features
+        env:
+          CARGO_INCREMENTAL: 0
+      - run: sccache --show-stats
 
   test:
     name: Test (Rust)
@@ -49,9 +57,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      # Exclude Tauri crates (hbd-ui) - they have GTK deps and are tested in build-tauri
-      - run: cargo test -p hbd -p helix-map --all-features
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Test (exclude Tauri - needs GTK)
+        run: cargo test --workspace --exclude hbd-ui --all-features
+        env:
+          CARGO_INCREMENTAL: 0
+      - run: sccache --show-stats
 
   lint-ui:
     name: Lint (UI)
@@ -81,13 +92,13 @@ jobs:
         with:
           bun-version: latest
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ". -> target"
+      - uses: mozilla-actions/sccache-action@v0.0.9
       - run: bun install --frozen-lockfile
       - run: bun run build
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_INCREMENTAL: 0
         with:
           projectPath: hbd-ui
+      - run: sccache --show-stats
