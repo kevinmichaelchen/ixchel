@@ -176,9 +176,9 @@ Decision tree:
 | bge-base | ~400MB | ~700MB |
 | all-MiniLM | ~100MB | ~200MB |
 
-## Integration with HelixDB
+## Storage Independence
 
-helix-embeddings generates vectors; HelixDB stores and searches them.
+helix-embeddings is a **pure utility** that returns `Vec<f32>`. It has no knowledge of storage.
 
 ```
 ┌──────────────┐     embed()     ┌──────────────┐
@@ -188,18 +188,19 @@ helix-embeddings generates vectors; HelixDB stores and searches them.
                                         │
                                         ▼
                                  ┌──────────────┐
-                                 │   HelixDB    │
-                                 │  HNSW Index  │
+                                 │  Consumer    │
+                                 │  decides     │
                                  └──────────────┘
 ```
 
-### Workflow
+**What consumers do with embeddings is their concern:**
+- helix-decisions: Stores in its `DecisionStore` (HelixDB backend)
+- hbd: Stores in its `IssueStore` (HelixDB backend)
+- helix-docs: Stores in its storage backend
 
-1. **Indexing:** `embed_batch()` → store vectors in HelixDB HNSW
-2. **Querying:** `embed()` query → search HelixDB for nearest neighbors
-3. **Results:** HelixDB returns node IDs → fetch full documents
+This crate does NOT depend on HelixDB or any storage system.
 
-### Important: Embedding Consistency
+### Embedding Consistency
 
 **All embeddings for a tool MUST use the same model.** Mixing models produces incompatible vectors.
 
@@ -262,10 +263,7 @@ fastembed caches downloaded models in `~/.cache/fastembed/`:
 
 ### Embedding Cache
 
-helix-embeddings does NOT cache embeddings. That's the consumer's responsibility:
-- helix-decisions: Stores in HelixDB (or helix-storage JSON)
-- hbd: Stores in HelixDB
-- helix-docs: Stores in HelixDB
+helix-embeddings does NOT cache embeddings. That's the consumer's responsibility. Each tool manages its own storage via its storage trait.
 
 ## Thread Safety
 
@@ -345,4 +343,5 @@ Run with: `cargo test --ignored -p helix-embeddings`
 
 - [requirements.md](./requirements.md) — Requirements specification
 - [helix-config/specs/design.md](../helix-config/specs/design.md) — Configuration
+- [ADR-004](../../../.decisions/004-trait-based-storage-architecture.md) — Why storage is consumer's concern
 - [fastembed docs](https://docs.rs/fastembed) — Underlying library

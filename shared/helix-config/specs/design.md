@@ -475,89 +475,71 @@ Migration steps:
 
 ---
 
-## HelixDB Storage Paths
+## Storage Path Conventions
 
-Tools using HelixDB for persistence should follow these conventions:
+> **Note:** helix-config does NOT depend on HelixDB. It only documents path conventions that tools should follow when they use HelixDB as their storage backend.
+>
+> See [ADR-004](../../.decisions/004-trait-based-storage-architecture.md) for why storage is each tool's concern.
 
-### Project-Local HelixDB (Default)
+### Project-Local Storage (Default)
 
 For tools that store data within the project:
 
 ```
 {project}/.helix/data/{tool}/
-├── helix-db/                    # HelixDB data directory
-│   ├── data.mdb                 # LMDB data file
-│   └── lock.mdb                 # LMDB lock file
-└── manifest.json                # Sync manifest (optional)
+├── data.mdb                 # LMDB data file (if using HelixDB)
+└── lock.mdb                 # LMDB lock file
 ```
 
-**Example:** helix-decisions stores decision graph + vectors in `.helix/data/decisions/helix-db/`
+**Example:** helix-decisions stores decision graph + vectors in `.helix/data/decisions/`
 
-### Global HelixDB
+### Global Storage
 
 For tools with cross-project data:
 
 ```
 ~/.helix/data/{tool}/
-├── helix-db/                    # HelixDB data directory
-│   ├── data.mdb
-│   └── lock.mdb
-└── manifest.json
+├── data.mdb
+└── lock.mdb
 ```
 
-**Example:** helix-docs stores documentation cache in `~/.helix/data/docs/helix-db/`
+**Example:** helix-docs stores documentation cache in `~/.helix/data/docs/`
 
 ### Path Helper Functions
 
 ```rust
 use helix_config::{helix_data_dir, project_data_dir};
 
-// Global HelixDB path
-let global_db = helix_data_dir()
-    .join("docs")
-    .join("helix-db");
-// → ~/.helix/data/docs/helix-db/
+// Global data path
+let global_data = helix_data_dir().join("docs");
+// → ~/.helix/data/docs/
 
-// Project-local HelixDB path (requires git root discovery)
-let project_db = project_data_dir("decisions")?
-    .join("helix-db");
-// → {project}/.helix/data/decisions/helix-db/
+// Project-local data path (requires git root discovery)
+let project_data = project_data_dir("decisions")?;
+// → {project}/.helix/data/decisions/
 ```
 
-### HelixDB Config Options
+### Storage Config Options
 
-Tools can configure HelixDB behavior via shared config:
+Tools can configure storage behavior via shared config:
 
 ```toml
 # ~/.helix/config/config.toml
 
-[helix_db]
+[storage]
 # LMDB map size (default: 1GB for project-local, 10GB for global)
 map_size_mb = 1024
-
-# Enable memory-mapped I/O (default: true)
-mmap = true
 
 # Max readers (default: 126)
 max_readers = 126
 ```
 
-### HelixDB API Patterns Reference
-
-When integrating HelixDB, follow the corrected patterns in:
-- `helix-decisions/docs/phase3/PHASE_3_CORRECTIONS.md`
-- `helix-decisions/docs/phase3/CORRECTIONS_QUICK_REFERENCE.txt`
-
-Key requirements:
-- **Edges:** Write to 3 databases (edges_db, out_edges_db, in_edges_db)
-- **Nodes:** Use arena allocation + ImmutablePropertiesMap
-- **Vectors:** Stored separately, linked via vector_id property
-- **Keys:** Use `hash_label()` for adjacency DB keys
+Tools read this config and pass it to their storage backend implementation.
 
 ---
 
 ## See Also
 
 - [requirements.md](./requirements.md) — Requirements specification
-- [helix-decisions/specs/design.md](../../helix-decisions/specs/design.md) — HelixDB integration example
+- [ADR-004](../../.decisions/004-trait-based-storage-architecture.md) — Trait-based storage architecture
 - [shared/AGENTS.md](../AGENTS.md) — Shared crates overview
