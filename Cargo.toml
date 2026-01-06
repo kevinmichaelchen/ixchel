@@ -3,9 +3,14 @@ resolver = "2"
 members = [
     "hbd",
     "hbd-ui/src-tauri",
+    "helix-docs",
     "helix-map",
+    "helix-repo",
+    "shared/helix-id",
+    "shared/helix-config",
     # "shared/helix-embed",
-    # "shared/helix-sync",
+    # "shared/helix-search",
+    # "shared/helix-chunk",
 ]
 
 [workspace.package]
