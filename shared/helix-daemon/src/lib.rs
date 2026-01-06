@@ -7,6 +7,12 @@
 //! All messages are UTF-8 JSON lines over Unix socket (`~/.helix/run/helixd.sock`).
 //! See `specs/design.md` for the full protocol specification.
 
+mod client;
+mod server;
+
+pub use client::Client;
+pub use server::Server;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -293,54 +299,6 @@ pub struct QueueInfo {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ShutdownResponse {}
-
-// ============================================================================
-// Client (stub)
-// ============================================================================
-
-/// Client for communicating with helixd.
-///
-/// TODO: Implement actual IPC in Phase 2.
-pub struct Client {
-    _socket_path: String,
-}
-
-#[allow(clippy::unused_async)]
-impl Client {
-    pub fn new() -> Self {
-        Self::with_socket_path(DEFAULT_SOCKET_PATH)
-    }
-
-    pub fn with_socket_path(path: impl Into<String>) -> Self {
-        Self {
-            _socket_path: path.into(),
-        }
-    }
-
-    pub async fn connect(&self) -> Result<(), DaemonError> {
-        todo!("Client::connect not yet implemented")
-    }
-
-    pub async fn send(&self, _request: Request) -> Result<Response, DaemonError> {
-        todo!("Client::send not yet implemented")
-    }
-
-    pub async fn sync(
-        &self,
-        _repo_root: &str,
-        _tool: &str,
-        _directory: &str,
-        _wait: bool,
-    ) -> Result<SyncState, DaemonError> {
-        todo!("Client::sync not yet implemented")
-    }
-}
-
-impl Default for Client {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 // ============================================================================
 // Tests

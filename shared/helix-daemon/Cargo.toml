@@ -20,8 +20,13 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 uuid.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+dirs-next = "2.0"
 
 [dev-dependencies]
+tempfile = "3.10"
 
 [lints]
 workspace = true
