@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use helix_daemon::Client as DaemonClient;
 use helix_decisions::{
     ChainResponse, DecisionSearcher, RelatedResponse, SearchResponse, Status, hooks,
 };
@@ -18,6 +19,9 @@ struct Cli {
 
     #[arg(short, long, global = true)]
     json: bool,
+
+    #[arg(long, global = true, help = "Block until index is up to date")]
+    sync: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -59,10 +63,19 @@ fn main() -> Result<()> {
         _ => {}
     }
 
-    let directory = resolve_decisions_directory(cli.directory)?;
+    let directory = resolve_decisions_directory(cli.directory.clone())?;
+    let git_root = find_git_root_from_cwd()?;
+
+    let daemon_result = enqueue_daemon_sync(&git_root, &directory, cli.sync);
 
     let mut searcher = DecisionSearcher::new()?;
     searcher.sync(&directory)?;
+
+    if let Err(e) = &daemon_result
+        && !cli.json
+    {
+        eprintln!("Warning: daemon sync failed ({e}), results may be stale");
+    }
 
     match cli.command {
         Commands::InitHooks { .. } | Commands::RemoveHooks => unreachable!(),
@@ -119,6 +132,37 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn enqueue_daemon_sync(
+    git_root: &std::path::Path,
+    decisions_dir: &std::path::Path,
+    wait: bool,
+) -> Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+
+    rt.block_on(async {
+        let client = DaemonClient::new();
+
+        let repo_root = git_root.to_string_lossy().to_string();
+        let directory = decisions_dir
+            .strip_prefix(git_root)
+            .unwrap_or(decisions_dir)
+            .to_string_lossy()
+            .to_string();
+
+        let sync_result = client.sync(&repo_root, "decisions", &directory, wait).await;
+
+        match sync_result {
+            Ok(state) => {
+                if wait && state != helix_daemon::SyncState::Done {
+                    anyhow::bail!("Sync did not complete successfully: {state:?}");
+                }
+                Ok(())
+            }
+            Err(e) => Err(anyhow::anyhow!("Daemon error: {e}")),
+        }
+    })
 }
 
 fn handle_init_hooks(force: bool, yes: bool) -> Result<()> {

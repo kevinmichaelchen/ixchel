@@ -24,6 +24,8 @@ helix-config = { path = "../shared/helix-config" }
 helix-storage = { path = "../shared/helix-storage" }
 helix-embeddings = { path = "../shared/helix-embeddings" }
 helix-discovery = { path = "../shared/helix-discovery" }
+helix-daemon = { path = "../shared/helix-daemon" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [dev-dependencies]
 tempfile = "3"
