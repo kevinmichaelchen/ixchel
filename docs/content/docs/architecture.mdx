@@ -13,8 +13,8 @@ Helix Tools share a common architecture that balances simplicity with power.
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLI Tools Layer                              │
 │                                                                      │
-│   hbd          helix-docs      helix-map       helix-repo           │
-│   (issues)     (research)      (codebase)      (clones)             │
+│   hbd        adr-search    helix-docs    helix-map    helix-repo   │
+│   (issues)   (decisions)   (research)    (codebase)   (clones)     │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
@@ -76,6 +76,7 @@ When you `git pull` new changes:
 
 ```
 helix-tools/
+├── adr-search/             # ADR semantic search CLI
 ├── hbd/                    # Issue tracker CLI
 ├── helix-docs/             # Documentation cache CLI
 ├── helix-map/              # Codebase indexer CLI
