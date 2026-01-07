@@ -33,6 +33,7 @@ pub mod searcher;
 pub mod storage;
 pub mod types;
 
+pub use helix_backend::SyncStats;
 pub use searcher::DecisionSearcher;
 pub use types::{
     ChainNode, ChainResponse, Decision, RelatedDecision, RelatedResponse, RelationType,

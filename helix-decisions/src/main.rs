@@ -69,12 +69,19 @@ fn main() -> Result<()> {
     let daemon_result = enqueue_daemon_sync(&git_root, &directory, cli.sync);
 
     let mut searcher = DecisionSearcher::new(&git_root)?;
-    searcher.sync(&directory)?;
+    let sync_stats = searcher.sync(&directory)?;
 
     if let Err(e) = &daemon_result
         && !cli.json
     {
         eprintln!("Warning: daemon sync failed ({e}), results may be stale");
+    }
+
+    if !cli.json && (sync_stats.added > 0 || sync_stats.modified > 0 || sync_stats.deleted > 0) {
+        eprintln!(
+            "Synced: +{} ~{} -{} ({}ms)",
+            sync_stats.added, sync_stats.modified, sync_stats.deleted, sync_stats.duration_ms
+        );
     }
 
     match cli.command {

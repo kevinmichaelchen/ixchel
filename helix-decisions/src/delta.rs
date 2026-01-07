@@ -5,7 +5,9 @@ use std::collections::{HashMap, HashSet};
 
 pub struct DeltaResult {
     pub to_add: Vec<Decision>,
+    pub to_modify: Vec<Decision>,
     pub to_remove: Vec<String>,
+    pub unchanged_count: u32,
 }
 
 pub fn compute_delta(
@@ -13,7 +15,9 @@ pub fn compute_delta(
     stored_hashes: HashMap<String, String>,
 ) -> DeltaResult {
     let mut to_add = Vec::new();
+    let mut to_modify = Vec::new();
     let mut to_remove = Vec::new();
+    let mut unchanged_count = 0u32;
 
     let mut seen_paths: HashSet<String> = HashSet::new();
 
@@ -22,8 +26,13 @@ pub fn compute_delta(
         seen_paths.insert(path.clone());
 
         match stored_hashes.get(&path) {
-            Some(stored_hash) if stored_hash == &decision.content_hash => {}
-            _ => {
+            Some(stored_hash) if stored_hash == &decision.content_hash => {
+                unchanged_count += 1;
+            }
+            Some(_) => {
+                to_modify.push(decision);
+            }
+            None => {
                 to_add.push(decision);
             }
         }
@@ -35,7 +44,12 @@ pub fn compute_delta(
         }
     }
 
-    DeltaResult { to_add, to_remove }
+    DeltaResult {
+        to_add,
+        to_modify,
+        to_remove,
+        unchanged_count,
+    }
 }
 
 #[cfg(test)]
@@ -79,7 +93,9 @@ mod tests {
 
         let delta = compute_delta(current, stored);
         assert!(delta.to_add.is_empty());
+        assert!(delta.to_modify.is_empty());
         assert!(delta.to_remove.is_empty());
+        assert_eq!(delta.unchanged_count, 1);
     }
 
     #[test]
@@ -89,7 +105,9 @@ mod tests {
 
         let delta = compute_delta(current, stored);
         assert_eq!(delta.to_add.len(), 1);
+        assert!(delta.to_modify.is_empty());
         assert!(delta.to_remove.is_empty());
+        assert_eq!(delta.unchanged_count, 0);
     }
 
     #[test]
@@ -100,8 +118,10 @@ mod tests {
             .collect();
 
         let delta = compute_delta(current, stored);
-        assert_eq!(delta.to_add.len(), 1);
+        assert!(delta.to_add.is_empty());
+        assert_eq!(delta.to_modify.len(), 1);
         assert!(delta.to_remove.is_empty());
+        assert_eq!(delta.unchanged_count, 0);
     }
 
     #[test]
@@ -113,6 +133,8 @@ mod tests {
 
         let delta = compute_delta(current, stored);
         assert!(delta.to_add.is_empty());
+        assert!(delta.to_modify.is_empty());
         assert_eq!(delta.to_remove.len(), 1);
+        assert_eq!(delta.unchanged_count, 0);
     }
 }

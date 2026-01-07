@@ -2,11 +2,13 @@
 
 use crate::delta::compute_delta;
 use crate::embeddings::{Embedder, create_embedder};
+use crate::helix_backend::SyncStats;
 use crate::loader::load_decisions;
 use crate::storage::{DecisionStorage, HelixDecisionStorage};
 use crate::types::{ChainResponse, RelatedResponse, SearchResponse, SearchResult, Status};
 use anyhow::Result;
 use std::path::Path;
+use std::time::Instant;
 
 pub struct DecisionSearcher {
     storage: Box<dyn DecisionStorage>,
@@ -20,18 +22,26 @@ impl DecisionSearcher {
         Ok(Self { storage, embedder })
     }
 
-    pub fn sync(&mut self, dir: &Path) -> Result<()> {
+    pub fn sync(&mut self, dir: &Path) -> Result<SyncStats> {
+        let start = Instant::now();
         let decisions = load_decisions(dir)?;
+        let scanned = decisions.len() as u32;
         let stored_hashes = self.storage.get_hashes()?;
         let delta = compute_delta(decisions, stored_hashes);
 
+        let deleted = delta.to_remove.len() as u32;
         if !delta.to_remove.is_empty() {
             self.storage.remove(delta.to_remove)?;
         }
 
-        if !delta.to_add.is_empty() {
+        let added = delta.to_add.len() as u32;
+        let modified = delta.to_modify.len() as u32;
+
+        let all_to_index: Vec<_> = delta.to_add.into_iter().chain(delta.to_modify).collect();
+
+        if !all_to_index.is_empty() {
             let mut decisions_with_embeddings = Vec::new();
-            for mut decision in delta.to_add {
+            for mut decision in all_to_index {
                 let embedding = self.embedder.embed(&decision.body)?;
                 decision.embedding = Some(embedding);
                 decisions_with_embeddings.push(decision);
@@ -39,7 +49,16 @@ impl DecisionSearcher {
             self.storage.index(decisions_with_embeddings)?;
         }
 
-        Ok(())
+        Ok(SyncStats {
+            scanned,
+            added,
+            modified,
+            deleted,
+            renamed: 0,
+            unchanged: delta.unchanged_count,
+            errors: 0,
+            duration_ms: start.elapsed().as_millis() as u64,
+        })
     }
 
     pub fn search(
