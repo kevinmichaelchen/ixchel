@@ -148,6 +148,9 @@
   - Handle deletions (tombstone node + vector)
   - Attempt rename match before deletion (content hash + decision id/uuid)
   - Reuse vector_id when content hash + embedding model unchanged
+  - Update vectors in place when content changes
+  - Batch writes into LMDB transactions (nodes/vectors first, edges second)
+  - Remove and recreate outgoing edges on change (same batch)
   - Save manifest after sync
   - Return `SyncStats` (files_scanned, added, modified, deleted, duration_ms)
 - [ ] Implement `upsert_decision_node()`:

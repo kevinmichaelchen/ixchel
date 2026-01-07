@@ -114,7 +114,7 @@ Decisions are stored as graph nodes with properties and vector embeddings.
 │ label: "decision"                       │
 ├─────────────────────────────────────────┤
 │ Properties:                             │
-│   decision_id: u32     # Local number   │
+│   id: u32              # Local number   │
 │   uuid: String         # Global hash ID │
 │   title: String                         │
 │   status: String       # enum as string │
@@ -1000,12 +1000,20 @@ pub struct IndexManifest {
 ### Rename/Delete Detection and Embedding Reuse
 
 - **Rename detection:** If a stored entry disappears but a new file appears with the same
-  `decision_id` or `uuid` and identical `content_hash`, treat it as a rename. Update only the
-  `file_path` property and manifest entry (no re-embedding).
+  frontmatter `id` or `uuid` and identical `content_hash`, treat it as a rename. Update only
+  the `file_path` property and manifest entry (no re-embedding).
 - **Embedding reuse:** Persist `vector_id` and `embedding_model` in the manifest. If the
   `content_hash` is unchanged and the model matches, reuse the existing vector.
 - **Deletion:** If no rename match exists, tombstone the node and vector and remove the
   manifest entry.
+
+### Path Normalization and Identity Rules
+
+- **Path normalization:** Store repo-root-relative paths using `/` separators and no `.`/`..`
+  segments. Normalize incoming paths before manifest lookup.
+- **Identity:** `uuid` (if present) is the stable identity; otherwise `id` is used.
+- **Conflicts:** If two files share the same `uuid` or `id` but different `content_hash`,
+  abort the sync with a hard error. If both exist with the same hash, also abort (ambiguous).
 
 ### 3-Stage Incremental Indexing
 
@@ -1031,12 +1039,57 @@ sync() {
        ║ Parse YAML frontmatter
        ║ Generate embedding (384-dim, f32 → f64)
        ║ Upsert decision node (arena + ImmutablePropertiesMap)
+       ║ Replace vector in place using existing vector_id when possible
        ║ Create relationship edges (3 DBs per edge)
        ╚══════════════════════════════════════════════════════════╝
     
     4. Attempt rename match for removed files before deletion
     5. Delete nodes + vectors for removed files (no rename match)
     6. Save manifest back to metadata_db
+}
+```
+
+### Batching and Transactions
+
+- A sync is **not** globally atomic. It runs in phases with batched write transactions.
+- **Phase 1 (nodes + vectors):** Upsert nodes/vectors in batches of size `N` (configurable).
+- **Phase 2 (edges):** After **all** node/vector batches complete, update edges in batches.
+- Each batch is a single LMDB write transaction. On batch failure, abort that batch and
+  return an error; previous committed batches remain valid.
+- Manifest entries are updated only for successfully committed batches. Unfinished files
+  remain pending for the next sync.
+
+**Batch size default:** `N = 100` unless overridden by config or environment.
+
+### Edge Update Semantics
+
+- For each changed decision, remove all outgoing edges for that node, then re-create edges
+  from current frontmatter in the same batch transaction.
+- Edge updates are performed after all node upserts to avoid edges pointing at missing nodes.
+- **Edge removal mechanism:** Use `out_edges_db` to scan and delete all outgoing edges for
+  the node across all relation labels, then delete the corresponding edge records from
+  `edges_db` and `in_edges_db`.
+
+### Vector Update Semantics
+
+- On content change, update the vector **in place** using the existing `vector_id` when the
+  backend supports it.
+- **Fallback (HelixDB current API):** `drop_vector(old_id)` → `insert(new_vector)` which
+  generates a new UUID. Update the node `vector_id` property and manifest entry to the new
+  ID within the same batch transaction.
+
+### Sync Stats
+
+```
+SyncStats {
+  scanned: u32,
+  added: u32,
+  modified: u32,
+  deleted: u32,
+  renamed: u32,
+  unchanged: u32,
+  errors: u32,
+  duration_ms: u64
 }
 ```
 
@@ -1084,7 +1137,7 @@ impl HelixDecisionBackend {
                 }),
                 graph_config: Some(GraphConfig {
                     secondary_indices: Some(vec![
-                        "decision_id".to_string(),
+                        "id".to_string(),
                         "vector_id".to_string(),
                     ]),
                 }),
@@ -1160,7 +1213,7 @@ impl HelixDecisionBackend {
         
         for rel in metadata.relationships() {
             // Look up target node_id from manifest
-            if let Some(target_entry) = self.find_node_by_decision_id(rel.target_id) {
+            if let Some(target_entry) = self.find_node_by_id(rel.target_id) {
                 let to_node_id = target_entry.node_id;
                 let edge_id = Uuid::new_v4().as_u128();
                 
@@ -1282,5 +1335,5 @@ See `docs/phase3/PHASE_3_CORRECTIONS.md` for full details. Key issues fixed:
 | Vector deletion | Must tombstone both node and vector |
 | Label hashing | Must hash labels for adjacency DB keys |
 | Config path | Must plumb through HelixGraphEngineOpts.path |
-| Secondary indices | Must create explicitly for decision_id, vector_id |
+| Secondary indices | Must create explicitly for id, vector_id |
 | Metadata namespace | Use "manifest:helix-decisions:v1" to avoid collisions |

@@ -15,6 +15,7 @@ shared/helix-embeddings     → Returns Vec<f32>, no storage knowledge
 shared/helix-config         → Documents paths, no HelixDB dependency
 shared/helix-id             → Pure utility
 shared/helix-discovery      → Pure utility
+shared/helix-daemon         → IPC protocol + client helpers, no HelixDB dependency
 
 helix-decisions/            → Defines DecisionStore trait
                             → Provides HelixDB implementation
@@ -30,6 +31,7 @@ hbd/                        → Defines IssueStore trait
 | [helix-id](./helix-id/) | Hash-based ID generation | NO | [specs](./helix-id/specs/) |
 | [helix-embeddings](./helix-embeddings/) | Semantic embeddings via fastembed | NO | [specs](./helix-embeddings/specs/) |
 | [helix-discovery](./helix-discovery/) | Git root and project marker discovery | NO | [specs](./helix-discovery/specs/) |
+| [helix-daemon](./helix-daemon/) | Global IPC protocol + client helpers | NO | [specs](./helix-daemon/specs/) |
 | [helix-storage](./helix-storage/) | ~~Trait-based vector storage~~ | **REMOVE** | [specs](./helix-storage/specs/) |
 
 ## helix-storage Removal
