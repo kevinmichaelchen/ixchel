@@ -1,14 +1,79 @@
 //! Integration tests for helix-decisions (specs/tasks.md Task 3.3.1).
 //!
-//! Run with: cargo test -p helix-decisions --test integration -- --ignored
+//! Run with: cargo test -p helix-decisions --features embeddings-tests --test integration -- --nocapture
 
+#![cfg(feature = "embeddings-tests")]
+
+use helix_config::{EmbeddingConfig, load_shared_config};
 use helix_decisions::DecisionSearcher;
 use helix_decisions::types::{RelationType, Status};
+use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use tempfile::TempDir;
+
+fn configured_model() -> String {
+    load_shared_config()
+        .map(|config| config.embedding.model)
+        .unwrap_or_else(|_| EmbeddingConfig::default().model)
+}
+
+fn model_cache_paths(model_name: &str) -> Vec<PathBuf> {
+    let model_dir = format!("models--{}", model_name.replace('/', "--"));
+    let mut roots = Vec::new();
+
+    if let Ok(cache_dir) = env::var("FASTEMBED_CACHE_DIR") {
+        roots.push(PathBuf::from(cache_dir));
+    } else {
+        roots.push(PathBuf::from(".fastembed_cache"));
+    }
+
+    if let Ok(hf_home) = env::var("HF_HOME") {
+        let hf_home = PathBuf::from(hf_home);
+        roots.push(hf_home.clone());
+        roots.push(hf_home.join("hub"));
+    }
+
+    roots
+        .into_iter()
+        .map(|root| root.join(&model_dir))
+        .collect()
+}
+
+fn embeddings_available() -> bool {
+    let model_name = configured_model();
+    let paths = model_cache_paths(&model_name);
+
+    if paths.iter().any(|path| path.exists()) {
+        return true;
+    }
+
+    let mut message =
+        format!("Embeddings tests skipped: model cache not found for {model_name}.\n");
+    message.push_str("Looked in:\n");
+    for path in &paths {
+        message.push_str(&format!("  - {}\n", path.display()));
+    }
+    message.push_str("\nTo run these tests:\n");
+    message.push_str("  1) Download the model (fastembed caches on first use).\n");
+    message.push_str(
+        "  2) Re-run with: cargo test -p helix-decisions --features embeddings-tests --test integration -- --nocapture\n",
+    );
+    message.push_str("\nYou can control the cache location via FASTEMBED_CACHE_DIR or HF_HOME.\n");
+    eprintln!("{message}");
+
+    false
+}
+
+macro_rules! require_embeddings {
+    () => {
+        if !embeddings_available() {
+            return;
+        }
+    };
+}
 
 fn write_decision_file(dir: &Path, id: u32, title: &str, status: &str, body: &str) -> PathBuf {
     write_decision_file_with_relations(dir, id, title, status, body, "")
@@ -61,8 +126,8 @@ fn setup_test_env() -> (TempDir, PathBuf) {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_1_initial_indexing_10_decisions() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     for i in 1..=10 {
@@ -94,8 +159,8 @@ fn scenario_1_initial_indexing_10_decisions() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_2_modify_one_decision_delta_detected() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     for i in 1..=5 {
@@ -130,8 +195,8 @@ fn scenario_2_modify_one_decision_delta_detected() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_3_add_new_decisions_only_new_indexed() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     for i in 1..=3 {
@@ -168,8 +233,8 @@ fn scenario_3_add_new_decisions_only_new_indexed() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_4_delete_decision_node_and_vector_removed() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     let mut paths = Vec::new();
@@ -215,8 +280,8 @@ fn scenario_4_delete_decision_node_and_vector_removed() {
 fn scenario_5_embedding_model_change_reembed_all() {}
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_6_large_repo_delta_under_100ms() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     for i in 1..=100 {
@@ -254,8 +319,8 @@ fn scenario_6_large_repo_delta_under_100ms() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_7_chain_traversal_across_supersedes() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     write_decision_file(
@@ -306,8 +371,8 @@ fn scenario_7_chain_traversal_across_supersedes() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn scenario_8_related_query_with_all_edge_types() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     write_decision_file(
@@ -386,8 +451,8 @@ fn scenario_8_related_query_with_all_edge_types() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn test_search_with_status_filter() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     write_decision_file(
@@ -427,8 +492,8 @@ fn test_search_with_status_filter() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn test_storage_persistence_across_sessions() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     write_decision_file(
@@ -460,8 +525,8 @@ fn test_storage_persistence_across_sessions() {
 }
 
 #[test]
-#[ignore = "Requires downloading embedding model (~30MB)"]
 fn test_empty_decisions_directory() {
+    require_embeddings!();
     let (temp, decisions_dir) = setup_test_env();
 
     let mut searcher = DecisionSearcher::new(temp.path()).expect("Failed to create searcher");
