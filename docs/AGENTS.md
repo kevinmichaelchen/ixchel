@@ -22,14 +22,14 @@ docs/
 
 ## WHERE TO LOOK
 
-| Task | Location |
-|------|----------|
-| Add docs page | `content/docs/*.mdx` + update `meta.json` |
-| Modify navigation | `content/docs/meta.json` (hierarchical) |
-| Change branding | `lib/layout.shared.tsx` |
-| Custom MDX components | `mdx-components.tsx` |
-| Styling/theme | `app/global.css` (Tailwind v4) |
-| Build config | `next.config.mjs` + `source.config.ts` |
+| Task                  | Location                                  |
+| --------------------- | ----------------------------------------- |
+| Add docs page         | `content/docs/*.mdx` + update `meta.json` |
+| Modify navigation     | `content/docs/meta.json` (hierarchical)   |
+| Change branding       | `lib/layout.shared.tsx`                   |
+| Custom MDX components | `mdx-components.tsx`                      |
+| Styling/theme         | `app/global.css` (Tailwind v4)            |
+| Build config          | `next.config.mjs` + `source.config.ts`    |
 
 ## CONVENTIONS
 
@@ -53,4 +53,5 @@ bun run types:check      # Type checking
 - **GitHub Pages deploy**: Conditional `basePath` via `GITHUB_ACTIONS` env
 - **Lucide icons**: Auto-converted from icon names in frontmatter
 - **OG images**: Generated per-page via `/og/docs/[...slug]/route.tsx`
-- **LLM endpoint**: `/llms-full.txt` exports processed markdown for AI consumption
+- **LLM endpoint**: `/llms-full.txt` exports processed markdown for AI
+  consumption
