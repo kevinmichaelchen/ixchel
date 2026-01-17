@@ -2,7 +2,7 @@
 
 This document defines the technical architecture, data model, and query implementations for `hbd`.
 
-> **Implementation Status (2026-01-03)**
+> **Implementation Status (2026-01-06)**
 >
 > The current implementation uses **file-based storage only** (Markdown files in `.tickets/`).
 > HelixDB integration, vector embeddings, and graph queries are **planned but not yet implemented**.
@@ -16,10 +16,17 @@ This document defines the technical architecture, data model, and query implemen
 > - HelixDB embedded in the binary (like SQLite—no server to run) as query cache
 > - fastembed for local semantic search (no API calls needed)
 > - BM25 + vector hybrid search
-> - Sync daemon for file watching
+> - helixd daemon for file watching and background sync
 >
 > **Note:** Markdown files remain the source of truth. HelixDB acts as a fast query cache
 > that can be rebuilt from `.tickets/` at any time.
+>
+> **HelixDB API Patterns:** When implementing HelixDB integration, follow the corrected patterns
+> documented in `helix-decisions/docs/phase3/PHASE_3_CORRECTIONS.md`. Key requirements:
+> - Edges must write to 3 databases (edges_db, out_edges_db, in_edges_db)
+> - Nodes must use arena allocation + ImmutablePropertiesMap
+> - Vectors are stored separately, linked via vector_id property
+> - Use `hash_label()` for adjacency DB keys
 
 ## Table of Contents
 
@@ -63,13 +70,19 @@ This document defines the technical architecture, data model, and query implemen
                                    │
                              ┌─────v─────┐
                              │  Daemon   │
-                             │  (hbd-d)  │
+                             │ (helixd)  │
                              │           │
                              │  - Sync   │
                              │  - Watch  │
                              │  - Embed  │
                              └───────────┘
 ```
+
+### Daemon Integration (Planned)
+
+hbd uses the global helixd daemon for background sync and embedding. The CLI
+enqueues work via IPC and optionally waits with `--sync`. Protocol details live
+in `shared/helix-daemon/specs/design.md`.
 
 ### Current Architecture (Implemented)
 
@@ -118,7 +131,7 @@ This document defines the technical architecture, data model, and query implemen
                                    │
                              ┌─────v─────┐
                              │  Daemon   │
-                             │  (hbd-d)  │
+                             │ (helixd)  │
                              │           │
                              │  - Sync   │
                              │  - Watch  │
@@ -134,7 +147,7 @@ This document defines the technical architecture, data model, and query implemen
 | **Git Layer** | Source of truth, merge-friendly storage, version history |
 | **HelixDB** | Fast queries, graph traversal, vector/BM25 search |
 | **Embedding Layer** | Text vectorization for semantic search |
-| **Daemon (hbd-d)** | Background sync, file watching, async embedding |
+| **Daemon (helixd)** | Background sync, file watching, async embedding |
 
 ### Data Flow
 

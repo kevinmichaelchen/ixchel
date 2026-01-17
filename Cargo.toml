@@ -1,14 +1,18 @@
 [workspace]
 resolver = "2"
 members = [
-    "adr-search",
     "hbd",
     "hbd-ui/src-tauri",
+    "helix-decisions",
     "helix-docs",
     "helix-map",
     "helix-repo",
     "shared/helix-id",
     "shared/helix-config",
+    "shared/helix-storage",
+    "shared/helix-embeddings",
+    "shared/helix-discovery",
+    "shared/helix-daemon",
     # "shared/helix-embed",
     # "shared/helix-search",
     # "shared/helix-chunk",
@@ -22,6 +26,9 @@ repository = "https://github.com/kevinmichaelchen/helix-tools"
 authors = ["Kevin Chen"]
 
 [workspace.dependencies]
+# HelixDB - Graph-vector database
+helix-db = { git = "https://github.com/HelixDB/helix-db.git", features = ["vectors"] }
+
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }
 

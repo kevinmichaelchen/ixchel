@@ -1,5 +1,9 @@
 # Design
 
+**Document:** design.md  
+**Status:** Active (2026-01-06)  
+**Author:** Kevin Chen
+
 This document describes the design decisions and implementation details for `helix-config`.
 
 ## Overview
@@ -468,3 +472,74 @@ Migration steps:
 1. Replace custom config loading with `helix_config::load_config("tool-name")`
 2. Use `helix_config::helix_data_dir().join("tool-data")` for data storage
 3. Use `helix_config::detect_github_token()` for GitHub access
+
+---
+
+## Storage Path Conventions
+
+> **Note:** helix-config does NOT depend on HelixDB. It only documents path conventions that tools should follow when they use HelixDB as their storage backend.
+>
+> See [ADR-004](../../.decisions/004-trait-based-storage-architecture.md) for why storage is each tool's concern.
+
+### Project-Local Storage (Default)
+
+For tools that store data within the project:
+
+```
+{project}/.helix/data/{tool}/
+├── data.mdb                 # LMDB data file (if using HelixDB)
+└── lock.mdb                 # LMDB lock file
+```
+
+**Example:** helix-decisions stores decision graph + vectors in `.helix/data/decisions/`
+
+### Global Storage
+
+For tools with cross-project data:
+
+```
+~/.helix/data/{tool}/
+├── data.mdb
+└── lock.mdb
+```
+
+**Example:** helix-docs stores documentation cache in `~/.helix/data/docs/`
+
+### Path Helper Functions
+
+```rust
+use helix_config::{helix_data_dir, project_data_dir};
+
+// Global data path
+let global_data = helix_data_dir().join("docs");
+// → ~/.helix/data/docs/
+
+// Project-local data path (requires git root discovery)
+let project_data = project_data_dir("decisions")?;
+// → {project}/.helix/data/decisions/
+```
+
+### Storage Config Options
+
+Tools can configure storage behavior via shared config:
+
+```toml
+# ~/.helix/config/config.toml
+
+[storage]
+# LMDB map size (default: 1GB for project-local, 10GB for global)
+map_size_mb = 1024
+
+# Max readers (default: 126)
+max_readers = 126
+```
+
+Tools read this config and pass it to their storage backend implementation.
+
+---
+
+## See Also
+
+- [requirements.md](./requirements.md) — Requirements specification
+- [ADR-004](../../.decisions/004-trait-based-storage-architecture.md) — Trait-based storage architecture
+- [shared/AGENTS.md](../AGENTS.md) — Shared crates overview
