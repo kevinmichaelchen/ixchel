@@ -17,8 +17,8 @@ struct Cli {
     json: bool,
 
     /// Path to the database directory
-    #[arg(long, global = true, default_value = ".demo-got")]
-    db_path: PathBuf,
+    #[arg(long, global = true)]
+    db_path: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Commands,
@@ -95,6 +95,11 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
+    // Default database path is inside the crate directory for co-location
+    let db_path = cli
+        .db_path
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".data"));
+
     match cli.command {
         Commands::Ingest { file, clear } => {
             let yaml_path = file.unwrap_or_else(|| {
@@ -110,14 +115,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 tree.relationships.len()
             );
 
-            let mut storage = GotStorage::new(&cli.db_path)?;
+            let mut storage = GotStorage::new(&db_path)?;
 
             if clear {
                 println!("Clearing existing data...");
                 storage.clear()?;
             }
 
-            println!("Ingesting into HelixDB at {}...", cli.db_path.display());
+            println!("Ingesting into HelixDB at {}...", db_path.display());
             let stats = storage.ingest(&tree)?;
 
             println!(
@@ -134,14 +139,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Query { query_type } => {
-            if !GotStorage::exists(&cli.db_path) {
+            if !GotStorage::exists(&db_path) {
                 anyhow::bail!(
                     "Database not found at {}. Run 'demo-got ingest' first.",
-                    cli.db_path.display()
+                    db_path.display()
                 );
             }
 
-            let storage = GotStorage::new(&cli.db_path)?;
+            let storage = GotStorage::new(&db_path)?;
 
             match query_type {
                 QueryType::Ancestors { person_id, depth } => {
@@ -328,14 +333,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Stats => {
-            if !GotStorage::exists(&cli.db_path) {
+            if !GotStorage::exists(&db_path) {
                 anyhow::bail!(
                     "Database not found at {}. Run 'demo-got ingest' first.",
-                    cli.db_path.display()
+                    db_path.display()
                 );
             }
 
-            let storage = GotStorage::new(&cli.db_path)?;
+            let storage = GotStorage::new(&db_path)?;
             let stats = storage.get_stats()?;
 
             if cli.json {
@@ -343,7 +348,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             } else {
                 println!("Database Statistics");
                 println!("==================");
-                println!("Path: {}", cli.db_path.display());
+                println!("Path: {}", db_path.display());
                 println!("Nodes: {}", stats.node_count);
                 println!("Edges: {}", stats.edge_count);
                 println!("\nHouse breakdown:");

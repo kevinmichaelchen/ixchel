@@ -22,7 +22,7 @@ Load the family tree from YAML into HelixDB:
 cargo run -p demo-got -- ingest
 ```
 
-This creates a `.demo-got/graph.db/` directory with the persisted graph data.
+This creates a `.data/` directory inside the crate with the persisted graph data.
 
 ### Query Commands
 
