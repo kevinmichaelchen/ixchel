@@ -70,12 +70,26 @@ Deferred modules (future):
 
 - Chunk textual entities by headings (~512 tokens, 64 overlap); store per-chunk vectors + document centroid.
 - Embed citations/sources separately for quotes vs abstracts to improve retrieval precision.
+- Chunk IDs are attached to their parent node (`vector_ids`), enabling section-level recall and scoring.
 
 ## Context Generation
 
 - Context builder expands graph to a configurable depth, preferring `BLOCKS/DEPENDS_ON`, `SPAWNS`, `SUPPORTS/CONTRADICTS`, `CITES`, and `SUMMARIZES`.
 - Output formats: Markdown, JSON, XML. Chunk payloads are pulled for referenced nodes to keep context grounded.
 - Confidence and lease metadata are surfaced so agents can decide whether to trust or refresh links.
+
+## Relationship Inference (Suggestions)
+
+When mining large folders of reports/decisions/issues:
+
+1. **Chunk retrieval**: vector search over chunks to find top-k candidate pairs across types (e.g., report chunks vs decision chunks).
+2. **Pair filtering**: apply heuristic filters (type-specific) like:
+   - `implements` candidates: issue chunks containing verbs like "implement/build" near decision titles.
+   - `summarizes` candidates: report chunks referencing issue IDs or decision IDs.
+   - `cites` candidates: citation/source mentions or URL/DOI matches.
+3. **Rerank/classify**: use a cross-encoder/reranker on candidate pairs to assign relation labels + confidence.
+4. **Materialize suggestions**: attach suggested edges with `confidence`; require user/agent confirmation to promote to canonical edges.
+5. **Granularity**: suggestions carry chunk spans so context is explainable (which section/paragraph drove the link).
 
 ## Validation & Safety
 

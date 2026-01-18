@@ -87,6 +87,8 @@ AGENT, SESSION
 | `lease_expires_at` | DateTime | For `CLAIMS` edges to prevent deadlocks      |
 | `note`             | String   | Optional annotation                          |
 
+Suggested edges (auto-mined) should set `confidence`; confirmed edges may omit it.
+
 ## Validity Rules (Strict Mode)
 
 Rules are evaluated `from --edge--> to`. Wildcards (`*`) represent any label.
