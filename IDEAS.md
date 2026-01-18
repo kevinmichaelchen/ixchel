@@ -35,12 +35,12 @@ A background daemon + CLI that:
 
 ### Why HelixDB?
 
-| Capability | Use Case |
-|------------|----------|
-| **Graph storage** | Link commits → repos → PRs → issues |
+| Capability            | Use Case                                               |
+| --------------------- | ------------------------------------------------------ |
+| **Graph storage**     | Link commits → repos → PRs → issues                    |
 | **Vector embeddings** | Semantic search: "what did I work on related to auth?" |
-| **Embedded** | No server, works offline, fast reads |
-| **`.db` file** | Single portable cache file |
+| **Embedded**          | No server, works offline, fast reads                   |
+| **`.db` file**        | Single portable cache file                             |
 
 ### Architecture
 
@@ -180,11 +180,11 @@ Output on shell startup:
 
 ### Daemon Behavior
 
-| Source | Poll Interval | Trigger |
-|--------|---------------|---------|
-| Local git repos | 5 min | Also on `.git/index` change |
-| GitHub events | 15 min | Rate-limit aware |
-| PR/issue details | 1 hour | Or on event detection |
+| Source           | Poll Interval | Trigger                     |
+| ---------------- | ------------- | --------------------------- |
+| Local git repos  | 5 min         | Also on `.git/index` change |
+| GitHub events    | 15 min        | Rate-limit aware            |
+| PR/issue details | 1 hour        | Or on event detection       |
 
 ### Configuration
 

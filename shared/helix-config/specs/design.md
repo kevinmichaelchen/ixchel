@@ -1,7 +1,7 @@
 # Design
 
-**Document:** design.md  
-**Status:** Active (2026-01-06)  
+**Document:** design.md\
+**Status:** Active (2026-01-06)\
 **Author:** Kevin Chen
 
 This document describes the design decisions and implementation details for `helix-config`.
@@ -63,12 +63,14 @@ This document describes the design decisions and implementation details for `hel
 ### Why Unified?
 
 **Old model (problematic):**
+
 ```
 ~/.config/helix/     ← configs
 ~/.cache/helix/      ← data
 ```
 
 **New model (unified):**
+
 ```
 ~/.helix/            ← everything
 ├── config/          ← configs (user edits)
@@ -78,6 +80,7 @@ This document describes the design decisions and implementation details for `hel
 ```
 
 Benefits:
+
 - Single location (easy to manage, backup, reset)
 - Clear separation (config vs data vs state)
 - Follows Rust/Node/Ruby tool patterns
@@ -308,12 +311,15 @@ pub fn detect_github_token() -> Option<String> {
 ## Merge Strategy
 
 ### Scalar Values
+
 Later values replace earlier values.
 
 ### Tables (Objects)
+
 Merged recursively. Keys in higher-priority configs override lower-priority.
 
 ### Arrays
+
 Replaced entirely (not concatenated). This prevents unexpected behavior.
 
 ### Example
@@ -377,11 +383,13 @@ pub enum ConfigError {
 ## Security Considerations
 
 ### Token Handling
+
 - Never log token values
 - Never include tokens in error messages
 - Consider `secrecy` crate for memory safety
 
 ### File Permissions
+
 - Warn if config files are world-readable
 - Recommend `chmod 600` for files containing secrets
 
@@ -443,12 +451,12 @@ pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
 
 ## Consumers
 
-| Crate | Tool Name | Config Path | Data Path |
-|-------|-----------|-------------|-----------|
-| `hbd` | `hbd` | `~/.helix/config/hbd.toml` | `.tickets/` (project) |
-| `helix-docs` | `helix-docs` | `~/.helix/config/helix-docs.toml` | `~/.helix/data/docs/` |
-| `helix-map` | `helix-map` | `~/.helix/config/helix-map.toml` | `~/.helix/data/index/` |
-| `helix-repo` | `helix-repo` | `~/.helix/config/helix-repo.toml` | `~/.helix/data/repos/` |
+| Crate        | Tool Name    | Config Path                       | Data Path                |
+| ------------ | ------------ | --------------------------------- | ------------------------ |
+| `hbd`        | `hbd`        | `~/.helix/config/hbd.toml`        | `.tickets/` (project)    |
+| `helix-docs` | `helix-docs` | `~/.helix/config/helix-docs.toml` | `~/.helix/data/docs/`    |
+| `helix-map`  | `helix-map`  | `~/.helix/config/helix-map.toml`  | `~/.helix/data/index/`   |
+| `helix-repo` | `helix-repo` | `~/.helix/config/helix-repo.toml` | `~/.helix/data/repos/`   |
 | `helix-mail` | `helix-mail` | `~/.helix/config/helix-mail.toml` | `~/.helix/state/agents/` |
 
 ---
@@ -458,6 +466,7 @@ pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
 ### From Old Directory Structure
 
 Old:
+
 ```
 ~/.config/helix/config.toml
 ~/.config/helix/helix-docs.toml
@@ -465,6 +474,7 @@ Old:
 ```
 
 New:
+
 ```
 ~/.helix/config/config.toml
 ~/.helix/config/helix-docs.toml
@@ -472,6 +482,7 @@ New:
 ```
 
 Migration steps:
+
 1. Create `~/.helix/` directory
 2. Move `~/.config/helix/*` to `~/.helix/config/`
 3. Move `~/.cache/helix/*` to `~/.helix/data/`

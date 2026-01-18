@@ -9,10 +9,12 @@
 **Purpose:** Hash-based ID generation for symbols and files.
 
 **Usage in helix-map:**
+
 - `SymbolId` (`sym-xxxxxx`) - Identifies symbols in the index
 - `FileId` (`fil-xxxxxx`) - Identifies indexed files
 
 **Integration:**
+
 ```rust
 use helix_id::define_id;
 
@@ -27,6 +29,7 @@ See: [shared/helix-id/specs/design.md](../shared/helix-id/specs/design.md)
 **Purpose:** Hierarchical configuration loading.
 
 **Usage in helix-map:**
+
 - Global config from `~/.config/helix/config.toml`
 - Project config from `.helix/helix-map.toml`
 

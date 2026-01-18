@@ -1,25 +1,26 @@
 # helix-decisions: Implementation Tasks
 
-**Document:** tasks.md  
-**Status:** In Progress (2026-01-06)  
+**Document:** tasks.md\
+**Status:** In Progress (2026-01-06)\
 **Author:** Kevin Chen
 
 > **Implementation Status**
 >
-> | Phase | Status | Description |
-> |-------|--------|-------------|
-> | Phase 1-2 (Core) | ✅ Complete | Types, loader, embeddings, HelixDB storage, CLI, hooks |
-> | Phase 3.1 (Foundation) | ✅ Complete | Manifest, git_utils modules |
-> | Phase 3.2 (Backend) | ✅ Complete | HelixDB backend, storage rewrite |
-> | Phase 3.3 (Integration) | ✅ Complete | Integration tests, SyncStats |
-> | Phase 3.4 (Daemon) | ✅ Complete | IPC client, `--sync` flag, daemon integration |
-> | Phase 4 (Advanced) | 📋 Future | BM25 hybrid search, query language |
+> | Phase                   | Status      | Description                                            |
+> | ----------------------- | ----------- | ------------------------------------------------------ |
+> | Phase 1-2 (Core)        | ✅ Complete | Types, loader, embeddings, HelixDB storage, CLI, hooks |
+> | Phase 3.1 (Foundation)  | ✅ Complete | Manifest, git_utils modules                            |
+> | Phase 3.2 (Backend)     | ✅ Complete | HelixDB backend, storage rewrite                       |
+> | Phase 3.3 (Integration) | ✅ Complete | Integration tests, SyncStats                           |
+> | Phase 3.4 (Daemon)      | ✅ Complete | IPC client, `--sync` flag, daemon integration          |
+> | Phase 4 (Advanced)      | 📋 Future   | BM25 hybrid search, query language                     |
 
 ---
 
 ## Phase 1-2: Core (COMPLETE)
 
 ### Task 1.1: Project Setup ✅
+
 - [x] Create `helix-decisions/` directory structure
 - [x] Write `Cargo.toml` with dependencies
 - [x] Write `README.md`
@@ -29,6 +30,7 @@
 - [x] Add to workspace `Cargo.toml`
 
 ### Task 1.2: Types Module ✅
+
 - [x] Define `Status` enum
 - [x] Define `DecisionMetadata` struct (serde)
 - [x] Define `Decision` struct
@@ -38,6 +40,7 @@
 - [x] Unit tests for serialization
 
 ### Task 1.3: Loader Module ✅
+
 - [x] Implement `load_decisions(dir)` function
 - [x] Parse YAML frontmatter with `gray_matter`
 - [x] Extract body text
@@ -46,6 +49,7 @@
 - [x] Unit tests with fixture decisions
 
 ### Task 1.4: Embeddings Module ✅
+
 - [x] Implement `Embedder` struct (wraps helix-embeddings)
 - [x] Initialize fastembed with BGE-small-en-v1.5
 - [x] Implement `embed(text)` method
@@ -53,6 +57,7 @@
 - [x] Integration test with sample text
 
 ### Task 1.5: Storage Module ✅
+
 - [x] Define `DecisionStorage` trait
 - [x] Implement `HelixDecisionStorage` (HelixDB backend)
 - [x] Implement `open()` for project-local storage
@@ -63,6 +68,7 @@
 - [x] Integration tests
 
 ### Task 1.6: Searcher Module ✅
+
 - [x] Implement `DecisionSearcher` struct
 - [x] Implement `new()` constructor
 - [x] Implement `sync(dir)` method with delta detection
@@ -70,6 +76,7 @@
 - [x] Integration test end-to-end
 
 ### Task 1.7: CLI ✅
+
 - [x] Define `Cli` struct with clap derive
 - [x] Parse arguments: query, directory, limit, json
 - [x] Commands: search, chain, related
@@ -80,6 +87,7 @@
 - [x] Add `check` command for frontmatter + uuid validation
 
 ### Task 1.8: Git Hooks ✅
+
 - [x] Implement `hooks.rs` module
 - [x] `init-hooks` command to install pre-commit hook
 - [x] `remove-hooks` command to uninstall
@@ -88,6 +96,7 @@
 - [x] Bypass options: `--no-verify`, env var
 
 ### Task 1.9: Configuration ✅
+
 - [x] Implement `config.rs` module
 - [x] Load from `~/.helix/config/helix-decisions.toml`
 - [x] Load from `.helix/helix-decisions.toml` (repo override)
@@ -98,6 +107,7 @@
 ## Phase 3: Indexer + Daemon (PLANNED)
 
 > **Reference Documents:**
+>
 > - `docs/phase3/PHASE_3_PLAN.md` - Detailed architecture
 > - `docs/phase3/PHASE_3_CORRECTIONS.md` - API alignment fixes
 > - `docs/phase3/CORRECTIONS_QUICK_REFERENCE.txt` - Quick lookup
@@ -105,6 +115,7 @@
 ### Task 3.1: Foundation Modules (Session 1) ✅
 
 #### Task 3.1.1: manifest.rs ✅
+
 - [x] Define `ManifestEntry` struct
   - file_path, mtime, size, content_hash, decision_id, uuid, vector_id, embedding_model, indexer_version
 - [x] Define `IndexManifest` struct (HashMap of entries)
@@ -122,6 +133,7 @@
 > Manifest uses JSON bytes for storage-agnostic serialization.
 
 #### Task 3.1.2: git_utils.rs ✅
+
 - [x] Implement `list_decision_files(repo_root, decisions_dir)` function
 - [x] Run `git ls-files '.decisions/**/*.md'` internally
 - [x] Implement directory walk fallback if git unavailable
@@ -135,6 +147,7 @@
 ### Task 3.2: Backend Implementation (Session 2)
 
 #### Task 3.2.1: helix_backend.rs (~600 lines)
+
 - [ ] Define `HelixDecisionBackend` struct
   - engine: HelixGraphEngine
   - manifest: IndexManifest
@@ -202,6 +215,7 @@
   - Secondary index lookups
 
 #### Task 3.2.2: Update storage.rs
+
 - [ ] Add `HelixDecisionStorage` wrapper struct
 - [ ] Implement `DecisionStorage` trait for `HelixDecisionStorage`
 - [ ] Delegate methods to `HelixDecisionBackend`
@@ -213,6 +227,7 @@
   - Secondary index usage
 
 #### Task 3.2.3: Update lib.rs and Cargo.toml
+
 - [ ] Export new modules: `manifest`, `git_utils`, `helix_backend`
 - [ ] Add `helix-db` dependency
 - [ ] Add `bumpalo` dependency (for arena allocation)
@@ -221,6 +236,7 @@
 ### Task 3.3: Integration & Polish (Session 3)
 
 #### Task 3.3.1: Integration Tests ✅
+
 - [x] Scenario 1: Initial indexing (10 decisions)
 - [x] Scenario 2: Modify 1 decision (delta detected)
 - [x] Scenario 3: Add 3 decisions (only new files indexed)
@@ -234,6 +250,7 @@
 > `cargo test -p helix-decisions --test integration -- --ignored`
 
 #### Task 3.3.2: Performance Benchmarks
+
 - [ ] First sync (10 decisions): < 5 seconds
 - [ ] Delta sync (no changes): < 50ms
 - [ ] Delta sync (1 file changed): < 100ms
@@ -241,11 +258,13 @@
 - [ ] Graph traversal: < 50ms
 
 #### Task 3.3.3: Documentation
+
 - [ ] Update README.md with HelixDB architecture section
 - [ ] Document graph schema
 - [ ] Add code comments on complex methods
 
 #### Task 3.3.4: Cleanup ✅
+
 - [x] Run `cargo test --all` - 37 unit tests pass, 11 integration tests (ignored)
 - [x] Run `cargo clippy` (0 warnings)
 - [x] Run `cargo fmt`
@@ -254,6 +273,7 @@
 #### Task 3.4: Indexer Daemon and Consistency
 
 ##### Task 3.4.1: Daemon Process ✅
+
 - [x] ~~Add `helix-decisions daemon` subcommand~~ → Implemented as shared `helixd` binary
 - [x] Implement a global per-user daemon with `{repo_root, tool}` namespacing
 - [x] Define a stable socket naming scheme for helix-tools
@@ -267,17 +287,20 @@
 > See `shared/helix-daemon/specs/tasks.md` for daemon implementation details.
 
 ##### Task 3.4.2: IPC + Queue ✅
+
 - [x] Use `shared/helix-daemon` IPC client
 - [x] CLI sends `enqueue_sync` on each invocation
 - [x] CLI uses `wait_sync` for `--sync`
 
 ##### Task 3.4.3: Strong Consistency Flag ✅
+
 - [x] Add `--sync` to block until the queued sync completes
 - [x] Implement `wait_sync` with timeout and clear error reporting
 - [x] If daemon is unavailable, run a direct sync under the writer lock
 - [x] Emit a warning when serving potentially stale results
 
 ##### Task 3.4.4: Sync Worker (PLANNED)
+
 > The daemon currently stubs sync execution. This task implements actual sync logic.
 
 - [ ] Implement sync callback registration in daemon
@@ -289,16 +312,19 @@
 ## Phase 4: Advanced (Future)
 
 ### Task 4.1: BM25 Hybrid Search
+
 - [ ] Enable HelixDB BM25 index on title/body
 - [ ] Combine with vector search (RRF)
 - [ ] Useful when semantic search misses keywords
 
 ### Task 4.2: Query Language
+
 - [ ] Support HelixQL for complex queries
 - [ ] Find all decisions in a status chain
 - [ ] Find decisions with specific tag combinations
 
 ### Task 4.3: File Watcher Enhancements (Optional)
+
 - [ ] File watching for continuous re-indexing (fs events)
 - [ ] Smarter debounce/coalesce for bursty file changes
 - [ ] Push notifications for stale index warnings
@@ -308,11 +334,13 @@
 ## Dependencies
 
 ### Phase 3 Requires:
+
 - HelixDB embedded mode (available in helix-db crate)
 - Understanding of LMDB transaction model
 - Arena allocation patterns (bumpalo)
 
 ### Reference Files:
+
 - `helix-db/src/helix_engine/tests/storage_tests.rs` - Canonical examples
 - `helix-db/src/helix_engine/storage_core/mod.rs` - Key helpers
 - `helix-db/src/utils/items.rs` - Node/Edge structs
@@ -322,18 +350,18 @@
 
 ## Milestones
 
-| Milestone | Tasks | Status | Target |
-|-----------|-------|--------|--------|
-| **M1: Core Types** | 1.1-1.2 | ✅ Complete | - |
-| **M2: Load & Embed** | 1.3-1.4 | ✅ Complete | - |
-| **M3: Storage** | 1.5 | ✅ Complete | - |
-| **M4: Search** | 1.6-1.7 | ✅ Complete | - |
-| **M5: Hooks** | 1.8-1.9 | ✅ Complete | - |
-| **M6: Daemon Integration** | 3.4 | ✅ Complete | - |
-| **M7: Phase 3 Foundation** | 3.1 | ✅ Complete | - |
-| **M8: Phase 3 Backend** | 3.2 | 🚧 Planned | Session 2 (2-3 hrs) |
-| **M9: Phase 3 Integration** | 3.3 | 🚧 Planned | Session 3 (1-2 hrs) |
-| **M10: v1.0.0 Release** | All Phase 3 | 🚧 Planned | Total: 6-8 hrs |
+| Milestone                   | Tasks       | Status      | Target              |
+| --------------------------- | ----------- | ----------- | ------------------- |
+| **M1: Core Types**          | 1.1-1.2     | ✅ Complete | -                   |
+| **M2: Load & Embed**        | 1.3-1.4     | ✅ Complete | -                   |
+| **M3: Storage**             | 1.5         | ✅ Complete | -                   |
+| **M4: Search**              | 1.6-1.7     | ✅ Complete | -                   |
+| **M5: Hooks**               | 1.8-1.9     | ✅ Complete | -                   |
+| **M6: Daemon Integration**  | 3.4         | ✅ Complete | -                   |
+| **M7: Phase 3 Foundation**  | 3.1         | ✅ Complete | -                   |
+| **M8: Phase 3 Backend**     | 3.2         | 🚧 Planned  | Session 2 (2-3 hrs) |
+| **M9: Phase 3 Integration** | 3.3         | 🚧 Planned  | Session 3 (1-2 hrs) |
+| **M10: v1.0.0 Release**     | All Phase 3 | 🚧 Planned  | Total: 6-8 hrs      |
 
 ---
 

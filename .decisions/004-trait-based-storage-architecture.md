@@ -1,8 +1,8 @@
 # ADR-004: Trait-Based Storage Architecture
 
-**Status:** Accepted  
-**Date:** 2026-01-06  
-**Deciders:** Kevin Chen  
+**Status:** Accepted\
+**Date:** 2026-01-06\
+**Deciders:** Kevin Chen\
 **Tags:** architecture, storage, helixdb, dependency-injection
 
 ## Context and Problem Statement
@@ -10,11 +10,13 @@
 helix-tools uses HelixDB for persistent graph and vector storage. The question is: how should tools integrate with HelixDB?
 
 **Option A (rejected):** Every tool directly depends on HelixDB
+
 - Tight coupling
 - Tools can't be tested without HelixDB
 - Shared crates become HelixDB-aware
 
 **Option B (accepted):** Trait-based architecture with dependency injection
+
 - Loose coupling
 - Tools define their own storage interfaces
 - HelixDB is an implementation detail, not a dependency
@@ -79,12 +81,12 @@ impl DecisionStore for MemoryDecisionStore { ... }
 
 ### Shared Crates: No HelixDB Dependencies
 
-| Crate | Purpose | HelixDB Dependency |
-|-------|---------|-------------------|
-| helix-config | Configuration loading | NO — just documents paths |
-| helix-id | ID generation | NO — pure utility |
-| helix-embeddings | Text embeddings | NO — returns `Vec<f32>` |
-| helix-discovery | Git root discovery | NO — pure utility |
+| Crate            | Purpose               | HelixDB Dependency        |
+| ---------------- | --------------------- | ------------------------- |
+| helix-config     | Configuration loading | NO — just documents paths |
+| helix-id         | ID generation         | NO — pure utility         |
+| helix-embeddings | Text embeddings       | NO — returns `Vec<f32>`   |
+| helix-discovery  | Git root discovery    | NO — pure utility         |
 
 Consumers decide what to do with embeddings. helix-embeddings doesn't know or care about storage.
 
@@ -122,6 +124,7 @@ let graph_env = unsafe {
 ```
 
 This means:
+
 - Data persists automatically across runs
 - No JSON serialization needed
 - No "index rebuild" on startup
@@ -157,6 +160,7 @@ Tools read this config and pass it to their HelixDB backend.
 ### Shared `VectorStore` Trait in helix-storage
 
 **Rejected** because:
+
 - Different tools have different storage needs (graph traversal vs simple CRUD)
 - Forces a lowest-common-denominator interface
 - helix-storage was scaffolding, not a long-term solution
@@ -164,6 +168,7 @@ Tools read this config and pass it to their HelixDB backend.
 ### Direct HelixDB Dependency in All Tools
 
 **Rejected** because:
+
 - Tight coupling
 - Can't test without HelixDB
 - Violates dependency inversion

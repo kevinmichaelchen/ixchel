@@ -1,15 +1,15 @@
 # helix-decisions: Design Specification
 
-**Document:** design.md  
-**Status:** In Progress (2026-01-06)  
+**Document:** design.md\
+**Status:** In Progress (2026-01-06)\
 **Author:** Kevin Chen
 
 > **Implementation Status**
 >
-> | Phase | Status | Description |
-> |-------|--------|-------------|
-> | **Phase 1-2 (Core)** | ✅ Complete | HelixDB storage, semantic search, git hooks |
-> | **Phase 3 (Indexer + Daemon)** | 🚧 Planned | Incremental indexing, background sync |
+> | Phase                          | Status      | Description                                 |
+> | ------------------------------ | ----------- | ------------------------------------------- |
+> | **Phase 1-2 (Core)**           | ✅ Complete | HelixDB storage, semantic search, git hooks |
+> | **Phase 3 (Indexer + Daemon)** | 🚧 Planned  | Incremental indexing, background sync       |
 >
 > HelixDB is the only storage backend. Phase 3 adds incremental indexing and a daemon
 > for background sync. See [Phase 3 Implementation](#phase-3-indexer-daemon-implementation) below.
@@ -17,12 +17,14 @@
 ## Design Philosophy
 
 Decisions are not isolated documents—they form a **decision graph**:
+
 - Decision 005 **supersedes** Decision 002
-- Decision 007 **amends** Decision 003  
+- Decision 007 **amends** Decision 003
 - Decision 004 **relates to** Decision 006
 - Decision 008 **depends on** Decision 001
 
 This graph structure enables powerful queries beyond simple search:
+
 - "What's the current decision?" → Follow supersedes chain to leaf
 - "Why was this changed?" → Traverse back through supersedes history
 - "What else is affected?" → Find related and dependent decisions
@@ -134,12 +136,14 @@ Decisions are stored as graph nodes with properties and vector embeddings.
 ## ID Scheme
 
 ### Local ID (`id`)
+
 - Sequential integer (1, 2, 3...)
 - Human-readable and easy to reference
 - Unique within a single repository
 - Used in filenames: `003-database-migration.md`
 
 ### Global UUID (`uuid`)
+
 - Required hash-based identifier via helix-id
 - Format: `hx-xxxxxx` (6 hex chars from Blake3 hash)
 - Safe for distributed collaboration across branches
@@ -148,6 +152,7 @@ Decisions are stored as graph nodes with properties and vector embeddings.
 - Required in frontmatter; `helix-decisions check` enforces presence
 
 ### Why Both?
+
 - `id`: For humans ("see decision 5")
 - `uuid`: For machines and cross-repo references
 - Local IDs can conflict across branches; UUIDs cannot
@@ -164,6 +169,7 @@ Decisions become immutable once accepted:
 ### Amendment Pattern
 
 Instead of modifying accepted decisions:
+
 - Create new decision with `amends: [original_id]`
 - Original remains unchanged for audit trail
 - Search returns both, with amendment relationship visible
@@ -171,6 +177,7 @@ Instead of modifying accepted decisions:
 ### Supersession Pattern
 
 When a decision is replaced entirely:
+
 - Create new decision with `supersedes: [old_id]`
 - Set old decision status to `superseded`
 - Graph traversal shows evolution chain
@@ -226,6 +233,7 @@ When a decision is replaced entirely:
 ## Module Design
 
 ### types.rs
+
 ```rust
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
@@ -425,6 +433,7 @@ pub struct ChainNode {
 ```
 
 ### loader.rs
+
 ```rust
 use crate::types::{Decision, DecisionMetadata};
 use anyhow::Result;
@@ -479,6 +488,7 @@ fn hash_content(content: &str) -> String {
 ```
 
 ### embeddings.rs
+
 ```rust
 use anyhow::Result;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
@@ -536,6 +546,7 @@ impl HelixDecisionStorage {
 ```
 
 ### delta.rs
+
 ```rust
 use crate::types::Decision;
 use std::collections::HashMap;
@@ -584,6 +595,7 @@ pub fn compute_delta(
 ```
 
 ### searcher.rs
+
 ```rust
 use crate::delta::compute_delta;
 use crate::embeddings::Embedder;
@@ -695,6 +707,7 @@ impl DecisionSearcher {
 ## Data Flow
 
 ### First Invocation (Cold Start)
+
 ```
 1. CLI parses args (query, options)
 2. DecisionSearcher::new() opens HelixDB (creates if needed)
@@ -710,6 +723,7 @@ impl DecisionSearcher {
 ```
 
 ### Subsequent Invocations (Warm)
+
 ```
 1. CLI parses args
 2. DecisionSearcher::new() opens existing HelixDB
@@ -720,6 +734,7 @@ impl DecisionSearcher {
 ```
 
 ### Graph Traversal (chain/related commands)
+
 ```
 1. CLI parses args with decision ID
 2. DecisionSearcher::new() opens existing HelixDB
@@ -731,6 +746,7 @@ impl DecisionSearcher {
 ## Query Examples
 
 ### Semantic Search
+
 ```bash
 # Find decisions about caching
 helix-decisions search "caching strategy"
@@ -743,6 +759,7 @@ helix-decisions search "database" --status accepted
 ```
 
 ### Graph Queries
+
 ```bash
 # Show the evolution of a decision (supersedes chain)
 helix-decisions chain 2
@@ -761,9 +778,11 @@ helix-decisions chain 2
 ```
 
 ### JSON Output (for agents)
+
 ```bash
 helix-decisions search "authentication" --json
 ```
+
 ```json
 {
   "query": "authentication",
@@ -799,12 +818,12 @@ graph schema with proper arena allocation, 3-DB edge writes, and vector mapping.
 
 ### Edge Types
 
-| Edge Label | Direction | Meaning |
-|------------|-----------|---------|
-| `SUPERSEDES` | A → B | A replaces B (B is obsolete) |
-| `AMENDS` | A → B | A modifies B (B still valid) |
-| `DEPENDS_ON` | A → B | A requires B to be accepted |
-| `RELATED_TO` | A ↔ B | Bidirectional topic relationship |
+| Edge Label   | Direction | Meaning                          |
+| ------------ | --------- | -------------------------------- |
+| `SUPERSEDES` | A → B     | A replaces B (B is obsolete)     |
+| `AMENDS`     | A → B     | A modifies B (B still valid)     |
+| `DEPENDS_ON` | A → B     | A requires B to be accepted      |
+| `RELATED_TO` | A ↔ B     | Bidirectional topic relationship |
 
 ### Decision Frontmatter Format
 
@@ -838,6 +857,7 @@ related_to: [6, 7]          # Related but not dependent
 ## Embedding Model
 
 Using `fastembed` with `AllMiniLML6V2`:
+
 - 384 dimensions
 - ~50ms per embedding (CPU)
 - Good semantic understanding
@@ -845,33 +865,34 @@ Using `fastembed` with `AllMiniLML6V2`:
 
 ## Performance Targets
 
-| Operation | Target | Notes |
-|-----------|--------|-------|
-| First sync | 2-5s | Embedding 100 decisions |
-| Delta sync | < 50ms | Hash comparison |
-| Query embed | 50-100ms | Single text |
-| Vector search | < 50ms | HelixDB |
-| Graph traversal | < 50ms | Chain/related |
-| Total search | < 100ms | After first run |
+| Operation       | Target   | Notes                   |
+| --------------- | -------- | ----------------------- |
+| First sync      | 2-5s     | Embedding 100 decisions |
+| Delta sync      | < 50ms   | Hash comparison         |
+| Query embed     | 50-100ms | Single text             |
+| Vector search   | < 50ms   | HelixDB                 |
+| Graph traversal | < 50ms   | Chain/related           |
+| Total search    | < 100ms  | After first run         |
 
 ## Error Handling
 
-| Error | Behavior |
-|-------|----------|
-| Missing directory | Exit 2 with message |
-| Malformed YAML | Warn, skip file |
-| HelixDB error | Exit 2 with message |
-| Embedding error | Exit 2 with message |
-| No results | Exit 1, show "No results" |
+| Error             | Behavior                  |
+| ----------------- | ------------------------- |
+| Missing directory | Exit 2 with message       |
+| Malformed YAML    | Warn, skip file           |
+| HelixDB error     | Exit 2 with message       |
+| Embedding error   | Exit 2 with message       |
+| No results        | Exit 1, show "No results" |
 
 ---
 
 ## Phase 3: Indexer + Daemon Implementation
 
-> **Status:** Planned  
+> **Status:** Planned\
 > **Documents:** See `docs/phase3/PHASE_3_PLAN.md` and `docs/phase3/PHASE_3_CORRECTIONS.md`
 
 Phase 3 focuses on incremental indexing and background sync on top of HelixDB:
+
 - **Incremental indexing** via 3-stage change detection
 - **Native graph traversal** for chain/related queries
 - **Daemonized sync** for single-writer guarantees and low-latency queries
@@ -1296,15 +1317,15 @@ impl HelixDecisionBackend {
 
 ### Performance Targets (Phase 3)
 
-| Operation | Phase 1-2 | Phase 3 | Notes |
-|-----------|-----|---------|-------|
-| First sync | 2-5s | 2-5s | Embedding dominates |
-| Delta sync (no changes) | ~100ms | <50ms | 3-stage skip |
-| Delta sync (1 file changed) | ~500ms | <100ms | Single re-embed |
-| Query embedding | 50-100ms | 50-100ms | fastembed unchanged |
-| Vector search | <100ms | <50ms | HNSW optimized |
-| Graph traversal | N/A (in-memory) | <50ms | Native LMDB |
-| Total search | <200ms | <100ms | After first run |
+| Operation                   | Phase 1-2       | Phase 3  | Notes               |
+| --------------------------- | --------------- | -------- | ------------------- |
+| First sync                  | 2-5s            | 2-5s     | Embedding dominates |
+| Delta sync (no changes)     | ~100ms          | <50ms    | 3-stage skip        |
+| Delta sync (1 file changed) | ~500ms          | <100ms   | Single re-embed     |
+| Query embedding             | 50-100ms        | 50-100ms | fastembed unchanged |
+| Vector search               | <100ms          | <50ms    | HNSW optimized      |
+| Graph traversal             | N/A (in-memory) | <50ms    | Native LMDB         |
+| Total search                | <200ms          | <100ms   | After first run     |
 
 ### Index Location
 
@@ -1332,13 +1353,13 @@ pub fn open_storage() -> Result<Box<dyn DecisionStorage>> {
 
 See `docs/phase3/PHASE_3_CORRECTIONS.md` for full details. Key issues fixed:
 
-| Issue | Correction |
-|-------|-----------|
-| Edge insertion | Must write to 3 DBs (edges_db, out_edges_db, in_edges_db) |
-| Node construction | Must use arena allocation + ImmutablePropertiesMap |
-| Vector insertion | HNSW generates UUID; store vector_id in node properties |
-| Vector deletion | Must tombstone both node and vector |
-| Label hashing | Must hash labels for adjacency DB keys |
-| Config path | Must plumb through HelixGraphEngineOpts.path |
-| Secondary indices | Must create explicitly for id, vector_id |
-| Metadata namespace | Use "manifest:helix-decisions:v1" to avoid collisions |
+| Issue              | Correction                                                |
+| ------------------ | --------------------------------------------------------- |
+| Edge insertion     | Must write to 3 DBs (edges_db, out_edges_db, in_edges_db) |
+| Node construction  | Must use arena allocation + ImmutablePropertiesMap        |
+| Vector insertion   | HNSW generates UUID; store vector_id in node properties   |
+| Vector deletion    | Must tombstone both node and vector                       |
+| Label hashing      | Must hash labels for adjacency DB keys                    |
+| Config path        | Must plumb through HelixGraphEngineOpts.path              |
+| Secondary indices  | Must create explicitly for id, vector_id                  |
+| Metadata namespace | Use "manifest:helix-decisions:v1" to avoid collisions     |

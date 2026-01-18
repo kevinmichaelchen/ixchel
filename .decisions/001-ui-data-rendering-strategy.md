@@ -1,8 +1,8 @@
 # ADR-001: UI Data Rendering Strategy
 
-**Status:** Accepted  
-**Date:** 2026-01-04  
-**Deciders:** Kevin Chen  
+**Status:** Accepted\
+**Date:** 2026-01-04\
+**Deciders:** Kevin Chen\
 **Tags:** hbd-ui, performance, virtualization, drag-drop
 
 ## Context and Problem Statement
@@ -14,6 +14,7 @@ hbd-ui needs to handle repositories with 1,000-10,000+ issues efficiently across
 - **Detail panel** - Single issue with dependency graph
 
 We need to select libraries that:
+
 1. Handle large datasets without performance degradation
 2. Support Svelte 5 runes and modern patterns
 3. Work well together as a cohesive stack
@@ -31,28 +32,28 @@ We need to select libraries that:
 
 ### Table Libraries
 
-| Option | Svelte 5 | Virtual | Features | Bundle | Maintenance |
-|--------|----------|---------|----------|--------|-------------|
-| **shadcn-svelte data-table** | Via adapter | Via TanStack | Full | ~25KB | Active (8K stars) |
-| svelte-headless-table | Native | None | Full | ~12KB | Active |
-| AG Grid | Unknown | Built-in | Enterprise | ~500KB | Commercial |
-| TanStack Table direct | Via adapter | Separate | Full | ~15KB | Active (6K stars) |
+| Option                       | Svelte 5    | Virtual      | Features   | Bundle | Maintenance       |
+| ---------------------------- | ----------- | ------------ | ---------- | ------ | ----------------- |
+| **shadcn-svelte data-table** | Via adapter | Via TanStack | Full       | ~25KB  | Active (8K stars) |
+| svelte-headless-table        | Native      | None         | Full       | ~12KB  | Active            |
+| AG Grid                      | Unknown     | Built-in     | Enterprise | ~500KB | Commercial        |
+| TanStack Table direct        | Via adapter | Separate     | Full       | ~15KB  | Active (6K stars) |
 
 ### Virtualization Libraries
 
-| Option | Svelte 5 | Features | Bundle | Maintenance |
-|--------|----------|----------|--------|-------------|
-| **@tanstack/svelte-virtual** | Yes | Row/column, dynamic heights | ~10KB | Active (TanStack) |
-| svelte-virtual-list | Partial | Basic windowing | ~5KB | Stale |
-| svelte-virtuallists | Yes | Lists only | ~5KB | Active |
+| Option                       | Svelte 5 | Features                    | Bundle | Maintenance       |
+| ---------------------------- | -------- | --------------------------- | ------ | ----------------- |
+| **@tanstack/svelte-virtual** | Yes      | Row/column, dynamic heights | ~10KB  | Active (TanStack) |
+| svelte-virtual-list          | Partial  | Basic windowing             | ~5KB   | Stale             |
+| svelte-virtuallists          | Yes      | Lists only                  | ~5KB   | Active            |
 
 ### Drag-Drop Libraries
 
-| Option | Svelte 5 | Multi-container | A11y | Maintenance |
-|--------|----------|-----------------|------|-------------|
-| **svelte-dnd-action** | Yes | Excellent | Best | Active (2K stars) |
-| sveltednd | Yes | Good | Basic | Active (477 stars) |
-| Native HTML5 DnD | Yes | Manual | Poor | N/A |
+| Option                | Svelte 5 | Multi-container | A11y  | Maintenance        |
+| --------------------- | -------- | --------------- | ----- | ------------------ |
+| **svelte-dnd-action** | Yes      | Excellent       | Best  | Active (2K stars)  |
+| sveltednd             | Yes      | Good            | Basic | Active (477 stars) |
+| Native HTML5 DnD      | Yes      | Manual          | Poor  | N/A                |
 
 ## Critical Finding: Virtualization + Drag-Drop Incompatibility
 
@@ -75,12 +76,12 @@ This is a fundamental architectural incompatibility, not a bug to be fixed.
 
 ### Workarounds Evaluated
 
-| Approach | Feasibility | Trade-off |
-|----------|-------------|-----------|
-| **Pagination** | Recommended | Limits visible items but preserves DnD |
-| Disable virtualization in Kanban | Acceptable | Works for <500 items/column |
-| Custom portal-based drag | Complex | 100+ hours of custom work |
-| Virtual drop zones only | Partial | Breaks drag preview positioning |
+| Approach                         | Feasibility | Trade-off                              |
+| -------------------------------- | ----------- | -------------------------------------- |
+| **Pagination**                   | Recommended | Limits visible items but preserves DnD |
+| Disable virtualization in Kanban | Acceptable  | Works for <500 items/column            |
+| Custom portal-based drag         | Complex     | 100+ hours of custom work              |
+| Virtual drop zones only          | Partial     | Breaks drag preview positioning        |
 
 ## Decision
 
@@ -108,12 +109,12 @@ This is a fundamental architectural incompatibility, not a bug to be fixed.
 
 ### Libraries
 
-| Purpose | Library | Version | Rationale |
-|---------|---------|---------|-----------|
-| UI Components | shadcn-svelte | ^1.1.0 | Full Svelte 5, TanStack integration, copy-paste model |
-| Table | @tanstack/table-core + shadcn adapter | ^8.21.3 | Sorting, filtering, column resize, row selection |
-| Virtualization | @tanstack/svelte-virtual | ^3.13.12 | Official TanStack, handles 50K+ rows |
-| Drag-Drop | svelte-dnd-action | ^0.9.64 | Best accessibility, multi-container, touch support |
+| Purpose        | Library                               | Version  | Rationale                                             |
+| -------------- | ------------------------------------- | -------- | ----------------------------------------------------- |
+| UI Components  | shadcn-svelte                         | ^1.1.0   | Full Svelte 5, TanStack integration, copy-paste model |
+| Table          | @tanstack/table-core + shadcn adapter | ^8.21.3  | Sorting, filtering, column resize, row selection      |
+| Virtualization | @tanstack/svelte-virtual              | ^3.13.12 | Official TanStack, handles 50K+ rows                  |
+| Drag-Drop      | svelte-dnd-action                     | ^0.9.64  | Best accessibility, multi-container, touch support    |
 
 ### Architecture by View
 
@@ -142,6 +143,7 @@ This is a fundamental architectural incompatibility, not a bug to be fixed.
 ```
 
 **Behavior:**
+
 - Load first 1,000 issues on mount
 - Virtualize rendering (only ~40 DOM nodes regardless of count)
 - "Load more" button for additional batches
@@ -187,6 +189,7 @@ This is a fundamental architectural incompatibility, not a bug to be fixed.
 ```
 
 **Behavior:**
+
 - Show 100 items per column initially
 - "Load more" within each column
 - Full drag-drop functionality preserved
@@ -202,22 +205,22 @@ This is a fundamental architectural incompatibility, not a bug to be fixed.
 
 ### Virtualization Thresholds
 
-| Item Count | Table View | Kanban View | Recommended Strategy |
-|------------|------------|-------------|---------------------|
-| < 100 | No virtualization | No pagination | Direct render |
-| 100-500 | Optional | No pagination | Consider virtualization |
-| 500-1,000 | **Required** | Pagination helpful | Virtualize table |
-| 1,000-10,000 | **Required** | **Pagination required** | Full strategy |
-| 10,000+ | Required + pagination | Pagination + filters | Server-side filtering |
+| Item Count   | Table View            | Kanban View             | Recommended Strategy    |
+| ------------ | --------------------- | ----------------------- | ----------------------- |
+| < 100        | No virtualization     | No pagination           | Direct render           |
+| 100-500      | Optional              | No pagination           | Consider virtualization |
+| 500-1,000    | **Required**          | Pagination helpful      | Virtualize table        |
+| 1,000-10,000 | **Required**          | **Pagination required** | Full strategy           |
+| 10,000+      | Required + pagination | Pagination + filters    | Server-side filtering   |
 
 ### Benchmarks (Expected)
 
-| Metric | Without Virtualization | With Virtualization |
-|--------|----------------------|---------------------|
-| Initial render (10K) | ~500ms | ~50ms |
-| Scroll performance | Janky (<30fps) | Smooth (60fps) |
-| Memory (10K items) | ~50-100MB | ~5-10MB |
-| DOM nodes | ~10,000 | ~40 |
+| Metric               | Without Virtualization | With Virtualization |
+| -------------------- | ---------------------- | ------------------- |
+| Initial render (10K) | ~500ms                 | ~50ms               |
+| Scroll performance   | Janky (<30fps)         | Smooth (60fps)      |
+| Memory (10K items)   | ~50-100MB              | ~5-10MB             |
+| DOM nodes            | ~10,000                | ~40                 |
 
 ### Configuration
 
@@ -251,11 +254,11 @@ createVirtualizer({
 
 ### Risks and Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| TanStack Svelte 5 adapter breaks | Low | High | Pin versions, monitor releases |
-| svelte-dnd-action deprecation | Low | Medium | sveltednd as fallback |
-| 100 items/column insufficient | Medium | Medium | Add column-level filters |
+| Risk                             | Likelihood | Impact | Mitigation                     |
+| -------------------------------- | ---------- | ------ | ------------------------------ |
+| TanStack Svelte 5 adapter breaks | Low        | High   | Pin versions, monitor releases |
+| svelte-dnd-action deprecation    | Low        | Medium | sveltednd as fallback          |
+| 100 items/column insufficient    | Medium     | Medium | Add column-level filters       |
 
 ## Dependencies
 

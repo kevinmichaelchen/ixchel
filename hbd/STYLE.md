@@ -25,12 +25,12 @@ hbd/src/
 
 ### Layer Rules
 
-| Layer | Can Import | Cannot Import |
-|-------|------------|---------------|
-| `main.rs` | commands, lib exports | domain directly |
-| `commands/` | lib exports, domain | storage internals |
-| `domain/` | types only | storage, commands, I/O |
-| `storage.rs` | types, markdown, id | commands, domain |
+| Layer        | Can Import            | Cannot Import          |
+| ------------ | --------------------- | ---------------------- |
+| `main.rs`    | commands, lib exports | domain directly        |
+| `commands/`  | lib exports, domain   | storage internals      |
+| `domain/`    | types only            | storage, commands, I/O |
+| `storage.rs` | types, markdown, id   | commands, domain       |
 
 ## Enums
 
@@ -99,6 +99,7 @@ let issue = Issue::builder("Title")
 ```
 
 Builder methods:
+
 - Return `Self` for chaining
 - Use `#[must_use]` attribute
 - Accept `impl Into<T>` for string parameters
@@ -157,26 +158,31 @@ fn no_false_positive_when_no_path_exists() { ... }
 ## Code Review Checklist
 
 ### Architecture
+
 - [ ] Business logic in `domain/`, not `commands/` or `main.rs`
 - [ ] New public items intentionally exposed via `lib.rs`
 - [ ] No imports from internal modules (`id`, `markdown`)
 
 ### Types
+
 - [ ] Enums implement `as_str()`, `Display`, `FromStr`
 - [ ] Structs with >3 fields use builder pattern
 - [ ] `#[must_use]` on builder methods returning `Self`
 
 ### Error Handling
+
 - [ ] New errors have specific `HbdError` variants
 - [ ] `?` operator used (not manual `match`)
 - [ ] Error messages are actionable
 
 ### CLI
+
 - [ ] Command accepts `--json` flag
 - [ ] Human output uses tables/formatting
 - [ ] JSON output matches struct serialization
 
 ### Testing
+
 - [ ] `domain/` functions have unit tests
 - [ ] Edge cases covered
 - [ ] Tests don't require filesystem

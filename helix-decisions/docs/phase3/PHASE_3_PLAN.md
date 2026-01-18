@@ -11,12 +11,14 @@
 ## A. Architecture Overview
 
 ### Current State (MVP - Phase 2)
+
 - Storage: `JsonFileBackend` (simple JSON files at `.helix/data/decisions/`)
 - Persistence: Decision objects serialized to JSON
 - Indexing: Full scan on every `sync()` call
 - Performance: ~100ms delta-check (slow for large repos)
 
 ### Target State (Phase 3 - HelixDB)
+
 - Storage: `HelixDB` (LMDB-backed graph database at `.helixdb/`)
 - Persistence: Decision nodes + relationship edges in HelixDB
 - Indexing: Incremental via manifest-in-metadata pattern
@@ -25,6 +27,7 @@
 ### Graph Schema
 
 **Node Label:** `DECISION` (one node per decision file)
+
 ```
 Properties:
   id: u32                      # Local sequential ID (1, 2, 3...)
@@ -40,6 +43,7 @@ Properties:
 ```
 
 **Edge Labels:**
+
 - `SUPERSEDES` - decision A supersedes B
 - `AMENDS` - decision A amends B
 - `DEPENDS_ON` - decision A depends on B
@@ -47,6 +51,7 @@ Properties:
 - `SUPERSEDED_BY` - inverse of SUPERSEDES
 
 **Manifest (stored in metadata):**
+
 ```
 Key: "manifest:decisions"
 Value:
@@ -70,9 +75,11 @@ Value:
 ## B. Implementation Plan (4 Modules)
 
 ### Module 1: `manifest.rs` (250 lines)
+
 Tracks file state for incremental indexing.
 
 **Types:**
+
 ```rust
 pub struct ManifestEntry {
     pub file_path: String,
@@ -91,6 +98,7 @@ pub struct IndexManifest {
 ```
 
 **Methods:**
+
 ```rust
 impl IndexManifest {
     pub fn load(engine: &HelixGraphEngine) -> Result<Self>
@@ -105,6 +113,7 @@ impl IndexManifest {
 ```
 
 **JSON schema stored in metadata:**
+
 ```json
 {
   "entries": {
@@ -123,9 +132,11 @@ impl IndexManifest {
 ---
 
 ### Module 2: `git_utils.rs` (100 lines)
+
 Fast file enumeration using git.
 
 **Functions:**
+
 ```rust
 pub fn git_ls_files(
     repo_root: &Path,
@@ -140,11 +151,13 @@ fn run_git_command(
 ```
 
 **Implementation:**
+
 - Runs `git ls-files '.decisions/**/*.md'` (respects .gitignore)
 - Falls back to directory walk if git unavailable
 - Returns sorted Vec<PathBuf>
 
 **Usage Example:**
+
 ```rust
 let files = git_ls_files(&repo_root, ".decisions/**/*.md")?;
 // Returns [.decisions/001-arch.md, .decisions/002-db.md, ...]
@@ -153,9 +166,11 @@ let files = git_ls_files(&repo_root, ".decisions/**/*.md")?;
 ---
 
 ### Module 3: `helix_backend.rs` (600 lines)
+
 Core HelixDB integration with incremental indexing.
 
 **Main Struct:**
+
 ```rust
 pub struct HelixDecisionBackend {
     engine: HelixGraphEngine,
@@ -204,13 +219,13 @@ pub struct HelixDecisionBackend {
        decision: &Decision,
        content_hash: &str,
    ) -> Result<u128>  // Returns node_id
-   
+
    fn create_relationship_edges(
        &self,
        from_id: u128,
        metadata: &DecisionMetadata,
    ) -> Result<()>
-   
+
    fn delete_decision_node(&self, node_id: u128) -> Result<()>
    ```
 
@@ -221,7 +236,7 @@ pub struct HelixDecisionBackend {
        embedding: Vec<f32>,
        limit: usize,
    ) -> Result<Vec<(Decision, f32)>>
-   
+
    pub fn get_chain(&self, decision_id: u32) -> Result<Vec<ChainNode>>
    pub fn get_related(&self, decision_id: u32) -> Result<Vec<RelatedDecision>>
    ```
@@ -229,6 +244,7 @@ pub struct HelixDecisionBackend {
 **Implementation Details:**
 
 a. **Transaction Pattern:**
+
 ```rust
 let mut wtxn = self.engine.storage.graph_env.write_txn()?;
 
@@ -263,6 +279,7 @@ wtxn.commit()?;
 ```
 
 b. **Change Detection (3-stage filter):**
+
 ```
 Stage 1: Stat check (fast)
   if file.mtime == manifest.entry.mtime && file.size == manifest.entry.size {
@@ -280,11 +297,13 @@ Stage 3: Full re-index
 ```
 
 c. **Embedding Model Versioning:**
+
 - Store embedding_model in manifest
 - If model changes, re-embed all vectors
 - Prevents stale embeddings from old model versions
 
 d. **Error Handling:**
+
 - Partial failures: Continue indexing other files, report summary
 - Transaction rollback on critical errors
 - Log all changes for audit trail
@@ -292,6 +311,7 @@ d. **Error Handling:**
 ---
 
 ### Module 4: Update `storage.rs` (200 lines)
+
 Wire HelixDB backend into existing DecisionStorage trait.
 
 **Changes:**
@@ -349,19 +369,21 @@ Wire HelixDB backend into existing DecisionStorage trait.
 ## C. Files to Create/Modify
 
 ### Create (New Files)
-| File | Lines | Purpose |
-|------|-------|---------|
-| `helix-decisions/src/manifest.rs` | 250 | Manifest tracking for incremental indexing |
-| `helix-decisions/src/git_utils.rs` | 100 | Git-based file enumeration |
-| `helix-decisions/src/helix_backend.rs` | 600 | HelixDB storage backend |
+
+| File                                   | Lines | Purpose                                    |
+| -------------------------------------- | ----- | ------------------------------------------ |
+| `helix-decisions/src/manifest.rs`      | 250   | Manifest tracking for incremental indexing |
+| `helix-decisions/src/git_utils.rs`     | 100   | Git-based file enumeration                 |
+| `helix-decisions/src/helix_backend.rs` | 600   | HelixDB storage backend                    |
 
 ### Modify (Existing Files)
-| File | Changes |
-|------|---------|
-| `helix-decisions/src/storage.rs` | Add `HelixDecisionStorage`, implement trait wrapper |
-| `helix-decisions/src/lib.rs` | Export new modules: `manifest`, `git_utils`, `helix_backend` |
-| `helix-decisions/Cargo.toml` | Add dependencies: `helix-db` (direct), keep `sha2` |
-| `helix-decisions/src/main.rs` | Minor: Update error messages if storage changes |
+
+| File                             | Changes                                                      |
+| -------------------------------- | ------------------------------------------------------------ |
+| `helix-decisions/src/storage.rs` | Add `HelixDecisionStorage`, implement trait wrapper          |
+| `helix-decisions/src/lib.rs`     | Export new modules: `manifest`, `git_utils`, `helix_backend` |
+| `helix-decisions/Cargo.toml`     | Add dependencies: `helix-db` (direct), keep `sha2`           |
+| `helix-decisions/src/main.rs`    | Minor: Update error messages if storage changes              |
 
 ---
 
@@ -370,16 +392,19 @@ Wire HelixDB backend into existing DecisionStorage trait.
 ### Unit Tests (per module)
 
 **manifest.rs:**
+
 - Serialize/deserialize manifest
 - Entry operations (get, upsert, remove)
 - Manifest persistence in metadata
 
 **git_utils.rs:**
+
 - List files from git
 - Fallback to directory walk
 - Respect .gitignore
 
 **helix_backend.rs:**
+
 - Stat-based delta detection
 - Content hash comparison
 - Node creation with properties
@@ -389,6 +414,7 @@ Wire HelixDB backend into existing DecisionStorage trait.
 - Change detection (3 stages)
 
 **storage.rs:**
+
 - HelixDecisionStorage trait implementation
 - Search with filters
 - Chain and related queries
@@ -396,6 +422,7 @@ Wire HelixDB backend into existing DecisionStorage trait.
 ### Integration Tests
 
 **End-to-End Scenarios:**
+
 1. Initial indexing: 10 decisions → search works
 2. Modify 1 decision → delta detected, only that file re-indexed
 3. Add 3 decisions → only new files indexed
@@ -404,6 +431,7 @@ Wire HelixDB backend into existing DecisionStorage trait.
 6. Large repo (100+ decisions) → incremental time < 100ms
 
 ### Performance Benchmarks
+
 - First sync: < 5 seconds (10 decisions)
 - Delta sync: < 100ms (file count invariant)
 - Search: < 50ms (k=10 results)
@@ -414,6 +442,7 @@ Wire HelixDB backend into existing DecisionStorage trait.
 ## E. Dependency Analysis
 
 ### New Direct Dependencies
+
 ```toml
 [dependencies]
 helix-db = { path = "../../helix-db/helix-db" }  # Already in workspace!
@@ -421,6 +450,7 @@ helix-db = { path = "../../helix-db/helix-db" }  # Already in workspace!
 ```
 
 ### Workspace Structure Verification
+
 ```bash
 helix-tools/
 ├── helix-graph-ops/         # HelixDB graph helpers
@@ -440,18 +470,20 @@ Update Cargo.toml to reference correctly.
 ## F. Compatibility & Migration
 
 ### Backward Compatibility
+
 - Keep `PersistentDecisionStorage` for fallback
 - Index format migration: Use `indexer_version` field
 - If manifest missing: Full re-index automatically
 
 ### Upgrade Path
+
 1. **User runs `helix-decisions search` on existing repo**
    - `.helix/data/decisions/` exists (JSON backend)
    - New code detects HelixDB not initialized
    - Option A: Auto-migrate (read JSON, write to HelixDB)
    - Option B: Full re-index from `.decisions/` files
 
-2. **Implementation:** 
+2. **Implementation:**
    ```rust
    pub fn open() -> Result<Self> {
        if db_already_initialized() {
@@ -469,6 +501,7 @@ Update Cargo.toml to reference correctly.
 ## G. Configuration Updates
 
 ### Workspace Cargo.toml
+
 ```toml
 [workspace]
 members = [
@@ -483,6 +516,7 @@ helix-db = { path = "../helix-db/helix-db" }  # ← Add this globally OR...
 ```
 
 ### helix-decisions Cargo.toml
+
 ```toml
 [dependencies]
 helix-db = { path = "../../helix-db/helix-db" }  # Relative from helix-decisions/
@@ -491,6 +525,7 @@ helix-db = { workspace = true }
 ```
 
 ### Environment Variables
+
 - `HELIX_DB_PATH`: Override default `.helixdb/` location (optional)
 - `HELIX_DECISIONS_SKIP_HOOKS`: Already used for hook bypass
 - `HELIX_EMBEDDING_MODEL`: Already used in helix-embeddings
@@ -500,6 +535,7 @@ helix-db = { workspace = true }
 ## H. Execution Sequence
 
 ### Session 1 (2-3 hours): Foundation Modules
+
 1. **Start:** Fresh branch `feat/helix-db-integration`
 2. **Create `manifest.rs`:** Type definitions + load/save
    - Test serialization/deserialization
@@ -510,6 +546,7 @@ helix-db = { workspace = true }
 4. **Commit:** "feat(helix-decisions): add manifest and git_utils modules"
 
 ### Session 2 (2-3 hours): Backend Implementation
+
 1. **Create `helix_backend.rs`:** Core incremental indexing
    - Transaction pattern
    - Change detection (3 stages)
@@ -525,6 +562,7 @@ helix-db = { workspace = true }
 4. **Commit:** "feat(helix-decisions): add HelixDB backend with incremental indexing"
 
 ### Session 3 (1-2 hours): Integration & Polish
+
 1. **Integration tests:**
    - End-to-end scenarios
    - Performance benchmarks
@@ -546,26 +584,26 @@ helix-db = { workspace = true }
 
 ## I. Risk Mitigation
 
-| Risk | Mitigation |
-|------|-----------|
-| LMDB is single-writer | Assume sequential `sync()` calls; no concurrent writers |
-| Complex transaction logic | Write incremental tests for each tx pattern |
-| Node ID collisions | Use UUID v4 for node_id, very low collision risk |
-| Embedding model changes | Track model version; re-embed if version mismatch |
-| Manifest corruption | Load with fallback to full re-index |
-| HelixDB API changes | Pin HelixDB version in Cargo.toml; document API usage |
+| Risk                      | Mitigation                                              |
+| ------------------------- | ------------------------------------------------------- |
+| LMDB is single-writer     | Assume sequential `sync()` calls; no concurrent writers |
+| Complex transaction logic | Write incremental tests for each tx pattern             |
+| Node ID collisions        | Use UUID v4 for node_id, very low collision risk        |
+| Embedding model changes   | Track model version; re-embed if version mismatch       |
+| Manifest corruption       | Load with fallback to full re-index                     |
+| HelixDB API changes       | Pin HelixDB version in Cargo.toml; document API usage   |
 
 ---
 
 ## J. Success Criteria
 
-✅ All 3 new modules created and tested  
-✅ `DecisionStorage` trait fully implemented via HelixDB  
-✅ `sync()` completes in < 100ms (delta-only)  
-✅ Search, chain, related queries work with HelixDB  
-✅ 30+ tests passing, 0 clippy warnings  
-✅ Documentation complete (architecture, migration guide)  
-✅ Integration tests cover all scenarios  
+✅ All 3 new modules created and tested\
+✅ `DecisionStorage` trait fully implemented via HelixDB\
+✅ `sync()` completes in < 100ms (delta-only)\
+✅ Search, chain, related queries work with HelixDB\
+✅ 30+ tests passing, 0 clippy warnings\
+✅ Documentation complete (architecture, migration guide)\
+✅ Integration tests cover all scenarios\
 ✅ All existing features still work (backward compatible)
 
 ---

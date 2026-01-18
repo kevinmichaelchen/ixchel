@@ -21,4 +21,3 @@ Extract filtering logic: ready_issues(), blocked_issues(), stale_issues(). These
 ### 2026-01-04T19:25:38.541814+00:00 — kevinchen (human)
 
 Closed: Implemented domain/filters.rs with ready_issues, blocked_issues, stale_issues
-

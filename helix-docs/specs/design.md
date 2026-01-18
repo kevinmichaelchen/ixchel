@@ -151,11 +151,13 @@ enqueues work via IPC and optionally waits with `--sync`. Protocol details live 
 **Purpose:** Hash-based ID generation for all entity types.
 
 **Usage in helix-docs:**
+
 - `SourceId` (`src-xxxxxx`) - Identifies documentation sources (deterministic from URL)
 - `DocId` (`doc-xxxxxx`) - Identifies documents (deterministic from source + path)
 - `ChunkId` (`chk-xxxxxx`) - Identifies document chunks (deterministic from doc + index)
 
 **ID Strategy:**
+
 ```rust
 use helix_id::define_id;
 
@@ -175,6 +177,7 @@ let chunk_id = ChunkId::from_parts(&[doc_id.as_str(), "0"]);
 ```
 
 **Why deterministic IDs?**
+
 - Global cache means same source added from different projects should deduplicate
 - Re-ingesting same content produces same IDs (idempotent)
 - Enables "upsert" semantics without coordination
@@ -186,6 +189,7 @@ See: [shared/helix-id/specs/design.md](../../shared/helix-id/specs/design.md)
 **Purpose:** Hierarchical configuration loading with global/project/env precedence.
 
 **Usage in helix-docs:**
+
 - Global config from `~/.helix/config/config.toml`
 - Tool config from `~/.helix/config/helix-docs.toml`
 - Project config from `.helix/helix-docs.toml`
@@ -193,6 +197,7 @@ See: [shared/helix-id/specs/design.md](../../shared/helix-id/specs/design.md)
 - Path helpers for data directories
 
 **Integration:**
+
 ```rust
 use helix_config::{load_config, detect_github_token, helix_data_dir};
 
@@ -205,11 +210,11 @@ See: [shared/helix-config/specs/design.md](../../shared/helix-config/specs/desig
 
 ### Future Shared Crates
 
-| Crate | Purpose | Status |
-|-------|---------|--------|
-| `helix-embed` | Local embeddings via fastembed | Planned |
+| Crate          | Purpose                             | Status  |
+| -------------- | ----------------------------------- | ------- |
+| `helix-embed`  | Local embeddings via fastembed      | Planned |
 | `helix-search` | Hybrid search (BM25 + vector + RRF) | Planned |
-| `helix-chunk` | Document chunking strategies | Planned |
+| `helix-chunk`  | Document chunking strategies        | Planned |
 
 When implemented, these will replace the local implementations in `helix-docs`.
 
@@ -220,6 +225,7 @@ When implemented, these will replace the local implementations in `helix-docs`.
 ### 1. Single Responsibility
 
 Each module has one reason to change:
+
 - `domain/` - Business rules only
 - `services/` - Use case orchestration only
 - `adapters/` - External system integration only
@@ -819,6 +825,7 @@ Documentation is cached **globally** since the same library (e.g., `facebook/rea
 ```
 
 **Why global cache?**
+
 - Same `facebook/react` docs used by multiple projects
 - Fetch once, share everywhere
 - Reduces disk usage and API rate limit consumption
@@ -1166,6 +1173,7 @@ let id = SourceId::from_key("github.com/facebook/react");
 ```
 
 **Design considerations for v2:**
+
 - Version could be: git tag, branch, commit SHA, or semantic version
 - Need to normalize versions (e.g., `v18.2.0` vs `18.2.0`)
 - Search should support filtering by version

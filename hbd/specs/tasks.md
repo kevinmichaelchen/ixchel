@@ -4,32 +4,32 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 
 ## Timeline Overview
 
-| Phase | Focus | Duration | Dependencies |
-|-------|-------|----------|--------------|
-| 1 | Core Infrastructure + Labels | 2.5 weeks | None |
-| 2 | Dependencies & Graph | 1.5 weeks | Phase 1 |
-| 3 | Search & Vectors | 2 weeks | Phase 1 |
-| 4 | Sync & Daemon | 1 week | Phases 1-3 |
-| 5 | AI Agent Features | 2 weeks | Phase 4 |
-| 6 | Health & Analytics | 1.5 weeks | Phase 1 |
-| 7 | Polish, Maintenance & CLI Parity | 1.5 weeks | Phases 1-6 |
+| Phase | Focus                            | Duration  | Dependencies |
+| ----- | -------------------------------- | --------- | ------------ |
+| 1     | Core Infrastructure + Labels     | 2.5 weeks | None         |
+| 2     | Dependencies & Graph             | 1.5 weeks | Phase 1      |
+| 3     | Search & Vectors                 | 2 weeks   | Phase 1      |
+| 4     | Sync & Daemon                    | 1 week    | Phases 1-3   |
+| 5     | AI Agent Features                | 2 weeks   | Phase 4      |
+| 6     | Health & Analytics               | 1.5 weeks | Phase 1      |
+| 7     | Polish, Maintenance & CLI Parity | 1.5 weeks | Phases 1-6   |
 
 **Total: ~12 weeks**
 
 ### New Features Summary (vs Beads Compatibility)
 
-| Feature | Priority | Phase | Notes |
-|---------|----------|-------|-------|
-| Label management | High | 1 | `label add/remove/list/list-all` |
-| Cycle detection | High | 2 | `dep cycles` command |
-| Stale detection | High | 6 | `stale --days N` |
-| System info | High | 7 | `info` command |
-| Comment commands | High | 1 | `comment`, `comments` |
-| Graph visualization | Medium | 2 | `graph <id>` DOT output |
-| Issue count | Medium | 6 | `count` with filters |
-| Merge duplicates | Medium | 7 | `merge --into` |
-| Restore compacted | Medium | 7 | `restore <id>` |
-| Admin cleanup | Medium | 7 | `admin cleanup --older-than` |
+| Feature             | Priority | Phase | Notes                            |
+| ------------------- | -------- | ----- | -------------------------------- |
+| Label management    | High     | 1     | `label add/remove/list/list-all` |
+| Cycle detection     | High     | 2     | `dep cycles` command             |
+| Stale detection     | High     | 6     | `stale --days N`                 |
+| System info         | High     | 7     | `info` command                   |
+| Comment commands    | High     | 1     | `comment`, `comments`            |
+| Graph visualization | Medium   | 2     | `graph <id>` DOT output          |
+| Issue count         | Medium   | 6     | `count` with filters             |
+| Merge duplicates    | Medium   | 7     | `merge --into`                   |
+| Restore compacted   | Medium   | 7     | `restore <id>`                   |
+| Admin cleanup       | Medium   | 7     | `admin cleanup --older-than`     |
 
 ---
 
@@ -38,7 +38,7 @@ This document breaks down the `hbd` implementation into phases with specific, tr
 > **Last Updated:** 2026-01-03
 >
 > This document tracks planned implementation phases. Checkboxes reflect actual completion status.
-> 
+>
 > **Legend:** ✅ = Complete | 🚧 = In Progress | ⏳ = Blocked | ❌ = Cut from scope
 
 ---
@@ -691,23 +691,23 @@ Each task is complete when:
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|------------|
-| fastembed model download fails | Fallback to model2vec, then BM25-only |
-| HelixDB API changes | Pin to specific version, test on CI |
-| Large repos slow | Incremental sync, batch operations |
-| Git merge conflicts | Hash-based IDs, content-based resolution |
-| Memory usage high | Lazy loading, stream processing |
+| Risk                           | Mitigation                               |
+| ------------------------------ | ---------------------------------------- |
+| fastembed model download fails | Fallback to model2vec, then BM25-only    |
+| HelixDB API changes            | Pin to specific version, test on CI      |
+| Large repos slow               | Incremental sync, batch operations       |
+| Git merge conflicts            | Hash-based IDs, content-based resolution |
+| Memory usage high              | Lazy loading, stream processing          |
 
 ---
 
 ## Success Metrics
 
-| Metric | Target |
-|--------|--------|
-| `hbd list` latency | <100ms for 1000 issues |
-| `hbd search` latency | <500ms including embedding |
+| Metric               | Target                         |
+| -------------------- | ------------------------------ |
+| `hbd list` latency   | <100ms for 1000 issues         |
+| `hbd search` latency | <500ms including embedding     |
 | `hbd create` latency | <200ms (excluding async embed) |
-| Memory usage | <500MB for 10000 issues |
-| Test coverage | >80% for core modules |
-| Offline capability | 100% (after initial setup) |
+| Memory usage         | <500MB for 10000 issues        |
+| Test coverage        | >80% for core modules          |
+| Offline capability   | 100% (after initial setup)     |

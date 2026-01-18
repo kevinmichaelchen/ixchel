@@ -114,54 +114,60 @@ your-project/
 ## CLI Reference
 
 ### Project Setup
-| Command | Description |
-|---------|-------------|
+
+| Command    | Description                         |
+| ---------- | ----------------------------------- |
 | `hbd init` | Initialize hbd in current directory |
-| `hbd info` | Show project status and statistics |
+| `hbd info` | Show project status and statistics  |
 
 ### Issue Management
-| Command | Description |
-|---------|-------------|
-| `hbd create "Title"` | Create new issue |
-| `hbd show <id>` | Display issue details |
-| `hbd list` | List issues (filterable) |
-| `hbd update <id>` | Modify issue properties |
-| `hbd close <id>` | Close an issue |
-| `hbd reopen <id>` | Reopen a closed issue |
+
+| Command              | Description              |
+| -------------------- | ------------------------ |
+| `hbd create "Title"` | Create new issue         |
+| `hbd show <id>`      | Display issue details    |
+| `hbd list`           | List issues (filterable) |
+| `hbd update <id>`    | Modify issue properties  |
+| `hbd close <id>`     | Close an issue           |
+| `hbd reopen <id>`    | Reopen a closed issue    |
 
 ### Dependencies
-| Command | Description |
-|---------|-------------|
-| `hbd dep add <a> blocks <b>` | A blocks B |
-| `hbd dep remove <a> blocks <b>` | Remove dependency |
-| `hbd dep list <id>` | Show issue dependencies |
-| `hbd dep cycles` | Find circular dependencies |
-| `hbd ready` | List unblocked issues |
-| `hbd blocked` | List blocked issues |
-| `hbd explain <id>` | Show blocker tree |
+
+| Command                         | Description                |
+| ------------------------------- | -------------------------- |
+| `hbd dep add <a> blocks <b>`    | A blocks B                 |
+| `hbd dep remove <a> blocks <b>` | Remove dependency          |
+| `hbd dep list <id>`             | Show issue dependencies    |
+| `hbd dep cycles`                | Find circular dependencies |
+| `hbd ready`                     | List unblocked issues      |
+| `hbd blocked`                   | List blocked issues        |
+| `hbd explain <id>`              | Show blocker tree          |
 
 ### Labels & Comments
-| Command | Description |
-|---------|-------------|
-| `hbd label add <id> <label>` | Add label to issue |
-| `hbd label remove <id> <label>` | Remove label |
-| `hbd label list <id>` | List labels on issue |
-| `hbd label list-all` | List all project labels |
-| `hbd comment <id> "msg"` | Add comment |
-| `hbd comments <id>` | List comments |
+
+| Command                         | Description             |
+| ------------------------------- | ----------------------- |
+| `hbd label add <id> <label>`    | Add label to issue      |
+| `hbd label remove <id> <label>` | Remove label            |
+| `hbd label list <id>`           | List labels on issue    |
+| `hbd label list-all`            | List all project labels |
+| `hbd comment <id> "msg"`        | Add comment             |
+| `hbd comments <id>`             | List comments           |
 
 ### Analytics
-| Command | Description |
-|---------|-------------|
-| `hbd stats` | Issue statistics |
+
+| Command               | Description       |
+| --------------------- | ----------------- |
+| `hbd stats`           | Issue statistics  |
 | `hbd stale --days 14` | Find stale issues |
 
 ### Common Flags
-| Flag | Description |
-|------|-------------|
-| `--json` | Output as JSON |
-| `--agent <id>` | Mark as agent-created |
-| `--session <id>` | Group agent actions |
+
+| Flag             | Description           |
+| ---------------- | --------------------- |
+| `--json`         | Output as JSON        |
+| `--agent <id>`   | Mark as agent-created |
+| `--session <id>` | Group agent actions   |
 
 ## Why hbd?
 
@@ -177,26 +183,27 @@ hbd builds on excellent prior art in the git-backed issue tracking space:
 
 hbd exists because we wanted capabilities that file-based storage alone can't efficiently provide:
 
-| Capability | Beads | ticket | hbd |
-|------------|-------|--------|-----|
-| Git-backed storage | ✅ | ✅ | ✅ |
-| Markdown files | ❌ (JSONL) | ✅ | ✅ |
-| No daemon required | ❌ | ✅ | ✅ |
-| Dependency tracking | ✅ | ✅ | ✅ |
-| Cycle detection | ✅ | ❌ | ✅ |
-| **Semantic search** | ❌ | ❌ | 🚧 Planned |
-| **Graph algorithms** | ❌ | ❌ | 🚧 Planned |
-| **Critical path analysis** | ❌ | ❌ | 🚧 Planned |
+| Capability                 | Beads      | ticket | hbd        |
+| -------------------------- | ---------- | ------ | ---------- |
+| Git-backed storage         | ✅         | ✅     | ✅         |
+| Markdown files             | ❌ (JSONL) | ✅     | ✅         |
+| No daemon required         | ❌         | ✅     | ✅         |
+| Dependency tracking        | ✅         | ✅     | ✅         |
+| Cycle detection            | ✅         | ❌     | ✅         |
+| **Semantic search**        | ❌         | ❌     | 🚧 Planned |
+| **Graph algorithms**       | ❌         | ❌     | 🚧 Planned |
+| **Critical path analysis** | ❌         | ❌     | 🚧 Planned |
 
-**Semantic Search** — Find issues by *meaning*, not just keywords. Search for "user can't log in" and find issues about "authentication", "sign-in", and "login failures" even if they use different words. Get duplicate warnings when creating issues that are semantically similar to existing ones.
+**Semantic Search** — Find issues by _meaning_, not just keywords. Search for "user can't log in" and find issues about "authentication", "sign-in", and "login failures" even if they use different words. Get duplicate warnings when creating issues that are semantically similar to existing ones.
 
-**Graph Algorithms** — Beads tracks dependencies; hbd *analyzes* them. Find the critical path blocking your epic. Compute weighted paths based on priority × estimated time. Answer "where should I focus for maximum impact?"
+**Graph Algorithms** — Beads tracks dependencies; hbd _analyzes_ them. Find the critical path blocking your epic. Compute weighted paths based on priority × estimated time. Answer "where should I focus for maximum impact?"
 
 **Native Graph Storage** — HelixDB is an embedded database (like SQLite—no server to run) purpose-built for graph + vector workloads. Instead of recursive SQL CTEs for transitive dependencies, we get single-hop traversals. Instead of application-level cycle detection, we get native BFS.
 
 ### What We Kept, What We Skipped
 
 **From Beads, we kept:**
+
 - Hash-based IDs (`bd-a1b2c3`) for conflict-free merging
 - Dependency tracking with blocking semantics
 - Agent tracking with `--agent` and `--session` flags
@@ -204,6 +211,7 @@ hbd exists because we wanted capabilities that file-based storage alone can't ef
 - Full offline support
 
 **From Beads, we skipped:**
+
 - Molecular chemistry (templates, wisps, bonds) — simpler epics + labels instead
 - 12+ issue types — we have 5: bug, feature, task, epic, chore
 - Background daemon — direct file access instead
@@ -211,13 +219,13 @@ hbd exists because we wanted capabilities that file-based storage alone can't ef
 
 ### When to Use What
 
-| Use case | Recommendation |
-|----------|----------------|
-| Want mature, battle-tested | **Beads** |
-| Want absolute minimalism (single shell script) | **wedow/ticket** |
-| Want semantic search + graph algorithms | **hbd** (when implemented) |
-| Already using HelixDB | **hbd** |
-| Need molecular templates | **Beads** |
+| Use case                                       | Recommendation             |
+| ---------------------------------------------- | -------------------------- |
+| Want mature, battle-tested                     | **Beads**                  |
+| Want absolute minimalism (single shell script) | **wedow/ticket**           |
+| Want semantic search + graph algorithms        | **hbd** (when implemented) |
+| Already using HelixDB                          | **hbd**                    |
+| Need molecular templates                       | **Beads**                  |
 
 ## Specifications
 

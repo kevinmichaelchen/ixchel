@@ -1,8 +1,8 @@
 # ADR-003: Binary Installation Strategy
 
-**Status:** Proposed  
-**Date:** 2026-01-05  
-**Deciders:** Kevin Chen  
+**Status:** Proposed\
+**Date:** 2026-01-05\
+**Deciders:** Kevin Chen\
 **Tags:** distribution, dx, installation, ci
 
 ## Context and Problem Statement
@@ -26,18 +26,19 @@ helix-tools produces CLI binaries (primarily `hbd`) that users need to install. 
 
 ### Installation Methods in the Rust Ecosystem (January 2026)
 
-| Method | Examples | Rust Required | Maintenance | UX |
-|--------|----------|---------------|-------------|-----|
-| `cargo install` | Most crates | Yes | None | Good |
-| `cargo binstall` | ripgrep, bat, fd | Yes (binstall) | Low | Great |
-| Homebrew | gh, jq | No | Medium | Great |
-| `curl \| bash` | rustup, beads | No | High | Quick |
-| GitHub Releases | All of the above | No | Low | Manual |
-| Nix/nixpkgs | Many tools | No (Nix required) | Medium | Good |
+| Method           | Examples         | Rust Required     | Maintenance | UX     |
+| ---------------- | ---------------- | ----------------- | ----------- | ------ |
+| `cargo install`  | Most crates      | Yes               | None        | Good   |
+| `cargo binstall` | ripgrep, bat, fd | Yes (binstall)    | Low         | Great  |
+| Homebrew         | gh, jq           | No                | Medium      | Great  |
+| `curl \| bash`   | rustup, beads    | No                | High        | Quick  |
+| GitHub Releases  | All of the above | No                | Low         | Manual |
+| Nix/nixpkgs      | Many tools       | No (Nix required) | Medium      | Good   |
 
 ### cargo-binstall Ecosystem
 
 [cargo-binstall](https://github.com/cargo-bins/cargo-binstall) (2.4K stars) provides:
+
 - Automatic binary detection from GitHub Releases
 - Fallback to `cargo install` if no binary available
 - Platform detection (OS, architecture, libc)
@@ -49,11 +50,13 @@ helix-tools produces CLI binaries (primarily `hbd`) that users need to install. 
 ### Homebrew Considerations
 
 Pros:
+
 - Most familiar to macOS users
 - Auto-updates via `brew upgrade`
 - Can install without Rust
 
 Cons:
+
 - Requires formula submission to homebrew-core (slow approval) or maintaining a tap
 - Formula maintenance on each release
 - Linux support via Linuxbrew is less common
@@ -65,11 +68,13 @@ curl -fsSL https://raw.githubusercontent.com/steveyegge/beads/main/scripts/insta
 ```
 
 Pros:
+
 - One-liner, familiar to DevOps users
 - No Rust required
 - Works on any Unix-like system
 
 Cons:
+
 - Security concerns (executing untrusted code)
 - Script maintenance: platform detection, error handling, checksums
 - No built-in update mechanism
@@ -80,6 +85,7 @@ Cons:
 ### Option 1: cargo-binstall Only
 
 **Installation:**
+
 ```bash
 # If cargo-binstall is installed
 cargo binstall hbd
@@ -89,10 +95,12 @@ cargo install hbd
 ```
 
 **Requirements:**
+
 - GitHub Actions workflow to build and publish release binaries
 - Naming convention: `hbd-{version}-{target}.tar.gz`
 
 **Pros:**
+
 - Zero script maintenance
 - Automatic platform detection
 - Fallback to source compilation
@@ -100,6 +108,7 @@ cargo install hbd
 - Checksum verification built-in
 
 **Cons:**
+
 - Requires Rust toolchain installed
 - Extra step to install cargo-binstall itself
 - Not suitable for non-developers
@@ -107,6 +116,7 @@ cargo install hbd
 ### Option 2: cargo-binstall + Homebrew Tap
 
 **Installation:**
+
 ```bash
 # macOS/Linux (Homebrew)
 brew install kevinmichaelchen/tap/hbd
@@ -116,16 +126,19 @@ cargo binstall hbd
 ```
 
 **Requirements:**
+
 - Same as Option 1, plus:
 - Create `homebrew-tap` repository
 - Maintain formula (can be automated with `goreleaser` or similar)
 
 **Pros:**
+
 - Best UX for macOS users
 - No Rust required for Homebrew path
 - Familiar to broad audience
 
 **Cons:**
+
 - Tap maintenance overhead
 - Formula updates on each release
 - Another repo to maintain
@@ -133,6 +146,7 @@ cargo binstall hbd
 ### Option 3: cargo-binstall + Install Script
 
 **Installation:**
+
 ```bash
 # Quick install (downloads pre-built binary)
 curl -fsSL https://helix-tools.dev/install.sh | bash
@@ -142,16 +156,19 @@ cargo binstall hbd
 ```
 
 **Requirements:**
+
 - Same as Option 1, plus:
 - Write and maintain `install.sh` (and `install.ps1` for Windows)
 - Handle: platform detection, architecture, checksums, PATH setup, error handling
 
 **Pros:**
+
 - One-liner for non-Rust users
 - Full control over installation experience
 - Works without any prerequisites
 
 **Cons:**
+
 - Script maintenance burden
 - Security optics (curl | bash)
 - Must handle edge cases (ARM64, musl, etc.)
@@ -160,16 +177,19 @@ cargo binstall hbd
 ### Option 4: GitHub Releases Only (Minimal)
 
 **Installation:**
+
 ```bash
 # Download from releases page
 # Manually extract and add to PATH
 ```
 
 **Pros:**
+
 - Zero maintenance beyond CI builds
 - Maximum transparency (users see exactly what they download)
 
 **Cons:**
+
 - Poor UX: manual download, extraction, PATH setup
 - No update mechanism
 - Not suitable for broad adoption
@@ -177,6 +197,7 @@ cargo binstall hbd
 ### Option 5: cargo-binstall + Nix Flake
 
 **Installation:**
+
 ```bash
 # Nix users
 nix run github:kevinmichaelchen/helix-tools#hbd
@@ -186,36 +207,40 @@ cargo binstall hbd
 ```
 
 **Requirements:**
+
 - Add `flake.nix` to repository
 - Define package outputs
 
 **Pros:**
+
 - Reproducible builds
 - Popular in certain developer communities
 - Can include development shells
 
 **Cons:**
+
 - Nix has steep learning curve
 - Smaller audience than Homebrew
 - Flake maintenance
 
 ## Comparison Matrix
 
-| Criteria | Option 1 | Option 2 | Option 3 | Option 4 | Option 5 |
-|----------|----------|----------|----------|----------|----------|
-| **Maintenance** | Low | Medium | High | Minimal | Medium |
-| **Rust required** | Yes | No (brew) | No | No | No (nix) |
-| **UX (Rust devs)** | Great | Great | Great | Poor | Great |
-| **UX (non-Rust)** | N/A | Great | Good | Poor | Good |
-| **Security** | Good | Good | Moderate | Good | Good |
-| **Cross-platform** | Yes | macOS focus | Unix focus | Yes | Yes |
-| **Auto-updates** | Manual | brew upgrade | Manual | Manual | nix flake |
+| Criteria           | Option 1 | Option 2     | Option 3   | Option 4 | Option 5  |
+| ------------------ | -------- | ------------ | ---------- | -------- | --------- |
+| **Maintenance**    | Low      | Medium       | High       | Minimal  | Medium    |
+| **Rust required**  | Yes      | No (brew)    | No         | No       | No (nix)  |
+| **UX (Rust devs)** | Great    | Great        | Great      | Poor     | Great     |
+| **UX (non-Rust)**  | N/A      | Great        | Good       | Poor     | Good      |
+| **Security**       | Good     | Good         | Moderate   | Good     | Good      |
+| **Cross-platform** | Yes      | macOS focus  | Unix focus | Yes      | Yes       |
+| **Auto-updates**   | Manual   | brew upgrade | Manual     | Manual   | nix flake |
 
 ## Recommendation
 
 **Start with Option 1 (cargo-binstall only)**, then expand based on demand:
 
 ### Phase 1: cargo-binstall (Now)
+
 - Set up GitHub Actions to build release binaries for:
   - `x86_64-unknown-linux-gnu`
   - `x86_64-unknown-linux-musl`
@@ -227,11 +252,13 @@ cargo binstall hbd
 - This covers 90%+ of our target audience (Rust developers)
 
 ### Phase 2: Homebrew (If Requested)
+
 - Create `kevinmichaelchen/homebrew-tap` repository
 - Add formula for `hbd`
 - Automate formula updates via GitHub Actions
 
 ### Phase 3: Install Script (If Demanded by Non-Rust Users)
+
 - Only if significant demand from non-developers
 - Consider using existing solutions like `cargo-dist` which generates install scripts
 
@@ -240,6 +267,7 @@ cargo binstall hbd
 ### cargo-binstall Auto-Detection
 
 cargo-binstall looks for release assets matching these patterns:
+
 ```
 {name}-{version}-{target}.tar.gz
 {name}-{version}-{target}.zip
@@ -247,6 +275,7 @@ cargo-binstall looks for release assets matching these patterns:
 ```
 
 Example for `hbd v0.1.0` on Apple Silicon:
+
 ```
 hbd-0.1.0-aarch64-apple-darwin.tar.gz
 ```
@@ -254,6 +283,7 @@ hbd-0.1.0-aarch64-apple-darwin.tar.gz
 ### Optional: Explicit Binstall Metadata
 
 Add to `hbd/Cargo.toml` for custom URLs or formats:
+
 ```toml
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ version }-{ target }{ archive-suffix }"

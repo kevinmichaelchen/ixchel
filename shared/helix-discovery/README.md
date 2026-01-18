@@ -5,6 +5,7 @@ Project and git root discovery for helix-tools.
 ## Why
 
 Multiple helix-tools need to find project markers:
+
 - **helix-decisions** — Find `.decisions/` directory
 - **hbd** — Find `.tickets/` directory
 - **helix-config** — Find `.helix/` config directory
@@ -55,11 +56,11 @@ match find_marker_from_cwd(".decisions") {
 
 ## Consumers
 
-| Crate | Marker |
-|-------|--------|
+| Crate           | Marker        |
+| --------------- | ------------- |
 | helix-decisions | `.decisions/` |
-| hbd | `.tickets/` |
-| helix-config | `.helix/` |
+| hbd             | `.tickets/`   |
+| helix-config    | `.helix/`     |
 
 ## License
 

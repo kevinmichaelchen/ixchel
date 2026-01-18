@@ -25,4 +25,3 @@ Implement Command component from Bits UI. Features: issue search, navigation, hb
 ### 2026-01-04T02:43:11.382236+00:00 — kevinchen (human)
 
 Implemented Command Palette with Bits UI Command component. Features: issue search, status filtering, layout toggle, refresh action. Opens with ⌘K/Ctrl+K.
-

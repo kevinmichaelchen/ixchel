@@ -37,6 +37,7 @@ helix-docs get --library facebook/react docs/hooks.md
 ## Why Global Cache?
 
 Documentation like `facebook/react` is the same regardless of which project uses it. Global caching means:
+
 - **Fetch once** - No redundant API calls across projects
 - **Store once** - No duplicate storage per project
 - **Share embeddings** - Vector embeddings computed once, reused everywhere
@@ -121,19 +122,19 @@ preferred_libraries = ["facebook/react", "vercel/next.js"]
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
-| `helix-docs add <url>` | Add a documentation source |
-| `helix-docs source list` | List configured sources |
-| `helix-docs source remove <id>` | Remove a source |
-| `helix-docs ingest` | Fetch and index all sources |
-| `helix-docs ingest --embed` | Include vector embeddings |
-| `helix-docs search <query>` | Search documentation |
-| `helix-docs library <name>` | Find libraries by name |
-| `helix-docs get <path>` | Retrieve document content |
-| `helix-docs status` | Show cache statistics |
-| `helix-docs detect` | Detect project dependencies |
-| `helix-docs mcp` | Start MCP server |
+| Command                         | Description                 |
+| ------------------------------- | --------------------------- |
+| `helix-docs add <url>`          | Add a documentation source  |
+| `helix-docs source list`        | List configured sources     |
+| `helix-docs source remove <id>` | Remove a source             |
+| `helix-docs ingest`             | Fetch and index all sources |
+| `helix-docs ingest --embed`     | Include vector embeddings   |
+| `helix-docs search <query>`     | Search documentation        |
+| `helix-docs library <name>`     | Find libraries by name      |
+| `helix-docs get <path>`         | Retrieve document content   |
+| `helix-docs status`             | Show cache statistics       |
+| `helix-docs detect`             | Detect project dependencies |
+| `helix-docs mcp`                | Start MCP server            |
 
 ## Specifications
 
@@ -150,6 +151,7 @@ Inspired by [librarian][librarian] - a TypeScript-based documentation tool. heli
 MIT
 
 <!-- Links -->
+
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md
 [tasks]: ./specs/tasks.md

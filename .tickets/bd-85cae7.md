@@ -22,4 +22,3 @@ Per AC-003.1: WHEN a user runs hbd list THE SYSTEM SHALL display all non-closed 
 ### 2026-01-04T14:22:02.185750+00:00 — kevinchen (human)
 
 Closed: Implemented: list now excludes closed issues by default
-

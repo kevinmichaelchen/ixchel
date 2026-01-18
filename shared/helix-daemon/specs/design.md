@@ -37,6 +37,7 @@ All messages are UTF-8 JSON, one object per line (no newlines inside objects). T
 responds once per request. Requests and responses are correlated by `id`.
 
 ### Request Envelope
+
 ```json
 {
   "version": 1,
@@ -49,6 +50,7 @@ responds once per request. Requests and responses are correlated by `id`.
 ```
 
 ### Response Envelope
+
 ```json
 {
   "version": 1,
@@ -59,6 +61,7 @@ responds once per request. Requests and responses are correlated by `id`.
 ```
 
 ### Error Response
+
 ```json
 {
   "version": 1,

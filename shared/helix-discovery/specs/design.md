@@ -1,7 +1,7 @@
 # helix-discovery: Design Specification
 
-**Document:** design.md  
-**Status:** Active (2026-01-06)  
+**Document:** design.md\
+**Status:** Active (2026-01-06)\
 **Author:** Kevin Chen
 
 ## Overview
@@ -29,6 +29,7 @@ find_marker(start_dir, marker_name):
 ### Why Git-Anchored?
 
 Markers at git root ensures:
+
 - Predictable location (always at repo root)
 - Works with monorepos (each repo has its own markers)
 - Avoids ambiguity with nested projects
@@ -144,29 +145,29 @@ pub fn find_marker(git_root: &Path, marker: &str) -> Result<PathBuf, DiscoveryEr
 
 ## Edge Cases
 
-| Scenario | Behavior |
-|----------|----------|
-| Not in git repo | `NotInGitRepo` error |
-| Marker doesn't exist | `MarkerNotFound` error with searched path |
-| Bare git repo | Works (`.git` is directory, not file) |
-| Git worktree | Works (`.git` file points to main repo) |
-| Symlinked marker | Follows symlink |
-| Read permission denied | `Io` error |
+| Scenario               | Behavior                                  |
+| ---------------------- | ----------------------------------------- |
+| Not in git repo        | `NotInGitRepo` error                      |
+| Marker doesn't exist   | `MarkerNotFound` error with searched path |
+| Bare git repo          | Works (`.git` is directory, not file)     |
+| Git worktree           | Works (`.git` file points to main repo)   |
+| Symlinked marker       | Follows symlink                           |
+| Read permission denied | `Io` error                                |
 
 ## Performance
 
-| Operation | Expected |
-|-----------|----------|
+| Operation     | Expected                         |
+| ------------- | -------------------------------- |
 | find_git_root | < 1ms (typically 1-5 stat calls) |
-| find_marker | < 1ms (1 stat call) |
+| find_marker   | < 1ms (1 stat call)              |
 
 ## Consumers
 
-| Tool | Marker |
-|------|--------|
+| Tool            | Marker        |
+| --------------- | ------------- |
 | helix-decisions | `.decisions/` |
-| hbd | `.tickets/` |
-| helix-config | `.helix/` |
+| hbd             | `.tickets/`   |
+| helix-config    | `.helix/`     |
 
 ## See Also
 

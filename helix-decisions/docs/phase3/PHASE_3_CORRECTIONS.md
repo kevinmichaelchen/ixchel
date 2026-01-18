@@ -1,31 +1,32 @@
 # PHASE 3: HelixDB Integration - CRITICAL CORRECTIONS
 
-**Status:** Plan identified 10 critical/high issues requiring API realignment  
-**Impact:** Runtime failures without fixes  
-**Severity:** High - affects all graph operations  
+**Status:** Plan identified 10 critical/high issues requiring API realignment\
+**Impact:** Runtime failures without fixes\
+**Severity:** High - affects all graph operations
 
 ---
 
 ## Summary of Issues
 
-| Issue | Severity | Impact | Status |
-|-------|----------|--------|--------|
-| Edge insertion missing adjacency indexes | Critical | Chain/related queries fail | ✓ Fixed |
-| Vector insertion API mismatch | High | Embeddings not stored | ✓ Fixed |
-| Node/edge construction skips arena/helpers | High | Serialization fails | ✓ Fixed |
-| Metadata key collision risk | Medium | Version conflicts | ✓ Fixed |
-| Config path not plumbed | Medium | DB location ignored | ✓ Fixed |
-| Decision ID lookups need secondary indices | Medium | Property queries fail | ✓ Fixed |
-| Label hashing for adjacency keys | High | Traversal fails | ✓ Fixed |
-| Traversal ops vs direct writes | Design | Performance/complexity tradeoff | ✓ Decided |
-| Vector-ID ↔ node-ID mapping missing | High | Can't retrieve embeddings | ✓ Fixed |
-| Deletion doesn't handle vectors | High | Orphaned vectors, memory leak | ✓ Fixed |
+| Issue                                      | Severity | Impact                          | Status    |
+| ------------------------------------------ | -------- | ------------------------------- | --------- |
+| Edge insertion missing adjacency indexes   | Critical | Chain/related queries fail      | ✓ Fixed   |
+| Vector insertion API mismatch              | High     | Embeddings not stored           | ✓ Fixed   |
+| Node/edge construction skips arena/helpers | High     | Serialization fails             | ✓ Fixed   |
+| Metadata key collision risk                | Medium   | Version conflicts               | ✓ Fixed   |
+| Config path not plumbed                    | Medium   | DB location ignored             | ✓ Fixed   |
+| Decision ID lookups need secondary indices | Medium   | Property queries fail           | ✓ Fixed   |
+| Label hashing for adjacency keys           | High     | Traversal fails                 | ✓ Fixed   |
+| Traversal ops vs direct writes             | Design   | Performance/complexity tradeoff | ✓ Decided |
+| Vector-ID ↔ node-ID mapping missing        | High     | Can't retrieve embeddings       | ✓ Fixed   |
+| Deletion doesn't handle vectors            | High     | Orphaned vectors, memory leak   | ✓ Fixed   |
 
 ---
 
 ## 1. ISSUE: Edge Insertion Missing Adjacency Indexes
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // Only writes edges_db, missing adjacency!
 edges_db.put(&mut wtxn, &edge_id, &edge.to_bincode_bytes()?)?;
@@ -65,11 +66,13 @@ in_edges_db.put(&mut wtxn, &in_key, &in_value)?;
 ```
 
 ### Impact on Plan
+
 - **helix_backend.rs**: `create_relationship_edges()` must write 3 DBs, not 1
 - **Testing**: Must verify all 3 writes, test traversal queries
 - **Performance**: Slightly slower per-edge, but necessary for traversal correctness
 
 ### References
+
 - `helix-db/src/helix_engine/storage_core/mod.rs` (out_edge_key, in_edge_key, pack_edge_data helpers)
 - `helix-db/src/helix_engine/tests/storage_tests.rs` (canonical examples)
 
@@ -78,6 +81,7 @@ in_edges_db.put(&mut wtxn, &in_key, &in_value)?;
 ## 2. ISSUE: Node/Edge Construction Skips Arena & Helpers
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // Direct construction, missing arena, missing key helpers
 let node = Node {
@@ -139,11 +143,13 @@ edges_db.put(&mut wtxn, &edge_key, &edge.to_bincode_bytes()?)?;
 ```
 
 ### Impact on Plan
+
 - **helix_backend.rs**: Must allocate arena in `sync()` and each mutation
 - **manifest.rs**: No changes needed
 - **Testing**: Must verify properties round-trip correctly
 
 ### References
+
 - `helix-db/src/utils/items.rs` (Node<'arena>, Edge<'arena>)
 - `helix-db/src/utils/properties.rs` (ImmutablePropertiesMap)
 - `helix-db/src/helix_engine/storage_core/mod.rs` (node_key, edge_key helpers)
@@ -153,6 +159,7 @@ edges_db.put(&mut wtxn, &edge_key, &edge.to_bincode_bytes()?)?;
 ## 3. ISSUE: Vector Insertion API Mismatch
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // HNSW::insert doesn't exist; API expects different signature
 self.engine.storage.vectors.add_vector(&mut wtxn, node_id, embedding)?;
@@ -188,11 +195,13 @@ for result in search_results {
 ```
 
 **Pros:**
+
 - ✅ Separation of concerns (vectors independent from graph)
 - ✅ Can delete vectors without node deletion
 - ✅ Aligns with Helix's architecture
 
 **Cons:**
+
 - ⚠ Extra lookup step (vector_id → node_id)
 - ⚠ Need to maintain secondary index on vector_id property
 
@@ -208,10 +217,12 @@ let mapping: Vec<(u128, u128)> = bincode::deserialize(metadata_db.get(&rtxn, b"v
 ```
 
 **Pros:**
+
 - ✅ Simpler, no secondary index needed
 - ✅ All mappings in one place
 
 **Cons:**
+
 - ⚠ Must load entire mapping for every search
 - ⚠ Scales poorly (O(n) lookups)
 - ⚠ Not how Helix is designed
@@ -219,7 +230,8 @@ let mapping: Vec<(u128, u128)> = bincode::deserialize(metadata_db.get(&rtxn, b"v
 ### **RECOMMENDATION: Use Option A (vector_id property + secondary index)**
 
 ### Impact on Plan
-- **helix_backend.rs**: 
+
+- **helix_backend.rs**:
   - `upsert_decision_node()`: Store vector_id in properties
   - `search()`: Must map vector results back to node_ids via secondary index
   - Add secondary index creation on vector_id
@@ -227,6 +239,7 @@ let mapping: Vec<(u128, u128)> = bincode::deserialize(metadata_db.get(&rtxn, b"v
 - **Testing**: Test vector round-trip and result mapping
 
 ### References
+
 - `helix-db/src/helix_engine/vector_core/hnsw.rs` (insert API)
 - `helix-db/src/helix_engine/vector_core/vector_core.rs` (VectorCore methods)
 - `helix-db/src/helix_engine/vector_core/vector.rs` (vector insertion details)
@@ -236,6 +249,7 @@ let mapping: Vec<(u128, u128)> = bincode::deserialize(metadata_db.get(&rtxn, b"v
 ## 4. ISSUE: Vector Deletion (Orphaned Vectors)
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // Only deletes node, vector is orphaned
 storage.drop_node(&mut txn, &node_id)?;
@@ -265,10 +279,12 @@ txn.commit()?;
 ```
 
 ### Impact on Plan
+
 - **helix_backend.rs**: `delete_decision_node()` must handle vector cleanup
 - **Testing**: Verify vectors are tombstoned, not leaked
 
 ### References
+
 - `helix-db/src/helix_engine/storage_core/storage_methods.rs` (drop_node, drop_vector)
 
 ---
@@ -276,6 +292,7 @@ txn.commit()?;
 ## 5. ISSUE: Label Hashing for Adjacency Keys
 
 ### ❌ Current Plan (IGNORED)
+
 ```rust
 // Missing label hash calculation
 out_edges_db.put(&mut wtxn, &out_key, &out_value)?;
@@ -297,10 +314,12 @@ let out_key = {
 ```
 
 ### Impact on Plan
+
 - **helix_backend.rs**: `create_relationship_edges()` must hash labels
 - **Testing**: Verify hashes are consistent
 
 ### References
+
 - `helix-db/src/utils/label_hash.rs`
 
 ---
@@ -308,6 +327,7 @@ let out_key = {
 ## 6. ISSUE: Secondary Indices (Decision ID Lookups)
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // Plan assumes you can lookup decisions by id: u32
 let decision = get_decision_by_id(1)?;  // This won't work!
@@ -339,12 +359,14 @@ let props = vec![
 ```
 
 ### Impact on Plan
-- **helix_backend.rs**: 
+
+- **helix_backend.rs**:
   - Create secondary indices in `new()`
   - Mark indices to maintain in config
 - **Testing**: Verify index lookups work
 
 ### References
+
 - `helix-db/src/helix_engine/storage_core/mod.rs` (create_secondary_index)
 - `helix-db/src/helix_engine/traversal_core/ops/source/add_n.rs` (index usage)
 
@@ -353,6 +375,7 @@ let props = vec![
 ## 7. ISSUE: Metadata Key Namespace Collision
 
 ### ❌ Current Plan (RISKY)
+
 ```rust
 // Just use "manifest:decisions" as key
 // But metadata already has "storage_version", "vector_endianness", etc.
@@ -380,10 +403,12 @@ metadata_db.put(
 ```
 
 ### Impact on Plan
+
 - **manifest.rs**: Define MANIFEST_KEY constant, add comments
 - **Testing**: No changes
 
 ### References
+
 - `helix-db/src/helix_engine/storage_core/metadata.rs`
 
 ---
@@ -391,6 +416,7 @@ metadata_db.put(
 ## 8. ISSUE: Config Path Not Plumbed
 
 ### ❌ Current Plan (BROKEN)
+
 ```rust
 // Plan mentions HELIX_DB_PATH env var
 // But Helix reads HelixGraphEngineOpts.path, not env vars
@@ -420,10 +446,12 @@ pub fn new(repo_root: &Path) -> Result<Self> {
 ```
 
 ### Impact on Plan
+
 - **helix_backend.rs**: `new()` must plumb path through HelixGraphEngineOpts
 - **Testing**: Test with custom HELIX_DB_PATH
 
 ### References
+
 - `helix-db/src/helix_engine/traversal_core/mod.rs` (HelixGraphEngineOpts)
 - `helix-container/src/main.rs` (example of path handling)
 
@@ -432,6 +460,7 @@ pub fn new(repo_root: &Path) -> Result<Self> {
 ## 9. DESIGN CHOICE: Traversal Ops vs Direct Storage Writes
 
 ### ❌ Current Plan (MIXES BOTH)
+
 ```rust
 // Plan uses direct DB writes (edges_db.put, nodes_db.put)
 // But also relies on traversal queries (get_chain, get_related)
@@ -441,6 +470,7 @@ pub fn new(repo_root: &Path) -> Result<Self> {
 ### ✅ DECISION: USE DIRECT STORAGE WRITES
 
 **Rationale:**
+
 - ✅ You control all writes (adjacency, vectors, indices)
 - ✅ Simpler for incremental indexing (batch operations)
 - ✅ No arena context overhead per-write
@@ -449,11 +479,13 @@ pub fn new(repo_root: &Path) -> Result<Self> {
 **Alternative:** Traversal ops (add_n, add_e) would handle secondary indices automatically, but requires arena management and is overkill for this use case.
 
 ### Impact on Plan
+
 - **helix_backend.rs**: Stick with direct storage writes, update all 3 DBs per edge
 - **manifest.rs**: No changes
 - **Testing**: Verify adjacency manually in tests
 
 ### References
+
 - `helix-db/src/helix_engine/traversal_core/ops/source/add_n.rs` (if you ever reconsider)
 
 ---
@@ -461,6 +493,7 @@ pub fn new(repo_root: &Path) -> Result<Self> {
 ## 10. ISSUE: Node ID Strategy
 
 ### ❌ Current Plan (CONFUSING)
+
 ```rust
 // Plan uses decision_id: u32 as local ID
 // But also node_id: u128 as HelixDB node ID
@@ -497,11 +530,13 @@ let node_id = Uuid::new_v4().as_u128();
 ```
 
 ### Impact on Plan
+
 - **manifest.rs**: Add vector_id field
 - **helix_backend.rs**: Use UUID v4 consistently for node_id
 - **Testing**: No changes
 
 ### References
+
 - `helix-db/src/utils/id.rs`
 
 ---
@@ -511,6 +546,7 @@ let node_id = Uuid::new_v4().as_u128();
 ### Modified Graph Schema
 
 **Node (DECISION):**
+
 ```
 id: u32 (1, 2, 3...) [PROPERTY]
 title: string [PROPERTY]
@@ -526,6 +562,7 @@ node_id: u128 [KEY] ← UUID, not property
 ```
 
 **Edges (3 DB writes per edge):**
+
 ```
 edges_db: edge_id → edge_bytes
 out_edges_db: (from_id || label_hash) → (edge_id || to_id)
@@ -533,6 +570,7 @@ in_edges_db: (to_id || label_hash) → (edge_id || from_id)
 ```
 
 **Manifest (in metadata):**
+
 ```
 Key: "manifest:helix-decisions:v1"
 Value: {
@@ -555,6 +593,7 @@ Value: {
 ## CORRECTED MODULE SPECIFICATIONS
 
 ### manifest.rs (UPDATED)
+
 ```diff
   pub struct ManifestEntry {
       pub file_path: String,
@@ -573,6 +612,7 @@ Value: {
 ### helix_backend.rs (MAJOR CHANGES)
 
 #### In upsert_decision_node():
+
 ```diff
 - // Just create node and vector separately
 + // 1. Allocate arena
@@ -595,6 +635,7 @@ Value: {
 ```
 
 #### In create_relationship_edges():
+
 ```diff
 - // Write edge to edges_db only
 + // 1. Write to edges_db
@@ -612,6 +653,7 @@ Value: {
 ```
 
 #### In delete_decision_node():
+
 ```diff
 - // Delete node only
 + // 1. Get vector_id before deletion
@@ -628,6 +670,7 @@ Value: {
 ```
 
 #### In sync():
+
 ```diff
 - // Delegate to backend
 + // Create arena at start of sync
@@ -640,6 +683,7 @@ Value: {
 ```
 
 ### storage.rs (MINIMAL CHANGES)
+
 - ✅ No changes needed (trait remains same)
 - Update imports to use corrected helix_backend
 
@@ -648,6 +692,7 @@ Value: {
 ## CORRECTED TESTING STRATEGY
 
 ### manifest.rs Tests (6)
+
 - Serialization/deserialization ✓
 - CRUD (get, upsert, remove) ✓
 - Vector ID field handling ✓
@@ -655,43 +700,46 @@ Value: {
 - Key namespace ✓
 
 ### git_utils.rs Tests (4)
+
 - Git listing ✓
 - Directory walk fallback ✓
 - .gitignore respect ✓
 
 ### helix_backend.rs Tests (20+) ← EXPANDED
+
 - **Node creation (4 tests):**
   - ✓ Arena allocation
   - ✓ Properties round-trip
   - ✓ Key helper usage
   - ✓ Property lookup
-  
+
 - **Vector handling (4 tests):**
   - ✓ Insert f32→f64 conversion
   - ✓ Vector ID stored in properties
   - ✓ Delete tombstones vector
   - ✓ Search result mapping
-  
+
 - **Edge creation (6 tests):**
   - ✓ Write all 3 DBs
   - ✓ Label hashing
   - ✓ Adjacency keys correct
   - ✓ Traversal can find edges
   - ✓ Both directions (out/in)
-  
+
 - **Incremental indexing (3 stages, 6 tests):**
   - ✓ Stage 1: Stat skip
   - ✓ Stage 2: Hash skip
   - ✓ Stage 3: Full re-index
   - ✓ Vector deletion
   - ✓ Secondary index maintenance
-  
+
 - **Queries (3 tests):**
   - ✓ Vector search + mapping
   - ✓ Chain traversal via out_edges_db
   - ✓ Related via relationship edges
 
 ### storage.rs Tests (5)
+
 - Trait implementation ✓
 - Search filter ✓
 - Chain query ✓
@@ -705,6 +753,7 @@ Value: {
 ## PRIORITY FIX CHECKLIST
 
 ### Critical (Must Fix Before Implementation)
+
 - [x] Edge writes: Add out_edges_db + in_edges_db writes
 - [x] Node construction: Use arena + ImmutablePropertiesMap
 - [x] Vector insertion: API mismatch, need vector_id mapping
@@ -712,11 +761,13 @@ Value: {
 - [x] Node key helpers: Use HelixGraphStorage::node_key/edge_key
 
 ### High Priority
+
 - [x] Vector deletion: Tombstone vectors on node delete
 - [x] Secondary indices: Create and maintain for decision_id lookups
 - [x] Config path: Plumb HELIX_DB_PATH through HelixGraphEngineOpts
 
 ### Medium Priority
+
 - [x] Metadata key: Use "manifest:helix-decisions:v1" namespace
 - [x] Traversal ops decision: Decided on direct storage writes
 - [x] Test expansion: 35+ tests to cover all HelixDB APIs
@@ -726,32 +777,34 @@ Value: {
 ## CHANGED FILES (REVISED)
 
 ### Create (New Files)
-| File | Changes from Original |
-|------|----------------------|
-| `helix-decisions/src/manifest.rs` | Add vector_id field, add MANIFEST_KEY constant |
-| `helix-decisions/src/git_utils.rs` | No changes |
+
+| File                                   | Changes from Original                                                                           |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `helix-decisions/src/manifest.rs`      | Add vector_id field, add MANIFEST_KEY constant                                                  |
+| `helix-decisions/src/git_utils.rs`     | No changes                                                                                      |
 | `helix-decisions/src/helix_backend.rs` | **MAJOR REWRITE**: Arena allocation, 3 DB writes per edge, vector ID mapping, secondary indices |
 
 ### Modify (Existing Files)
-| File | Changes from Original |
-|------|----------------------|
-| `helix-decisions/src/storage.rs` | No changes needed |
-| `helix-decisions/src/lib.rs` | No changes needed |
-| `helix-decisions/Cargo.toml` | No changes needed |
+
+| File                             | Changes from Original |
+| -------------------------------- | --------------------- |
+| `helix-decisions/src/storage.rs` | No changes needed     |
+| `helix-decisions/src/lib.rs`     | No changes needed     |
+| `helix-decisions/Cargo.toml`     | No changes needed     |
 
 ---
 
 ## RISK REASSESSMENT
 
-| Risk | Mitigation | Status |
-|------|-----------|--------|
-| Edge traversals fail | Write all 3 DBs per edge | ✓ Fixed |
-| Vectors not stored | Create vector_id mapping | ✓ Fixed |
-| Serialization errors | Use arena + helpers | ✓ Fixed |
-| Config ignored | Plumb path through opts | ✓ Fixed |
-| Property lookups slow | Create secondary indices | ✓ Fixed |
-| Orphaned vectors | Delete both node + vector | ✓ Fixed |
-| Key collisions | Use versioned namespace | ✓ Fixed |
+| Risk                  | Mitigation                | Status  |
+| --------------------- | ------------------------- | ------- |
+| Edge traversals fail  | Write all 3 DBs per edge  | ✓ Fixed |
+| Vectors not stored    | Create vector_id mapping  | ✓ Fixed |
+| Serialization errors  | Use arena + helpers       | ✓ Fixed |
+| Config ignored        | Plumb path through opts   | ✓ Fixed |
+| Property lookups slow | Create secondary indices  | ✓ Fixed |
+| Orphaned vectors      | Delete both node + vector | ✓ Fixed |
+| Key collisions        | Use versioned namespace   | ✓ Fixed |
 
 ---
 
@@ -764,4 +817,3 @@ Value: {
 5. **Reference storage_tests.rs** - Use as canonical examples
 
 All corrections are **API-driven**, not design-driven. The architecture remains sound; only HelixDB-specific details were wrong.
-

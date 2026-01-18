@@ -21,4 +21,3 @@ Document: enum patterns, error handling, CLI command structure, clippy config ra
 ### 2026-01-04T19:35:22.437908+00:00 — kevinchen (human)
 
 Closed: Created STYLE.md with architecture, conventions, and code review checklist
-

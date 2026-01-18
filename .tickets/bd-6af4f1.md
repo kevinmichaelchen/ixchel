@@ -22,4 +22,3 @@ Add bits-ui dependency, configure tailwindcss-animate plugin, setup CSS variable
 ### 2026-01-04T02:38:19.137828+00:00 — kevinchen (human)
 
 Installed bits-ui v2.15.2, tailwindcss-animate. Added CSS variable theming for dark mode. Wrapped app in Tooltip.Provider.
-

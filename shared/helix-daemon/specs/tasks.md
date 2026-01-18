@@ -1,6 +1,6 @@
 # Tasks
 
-**Status:** Phase 1-4 Complete, Phase 5 Complete  
+**Status:** Phase 1-4 Complete, Phase 5 Complete\
 **Updated:** 2026-01-06
 
 ## Phase 1: Crate Skeleton ✅

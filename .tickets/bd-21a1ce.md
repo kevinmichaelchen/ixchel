@@ -21,4 +21,3 @@ Extract business logic from main.rs into domain/ module, slim down CLI layer, an
 ### 2026-01-04T19:35:38.594907+00:00 — kevinchen (human)
 
 Closed: Architecture refactor complete. All 6 child tasks closed.
-

@@ -26,4 +26,3 @@ Change id and markdown modules to pub(crate). Keep curated re-exports. Expose ne
 ### 2026-01-04T19:31:08.186493+00:00 — kevinchen (human)
 
 Closed: Made id and markdown modules pub(crate), exposed domain module
-

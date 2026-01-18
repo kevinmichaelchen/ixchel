@@ -16,10 +16,10 @@ This document describes the design decisions and implementation details for `hel
 
 ## Inspiration
 
-| Tool | What We Take | What We Skip |
-|------|--------------|--------------|
-| [git-grab](https://github.com/wezm/git-grab) | URL parsing, simplicity, Rust patterns | Clipboard features |
-| [ghq](https://github.com/x-motemen/ghq) | VCS abstraction concept, multiple roots | git-config integration, multi-VCS |
+| Tool                                         | What We Take                            | What We Skip                      |
+| -------------------------------------------- | --------------------------------------- | --------------------------------- |
+| [git-grab](https://github.com/wezm/git-grab) | URL parsing, simplicity, Rust patterns  | Clipboard features                |
+| [ghq](https://github.com/x-motemen/ghq)      | VCS abstraction concept, multiple roots | git-config integration, multi-VCS |
 
 ---
 
@@ -235,14 +235,14 @@ Inspired by git-grab's approach, handle multiple URL formats:
 
 ### Supported Formats
 
-| Format | Example | Normalized |
-|--------|---------|------------|
-| HTTPS | `https://github.com/facebook/react` | `https://github.com/facebook/react` |
+| Format          | Example                                 | Normalized                          |
+| --------------- | --------------------------------------- | ----------------------------------- |
+| HTTPS           | `https://github.com/facebook/react`     | `https://github.com/facebook/react` |
 | HTTPS with .git | `https://github.com/facebook/react.git` | `https://github.com/facebook/react` |
-| SSH | `git@github.com:facebook/react.git` | `https://github.com/facebook/react` |
-| SSH with port | `git@github.com:22:facebook/react.git` | `https://github.com/facebook/react` |
-| Schemeless | `github.com/facebook/react` | `https://github.com/facebook/react` |
-| Git protocol | `git://github.com/facebook/react` | `https://github.com/facebook/react` |
+| SSH             | `git@github.com:facebook/react.git`     | `https://github.com/facebook/react` |
+| SSH with port   | `git@github.com:22:facebook/react.git`  | `https://github.com/facebook/react` |
+| Schemeless      | `github.com/facebook/react`             | `https://github.com/facebook/react` |
+| Git protocol    | `git://github.com/facebook/react`       | `https://github.com/facebook/react` |
 
 ### Parsing Algorithm
 
@@ -624,22 +624,22 @@ pub struct RepoMetadata {
 
 ## Dependencies
 
-| Crate | Purpose | Required |
-|-------|---------|----------|
-| `clap` | CLI parsing | Yes |
-| `url` | URL parsing | Yes |
-| `serde` | Config/JSON serialization | Yes |
-| `toml` | Config file parsing | Yes |
-| `thiserror` | Error types | Yes |
-| `tokio` | Async runtime | Yes |
-| `dirs` | Platform directories | Yes |
+| Crate       | Purpose                   | Required |
+| ----------- | ------------------------- | -------- |
+| `clap`      | CLI parsing               | Yes      |
+| `url`       | URL parsing               | Yes      |
+| `serde`     | Config/JSON serialization | Yes      |
+| `toml`      | Config file parsing       | Yes      |
+| `thiserror` | Error types               | Yes      |
+| `tokio`     | Async runtime             | Yes      |
+| `dirs`      | Platform directories      | Yes      |
 
 ---
 
 ## Consumers
 
-| Tool | Usage |
-|------|-------|
-| `helix-docs` | Clone repos to extract documentation |
-| `helix-map` | Clone repos to index codebase structure |
-| AI agents | Clone repos to search implementations |
+| Tool         | Usage                                   |
+| ------------ | --------------------------------------- |
+| `helix-docs` | Clone repos to extract documentation    |
+| `helix-map`  | Clone repos to index codebase structure |
+| AI agents    | Clone repos to search implementations   |

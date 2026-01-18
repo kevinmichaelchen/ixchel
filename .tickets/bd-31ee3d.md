@@ -58,6 +58,7 @@ Build a Kanban board view with drag-drop between status columns per ADR-001.
 ## Technical Notes
 
 Per ADR-001, svelte-dnd-action was chosen over sveltednd for:
+
 - Better accessibility (keyboard + screen reader support)
 - Multi-container support (built for Kanban)
 - Touch support with `delayTouchStart`

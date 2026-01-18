@@ -2,12 +2,13 @@
 
 Decision graph infrastructure with semantic search and persistent indexing.
 
-**Status:** Core Complete  
+**Status:** Core Complete\
 **Created:** 2026-01-05
 
 ## Why helix-decisions?
 
-Decisions are the backbone of software architecture. Unlike code (which shows *what*), decisions capture *why*:
+Decisions are the backbone of software architecture. Unlike code (which shows _what_), decisions capture _why_:
+
 - "What have we decided about caching?"
 - "Why did we choose X over Y?"
 - "Are we already committed to this direction?"
@@ -108,6 +109,7 @@ helix-decisions init-hooks
 This will install a pre-commit hook that blocks commits modifying accepted decisions.
 
 **Bypass options:**
+
 - `git commit --no-verify` — Skip hook for a single commit
 - `HELIX_DECISIONS_SKIP_HOOKS=1` — Environment variable bypass
 - Delete `.git/hooks/pre-commit` — Remove hook entirely
@@ -156,26 +158,26 @@ related_to: 5            # Optional: related decisions
 
 ### Required Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | integer | Local sequential ID (1, 2, 3...) |
-| `uuid` | string | Hash-based UUID (hx-xxxxxx) for rename safety |
-| `title` | string | Human-readable title |
-| `status` | string | proposed, accepted, superseded, deprecated |
-| `date` | date | ISO 8601 date |
+| Field    | Type    | Description                                   |
+| -------- | ------- | --------------------------------------------- |
+| `id`     | integer | Local sequential ID (1, 2, 3...)              |
+| `uuid`   | string  | Hash-based UUID (hx-xxxxxx) for rename safety |
+| `title`  | string  | Human-readable title                          |
+| `status` | string  | proposed, accepted, superseded, deprecated    |
+| `date`   | date    | ISO 8601 date                                 |
 
 ### Optional Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `deciders` | list | People who made the decision |
-| `tags` | list | Categorization tags |
-| `content_hash` | string | SHA256 hash for immutability |
-| `git_commit` | string | Git commit when accepted |
-| `supersedes` | int/list | Decision(s) this replaces |
-| `amends` | int/list | Decision(s) this amends |
-| `depends_on` | int/list | Prerequisite decisions |
-| `related_to` | int/list | Related decisions |
+| Field          | Type     | Description                  |
+| -------------- | -------- | ---------------------------- |
+| `deciders`     | list     | People who made the decision |
+| `tags`         | list     | Categorization tags          |
+| `content_hash` | string   | SHA256 hash for immutability |
+| `git_commit`   | string   | Git commit when accepted     |
+| `supersedes`   | int/list | Decision(s) this replaces    |
+| `amends`       | int/list | Decision(s) this amends      |
+| `depends_on`   | int/list | Prerequisite decisions       |
+| `related_to`   | int/list | Related decisions            |
 
 ## Validation
 
@@ -209,6 +211,7 @@ Index is stored at `.helix/data/decisions/` within your repository (LMDB `data.m
 ## Output
 
 ### Pretty (human-readable)
+
 ```
 [1] 003: Database Migration Strategy
     Status: accepted
@@ -222,6 +225,7 @@ Index is stored at `.helix/data/decisions/` within your repository (LMDB `data.m
 ```
 
 ### JSON (machine-readable)
+
 ```json
 {
   "query": "database migration",
@@ -263,6 +267,7 @@ User/Agent
 ## Specs
 
 See `specs/` directory:
+
 - [requirements.md](specs/requirements.md) - User stories, acceptance criteria
 - [design.md](specs/design.md) - Architecture, data model
 - [tasks.md](specs/tasks.md) - Implementation phases

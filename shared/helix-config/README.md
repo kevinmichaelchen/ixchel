@@ -5,6 +5,7 @@ Hierarchical configuration loading for helix-tools. Provides a consistent config
 ## Why
 
 All helix-tools share common configuration patterns:
+
 - Global config in `~/.helix/config/`
 - Project config in `.helix/`
 - Environment variable overrides
@@ -126,6 +127,7 @@ if let Some(token) = detect_github_token() {
 ```
 
 Detection order:
+
 1. `GITHUB_TOKEN` environment variable
 2. `GH_TOKEN` environment variable
 3. `github.token` in config files
@@ -148,11 +150,11 @@ export HELIX_MAP__INDEXING__LANGUAGES=rust,typescript
 
 ## Consumers
 
-| Crate | Tool Name | Config File |
-|-------|-----------|-------------|
-| `hbd` | `hbd` | `~/.helix/config/hbd.toml` |
+| Crate        | Tool Name    | Config File                       |
+| ------------ | ------------ | --------------------------------- |
+| `hbd`        | `hbd`        | `~/.helix/config/hbd.toml`        |
 | `helix-docs` | `helix-docs` | `~/.helix/config/helix-docs.toml` |
-| `helix-map` | `helix-map` | `~/.helix/config/helix-map.toml` |
+| `helix-map`  | `helix-map`  | `~/.helix/config/helix-map.toml`  |
 | `helix-repo` | `helix-repo` | `~/.helix/config/helix-repo.toml` |
 | `helix-mail` | `helix-mail` | `~/.helix/config/helix-mail.toml` |
 
@@ -162,6 +164,7 @@ export HELIX_MAP__INDEXING__LANGUAGES=rust,typescript
 - [specs/design.md][design] - Design decisions and API details
 
 <!-- Links -->
+
 [config-docs]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md

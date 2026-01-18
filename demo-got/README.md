@@ -23,6 +23,7 @@ cargo run -p demo-got -- ingest
 ```
 
 This creates a `.data/` directory inside the crate with the persisted graph data. By default, it also:
+
 - Loads character biographies from `data/*.md` files
 - Generates embeddings using the local embedding model
 - Stores vectors for semantic search
@@ -163,6 +164,7 @@ demo-got/
 ### Vector Search
 
 Semantic search uses:
+
 - **HNSW index**: `m=16`, `ef_construction=128`, `ef_search=64`
 - **Embedding model**: `BAAI/bge-small-en-v1.5` (384 dimensions)
 - **Composite text**: `{name} ({alias})\nTitles: {titles}\n\n{bio}`

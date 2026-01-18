@@ -54,16 +54,17 @@ Build a virtualized table view for issues per ADR-001. Must handle 10,000+ issue
 
 ## Performance Targets
 
-| Metric | Target |
-|--------|--------|
-| Initial render (10K rows) | < 100ms |
-| Scroll performance | 60fps |
-| DOM nodes | < 50 (regardless of data size) |
-| Memory (10K rows) | < 20MB |
+| Metric                    | Target                         |
+| ------------------------- | ------------------------------ |
+| Initial render (10K rows) | < 100ms                        |
+| Scroll performance        | 60fps                          |
+| DOM nodes                 | < 50 (regardless of data size) |
+| Memory (10K rows)         | < 20MB                         |
 
 ## Technical Notes
 
 Per ADR-001:
+
 - TanStack Virtual handles windowing (only renders visible rows)
 - TanStack Table handles sorting/filtering in memory
 - shadcn-svelte provides styled Table primitives

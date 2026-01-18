@@ -21,4 +21,3 @@ hbd label add/remove/list for issue tagging
 ### 2026-01-04T01:08:28.079204+00:00 — kevinchen (human)
 
 Closed: Implemented all label commands
-

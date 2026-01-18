@@ -21,4 +21,3 @@ Per AC-005C.2: WHEN the label is not on the issue THE SYSTEM SHALL display a war
 ### 2026-01-04T14:19:38.501243+00:00 — kevinchen (human)
 
 Closed: Implemented: label remove now warns and exits 0 if label not present
-

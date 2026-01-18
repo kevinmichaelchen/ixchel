@@ -1,7 +1,7 @@
 # helix-embeddings: Design Specification
 
-**Document:** design.md  
-**Status:** Active (2026-01-06)  
+**Document:** design.md\
+**Status:** Active (2026-01-06)\
 **Author:** Kevin Chen
 
 ## Overview
@@ -125,11 +125,11 @@ impl Embedder {
 
 ### Supported Models
 
-| Model | Dimensions | Size | Speed | Quality | Use Case |
-|-------|------------|------|-------|---------|----------|
-| `BAAI/bge-small-en-v1.5` | 384 | ~30MB | Fast | Good | **Default** — balanced |
-| `BAAI/bge-base-en-v1.5` | 768 | ~110MB | Medium | Better | Higher quality needs |
-| `sentence-transformers/all-MiniLM-L6-v2` | 384 | ~22MB | Fastest | Acceptable | Resource-constrained |
+| Model                                    | Dimensions | Size   | Speed   | Quality    | Use Case               |
+| ---------------------------------------- | ---------- | ------ | ------- | ---------- | ---------------------- |
+| `BAAI/bge-small-en-v1.5`                 | 384        | ~30MB  | Fast    | Good       | **Default** — balanced |
+| `BAAI/bge-base-en-v1.5`                  | 768        | ~110MB | Medium  | Better     | Higher quality needs   |
+| `sentence-transformers/all-MiniLM-L6-v2` | 384        | ~22MB  | Fastest | Acceptable | Resource-constrained   |
 
 ### Model Selection Guide
 
@@ -151,30 +151,30 @@ Decision tree:
 
 ### Single Embedding
 
-| Operation | Target | Notes |
-|-----------|--------|-------|
-| First embed (cold) | < 2s | Model loading |
-| Subsequent embed | 50-100ms | Inference only |
-| Short text (< 100 chars) | ~50ms | Typical queries |
-| Long text (> 1000 chars) | ~100ms | Full documents |
+| Operation                | Target   | Notes           |
+| ------------------------ | -------- | --------------- |
+| First embed (cold)       | < 2s     | Model loading   |
+| Subsequent embed         | 50-100ms | Inference only  |
+| Short text (< 100 chars) | ~50ms    | Typical queries |
+| Long text (> 1000 chars) | ~100ms   | Full documents  |
 
 ### Batch Embedding
 
-| Batch Size | Target | Throughput |
-|------------|--------|------------|
-| 10 docs | < 500ms | 20 docs/sec |
-| 32 docs | < 1.5s | 21 docs/sec |
-| 100 docs | < 4s | 25 docs/sec |
+| Batch Size | Target  | Throughput  |
+| ---------- | ------- | ----------- |
+| 10 docs    | < 500ms | 20 docs/sec |
+| 32 docs    | < 1.5s  | 21 docs/sec |
+| 100 docs   | < 4s    | 25 docs/sec |
 
 **Note:** Batch processing amortizes model overhead and is significantly more efficient than individual calls.
 
 ### Memory Usage
 
-| Model | RAM (loaded) | Peak (inference) |
-|-------|--------------|------------------|
-| bge-small | ~150MB | ~300MB |
-| bge-base | ~400MB | ~700MB |
-| all-MiniLM | ~100MB | ~200MB |
+| Model      | RAM (loaded) | Peak (inference) |
+| ---------- | ------------ | ---------------- |
+| bge-small  | ~150MB       | ~300MB           |
+| bge-base   | ~400MB       | ~700MB           |
+| all-MiniLM | ~100MB       | ~200MB           |
 
 ## Storage Independence
 
@@ -194,6 +194,7 @@ helix-embeddings is a **pure utility** that returns `Vec<f32>`. It has no knowle
 ```
 
 **What consumers do with embeddings is their concern:**
+
 - helix-decisions: Stores in its `DecisionStore` (HelixDB backend)
 - hbd: Stores in its `IssueStore` (HelixDB backend)
 - helix-docs: Stores in its storage backend
@@ -331,11 +332,11 @@ Run with: `cargo test --ignored -p helix-embeddings`
 
 ## Consumers
 
-| Tool | Use Case | Batch Size | Model |
-|------|----------|------------|-------|
-| helix-decisions | Decision search | 10-50 | bge-small (default) |
-| hbd | Issue search | 10-100 | bge-small (default) |
-| helix-docs | Doc chunk search | 100-1000 | bge-small or bge-base |
+| Tool            | Use Case         | Batch Size | Model                 |
+| --------------- | ---------------- | ---------- | --------------------- |
+| helix-decisions | Decision search  | 10-50      | bge-small (default)   |
+| hbd             | Issue search     | 10-100     | bge-small (default)   |
+| helix-docs      | Doc chunk search | 100-1000   | bge-small or bge-base |
 
 ---
 

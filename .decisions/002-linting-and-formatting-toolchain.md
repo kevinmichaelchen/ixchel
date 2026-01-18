@@ -1,8 +1,8 @@
 # ADR-002: Linting and Formatting Toolchain
 
-**Status:** Accepted  
-**Date:** 2026-01-04  
-**Deciders:** Kevin Chen  
+**Status:** Accepted\
+**Date:** 2026-01-04\
+**Deciders:** Kevin Chen\
 **Tags:** hbd-ui, dx, linting, tooling
 
 ## Context and Problem Statement
@@ -10,6 +10,7 @@
 hbd-ui is a Svelte 5 + Tauri application that needs a linting and formatting toolchain. The original plan (ticket bd-92268a) specified "Ultracite + Biome," but research revealed significant limitations for Svelte projects.
 
 We need to balance:
+
 1. **Speed** - Fast feedback in editor and CI
 2. **Comprehensiveness** - Catch real bugs in Svelte templates
 3. **Maintenance** - Minimize tool sprawl
@@ -26,34 +27,34 @@ We need to balance:
 
 ### Tool Comparison (January 2026)
 
-| Tool | Speed vs ESLint | Svelte Templates | Rules | Type-Aware | Stars |
-|------|----------------|------------------|-------|------------|-------|
-| **Oxlint** | 50-100x faster | `<script>` only | 645+ | Alpha | 18K |
-| **Biome** | 15x faster | Experimental | 415 | Custom inference | 23K |
-| **ESLint** | Baseline | Full via plugin | 300+ | Full | 27K |
+| Tool       | Speed vs ESLint | Svelte Templates | Rules | Type-Aware       | Stars |
+| ---------- | --------------- | ---------------- | ----- | ---------------- | ----- |
+| **Oxlint** | 50-100x faster  | `<script>` only  | 645+  | Alpha            | 18K   |
+| **Biome**  | 15x faster      | Experimental     | 415   | Custom inference | 23K   |
+| **ESLint** | Baseline        | Full via plugin  | 300+  | Full             | 27K   |
 
 ### Critical Gap: Svelte Template Linting
 
 **Neither Oxlint nor Biome can lint Svelte-specific syntax:**
 
-| Feature | Oxlint | Biome | ESLint + plugin |
-|---------|--------|-------|-----------------|
-| `{#if}` / `{#each}` blocks | No | No | **Yes** |
-| `$derived` / `$effect` runes | No | No | **Yes** |
-| Component props validation | No | No | **Yes** |
-| Template accessibility (`a11y-*`) | No | No | **Yes** |
-| Unused Svelte imports | No | No | **Yes** |
-| Invalid `bind:` directives | No | No | **Yes** |
+| Feature                           | Oxlint | Biome | ESLint + plugin |
+| --------------------------------- | ------ | ----- | --------------- |
+| `{#if}` / `{#each}` blocks        | No     | No    | **Yes**         |
+| `$derived` / `$effect` runes      | No     | No    | **Yes**         |
+| Component props validation        | No     | No    | **Yes**         |
+| Template accessibility (`a11y-*`) | No     | No    | **Yes**         |
+| Unused Svelte imports             | No     | No    | **Yes**         |
+| Invalid `bind:` directives        | No     | No    | **Yes**         |
 
 **Only `eslint-plugin-svelte`** (380 stars, actively maintained) provides comprehensive Svelte 5 linting.
 
 ### Benchmark Data
 
-| Scenario | Oxlint | Biome | ESLint |
-|----------|--------|-------|--------|
-| 1K JS/TS files | ~20-40ms | ~60-80ms | ~1-2s |
-| 10K JS/TS files | ~200-400ms | ~600-800ms | ~10-20s |
-| Pre-commit (typical) | Instant | Fast | Noticeable |
+| Scenario             | Oxlint     | Biome      | ESLint     |
+| -------------------- | ---------- | ---------- | ---------- |
+| 1K JS/TS files       | ~20-40ms   | ~60-80ms   | ~1-2s      |
+| 10K JS/TS files      | ~200-400ms | ~600-800ms | ~10-20s    |
+| Pre-commit (typical) | Instant    | Fast       | Noticeable |
 
 ### Ultracite's Role
 
@@ -68,11 +69,13 @@ npx ultracite init --linter biome
 ```
 
 **Pros:**
+
 - Fast (15x ESLint)
 - Zero-config via Ultracite
 - Single tool for lint + format
 
 **Cons:**
+
 - **No Svelte template linting**
 - Misses accessibility issues in templates
 - Custom type inference (not TypeScript compiler)
@@ -86,11 +89,13 @@ npm install -D eslint eslint-plugin-svelte @typescript-eslint/eslint-plugin pret
 ```
 
 **Pros:**
+
 - Full Svelte 5 support
 - Type-aware linting
 - Largest ecosystem
 
 **Cons:**
+
 - Slowest option (50-100x slower than Oxlint)
 - Requires Prettier for formatting
 
@@ -110,11 +115,13 @@ npm install -D prettier prettier-plugin-svelte
 ```
 
 **Pros:**
+
 - Fast: Oxlint handles 90%+ of files at 50-100x speed
 - Comprehensive: ESLint catches Svelte-specific issues
 - Clear separation: Each tool does what it's best at
 
 **Cons:**
+
 - Two linters to maintain
 - Slightly more complex CI config
 
@@ -123,6 +130,7 @@ npm install -D prettier prettier-plugin-svelte
 ### Option 4: Wait for Biome/Oxlint Svelte Support
 
 **Status of Svelte support:**
+
 - Biome: Multiple open issues, no timeline
 - Oxlint: Open issues for Vue/Svelte, no timeline
 
@@ -301,16 +309,19 @@ npx prettier --check $(git diff --cached --name-only --diff-filter=ACMR | tr '\n
 ## Migration Path
 
 ### Phase 1: Current (Hybrid)
+
 - Oxlint for JS/TS
 - ESLint for Svelte
 - Prettier for formatting
 
 ### Phase 2: When Biome/Oxlint Supports Svelte
+
 - Monitor [Biome Svelte issues](https://github.com/biomejs/biome/issues?q=svelte)
 - Monitor [Oxlint Vue/Svelte issues](https://github.com/oxc-project/oxc/issues/15761)
 - When support is stable, evaluate migration
 
 ### Phase 3: Single Tool (Future)
+
 - Replace Oxlint + ESLint with single tool
 - Replace Prettier with Biome/Oxfmt if Svelte formatting works
 - Simplify configuration
@@ -333,11 +344,11 @@ npx prettier --check $(git diff --cached --name-only --diff-filter=ACMR | tr '\n
 
 ### Risks and Mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Rule conflicts between tools | Low | Low | Oxlint ignores `.svelte` files |
-| eslint-plugin-svelte deprecation | Very Low | High | Official Svelte team plugin |
-| Oxlint breaking changes | Medium | Low | Pin versions, test before upgrade |
+| Risk                             | Likelihood | Impact | Mitigation                        |
+| -------------------------------- | ---------- | ------ | --------------------------------- |
+| Rule conflicts between tools     | Low        | Low    | Oxlint ignores `.svelte` files    |
+| eslint-plugin-svelte deprecation | Very Low   | High   | Official Svelte team plugin       |
+| Oxlint breaking changes          | Medium     | Low    | Pin versions, test before upgrade |
 
 ## Dependencies
 
@@ -360,15 +371,17 @@ npx prettier --check $(git diff --cached --name-only --diff-filter=ACMR | tr '\n
 **Ticket bd-92268a** should be updated:
 
 **Before:**
+
 > Setup Ultracite + Biome linting
 
 **After:**
+
 > Setup hybrid linting: Oxlint + ESLint + Prettier
-> 
+>
 > - Oxlint for JS/TS files (fast, comprehensive)
 > - ESLint with eslint-plugin-svelte for .svelte files (template linting, a11y)
 > - Prettier with prettier-plugin-svelte for formatting
-> 
+>
 > See ADR-002 for rationale.
 
 ## Related Decisions

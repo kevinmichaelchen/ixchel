@@ -8,11 +8,13 @@ This document defines the technical architecture, data model, and query implemen
 > HelixDB integration, vector embeddings, and graph queries are **planned but not yet implemented**.
 >
 > What's working today:
+>
 > - File-based CRUD via `.tickets/*.md`
 > - In-memory dependency traversal and cycle detection
 > - YAML frontmatter parsing and serialization
 >
 > What's planned:
+>
 > - HelixDB embedded in the binary (like SQLite—no server to run) as query cache
 > - fastembed for local semantic search (no API calls needed)
 > - BM25 + vector hybrid search
@@ -23,6 +25,7 @@ This document defines the technical architecture, data model, and query implemen
 >
 > **HelixDB API Patterns:** When implementing HelixDB integration, follow the corrected patterns
 > documented in `helix-decisions/docs/phase3/PHASE_3_CORRECTIONS.md`. Key requirements:
+>
 > - Edges must write to 3 databases (edges_db, out_edges_db, in_edges_db)
 > - Nodes must use arena allocation + ImmutablePropertiesMap
 > - Vectors are stored separately, linked via vector_id property
@@ -106,39 +109,40 @@ in `shared/helix-daemon/specs/design.md`.
                          │  - Human-readable   │
                          └─────────────────────┘
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              CLI Layer (hbd)                             │
-│   hbd create, list, search, similar, ready, blocked, dep, graph, ...    │
-│   - Rust CLI with clap                                                   │
-│   - All commands support --json for AI agents                            │
-│   - Tries daemon RPC first, falls back to direct DB access              │
-└──────────────────────────────────┬──────────────────────────────────────┘
-                                   │
-               ┌───────────────────┼───────────────────┐
-               │                   │                   │
-               v                   v                   v
-┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
-│    Git Layer        │ │      HelixDB        │ │   Embedding Layer   │
-│  .tickets/*.md      │ │      (LMDB)         │ │                     │
-│                     │ │                     │ │  fastembed (local)  │
-│  - Source of truth  │ │  - Fast queries     │ │  BGE-small-en-v1.5  │
-│  - YAML frontmatter │ │  - Graph traversal  │ │                     │
-│  - Merge-friendly   │ │  - Vector search    │ │  Cloud fallback:    │
-│  - Human-readable   │ │  - BM25 index       │ │  OpenAI / Gemini    │
-└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
-               │                   │                   │
-               └───────────────────┼───────────────────┘
-                                   │
-                             ┌─────v─────┐
-                             │  Daemon   │
-                             │ (helixd)  │
-                             │           │
-                             │  - Sync   │
-                             │  - Watch  │
-                             │  - Embed  │
-                             └───────────┘
-```
 
+┌─────────────────────────────────────────────────────────────────────────┐
+│ CLI Layer (hbd) │
+│ hbd create, list, search, similar, ready, blocked, dep, graph, ... │
+│ - Rust CLI with clap │
+│ - All commands support --json for AI agents │
+│ - Tries daemon RPC first, falls back to direct DB access │
+└──────────────────────────────────┬──────────────────────────────────────┘
+│
+┌───────────────────┼───────────────────┐
+│ │ │
+v v v
+┌─────────────────────┐ ┌─────────────────────┐ ┌─────────────────────┐
+│ Git Layer │ │ HelixDB │ │ Embedding Layer │
+│ .tickets/*.md │ │ (LMDB) │ │ │
+│ │ │ │ │ fastembed (local) │
+│ - Source of truth │ │ - Fast queries │ │ BGE-small-en-v1.5 │
+│ - YAML frontmatter │ │ - Graph traversal │ │ │
+│ - Merge-friendly │ │ - Vector search │ │ Cloud fallback: │
+│ - Human-readable │ │ - BM25 index │ │ OpenAI / Gemini │
+└─────────────────────┘ └─────────────────────┘ └─────────────────────┘
+│ │ │
+└───────────────────┼───────────────────┘
+│
+┌─────v─────┐
+│ Daemon │
+│ (helixd) │
+│ │
+│ - Sync │
+│ - Watch │
+│ - Embed │
+└───────────┘
+
+```
 ### Component Responsibilities
 
 | Component | Responsibility |
@@ -153,33 +157,35 @@ in `shared/helix-daemon/specs/design.md`.
 
 **Write Path:**
 ```
-hbd create "Title"
-    │
-    ├──▶ Generate hash-based ID (bd-xxxxxx)
-    │
-    ├──▶ Write .tickets/bd-xxxxxx.md
-    │
-    ├──▶ Insert Issue node in HelixDB
-    │
-    └──▶ Queue embedding generation (async)
-         └──▶ Insert IssueEmbedding + HAS_EMBEDDING edge
-```
 
+hbd create "Title"
+│
+├──▶ Generate hash-based ID (bd-xxxxxx)
+│
+├──▶ Write .tickets/bd-xxxxxx.md
+│
+├──▶ Insert Issue node in HelixDB
+│
+└──▶ Queue embedding generation (async)
+└──▶ Insert IssueEmbedding + HAS_EMBEDDING edge
+
+```
 **Read Path (after git pull):**
 ```
-git pull (new .tickets/ files)
-    │
-    ├──▶ Daemon detects file changes
-    │
-    ├──▶ For each changed file:
-    │    ├── Parse YAML frontmatter
-    │    ├── Compute content hash
-    │    ├── Compare with HelixDB
-    │    └── Upsert if content differs
-    │
-    └──▶ Re-embed if text changed
-```
 
+git pull (new .tickets/ files)
+│
+├──▶ Daemon detects file changes
+│
+├──▶ For each changed file:
+│ ├── Parse YAML frontmatter
+│ ├── Compute content hash
+│ ├── Compare with HelixDB
+│ └── Upsert if content differs
+│
+└──▶ Re-embed if text changed
+
+````
 ---
 
 ## Data Model (HelixQL Schema)
@@ -306,7 +312,7 @@ V::CommentEmbedding {
     text_hash: String,
     model: String,
 }
-```
+````
 
 ### Edges
 
@@ -1306,13 +1312,13 @@ pub fn sync() -> Result<SyncResult, SyncError> {
 
 ### Conflict Resolution
 
-| Scenario | Resolution |
-|----------|------------|
-| Same ID, same content hash | Skip (already synced) |
-| Same ID, DB newer | Export DB version to file |
-| Same ID, file newer | Import file to DB |
-| Git merge conflict | Manual resolution required |
-| Concurrent creates | Hash IDs prevent collisions |
+| Scenario                   | Resolution                  |
+| -------------------------- | --------------------------- |
+| Same ID, same content hash | Skip (already synced)       |
+| Same ID, DB newer          | Export DB version to file   |
+| Same ID, file newer        | Import file to DB           |
+| Git merge conflict         | Manual resolution required  |
+| Concurrent creates         | Hash IDs prevent collisions |
 
 ### Hash-Based IDs
 
@@ -1326,6 +1332,7 @@ pub fn generate_issue_id() -> String {
 ```
 
 **Why this works:**
+
 - UUIDs ensure uniqueness across machines
 - Short hashes (6 chars) are human-friendly
 - No coordination needed between branches
@@ -1361,7 +1368,7 @@ estimated_minutes: 120
 
 ## Description
 
-The parser leaks memory when processing files larger than 10MB. 
+The parser leaks memory when processing files larger than 10MB.
 Memory usage grows linearly with each parsed file and is never freed.
 
 ## Steps to Reproduce
@@ -1474,19 +1481,20 @@ pub enum HbdError {
 
 ### Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Invalid arguments |
-| 3 | Issue not found |
-| 4 | Cycle detected |
-| 5 | Sync conflict |
-| 10 | Embedding unavailable (warning, operation continued) |
+| Code | Meaning                                              |
+| ---- | ---------------------------------------------------- |
+| 0    | Success                                              |
+| 1    | General error                                        |
+| 2    | Invalid arguments                                    |
+| 3    | Issue not found                                      |
+| 4    | Cycle detected                                       |
+| 5    | Sync conflict                                        |
+| 10   | Embedding unavailable (warning, operation continued) |
 
 ### Error Messages
 
 All errors follow this format:
+
 ```
 error: <short description>
 
@@ -1496,6 +1504,7 @@ hint: <suggested fix>
 ```
 
 Example:
+
 ```
 error: Cycle detected in dependencies
 

@@ -113,10 +113,10 @@ operate with high awareness
 **As an** AI agent **I want** a public API map **So that** I can see the intended
 surface area quickly
 
-| ID        | Acceptance Criterion                                                              |
-| --------- | --------------------------------------------------------------------------------- |
+| ID        | Acceptance Criterion                                                             |
+| --------- | -------------------------------------------------------------------------------- |
 | AC-006B.1 | WHEN exports or re-exports are present THE SYSTEM SHALL record them in the index |
-| AC-006B.2 | WHEN exporting context THE SYSTEM SHALL summarize public API by module            |
+| AC-006B.2 | WHEN exporting context THE SYSTEM SHALL summarize public API by module           |
 
 ---
 
@@ -125,10 +125,10 @@ surface area quickly
 **As an** AI agent **I want** stable symbol identifiers **So that** changes can
 be tracked across indexing runs
 
-| ID        | Acceptance Criterion                                                             |
-| --------- | -------------------------------------------------------------------------------- |
+| ID        | Acceptance Criterion                                                              |
+| --------- | --------------------------------------------------------------------------------- |
 | AC-006C.1 | THE SYSTEM SHALL assign a deterministic ID per symbol (based on qual name + kind) |
-| AC-006C.2 | WHEN a symbol moves files THE SYSTEM SHALL preserve its ID if identity is stable |
+| AC-006C.2 | WHEN a symbol moves files THE SYSTEM SHALL preserve its ID if identity is stable  |
 
 ---
 
@@ -137,11 +137,11 @@ be tracked across indexing runs
 **As a** developer **I want** configurable indexing scope **So that** monorepos
 can be indexed selectively
 
-| ID        | Acceptance Criterion                                                                |
-| --------- | ----------------------------------------------------------------------------------- |
-| AC-006D.1 | THE SYSTEM SHALL support include/exclude path patterns                              |
-| AC-006D.2 | THE SYSTEM SHALL support language filters per index run                             |
-| AC-006D.3 | WHERE a project scope is defined THE SYSTEM SHALL index only that subtree           |
+| ID        | Acceptance Criterion                                                      |
+| --------- | ------------------------------------------------------------------------- |
+| AC-006D.1 | THE SYSTEM SHALL support include/exclude path patterns                    |
+| AC-006D.2 | THE SYSTEM SHALL support language filters per index run                   |
+| AC-006D.3 | WHERE a project scope is defined THE SYSTEM SHALL index only that subtree |
 
 ---
 
@@ -150,10 +150,10 @@ can be indexed selectively
 **As an** AI agent **I want** index diffs between runs **So that** I can refresh
 context efficiently
 
-| ID        | Acceptance Criterion                                                                    |
-| --------- | --------------------------------------------------------------------------------------- |
-| AC-006E.1 | WHEN an index exists THE SYSTEM SHALL produce a list of added/removed/changed symbols   |
-| AC-006E.2 | WHEN exporting context THE SYSTEM SHALL allow a delta-only view                          |
+| ID        | Acceptance Criterion                                                                  |
+| --------- | ------------------------------------------------------------------------------------- |
+| AC-006E.1 | WHEN an index exists THE SYSTEM SHALL produce a list of added/removed/changed symbols |
+| AC-006E.2 | WHEN exporting context THE SYSTEM SHALL allow a delta-only view                       |
 
 ---
 
@@ -164,11 +164,11 @@ context efficiently
 **As an** AI agent **I want** the system to identify entrypoints **So that** I
 can orient quickly in a new codebase
 
-| ID       | Acceptance Criterion                                                                 |
-| -------- | ------------------------------------------------------------------------------------ |
+| ID       | Acceptance Criterion                                                                  |
+| -------- | ------------------------------------------------------------------------------------- |
 | AC-007.1 | WHEN indexing completes THE SYSTEM SHALL identify executable entrypoints (e.g., main) |
-| AC-007.2 | WHEN indexing completes THE SYSTEM SHALL identify public API entrypoints (exports)  |
-| AC-007.3 | WHEN exporting context THE SYSTEM SHALL include a list of entrypoints with kinds    |
+| AC-007.2 | WHEN indexing completes THE SYSTEM SHALL identify public API entrypoints (exports)    |
+| AC-007.3 | WHEN exporting context THE SYSTEM SHALL include a list of entrypoints with kinds      |
 
 ---
 
@@ -177,11 +177,11 @@ can orient quickly in a new codebase
 **As an** AI agent **I want** usage and call directionality metrics **So that** I
 can see what is used most and where flow begins
 
-| ID       | Acceptance Criterion                                                                     |
-| -------- | ---------------------------------------------------------------------------------------- |
-| AC-008.1 | WHEN call edges can be resolved THE SYSTEM SHALL record call-in and call-out counts      |
-| AC-008.2 | WHEN import/export relationships exist THE SYSTEM SHALL record import and export counts  |
-| AC-008.3 | WHEN exporting context THE SYSTEM SHALL surface top-used symbols by usage score          |
+| ID       | Acceptance Criterion                                                                    |
+| -------- | --------------------------------------------------------------------------------------- |
+| AC-008.1 | WHEN call edges can be resolved THE SYSTEM SHALL record call-in and call-out counts     |
+| AC-008.2 | WHEN import/export relationships exist THE SYSTEM SHALL record import and export counts |
+| AC-008.3 | WHEN exporting context THE SYSTEM SHALL surface top-used symbols by usage score         |
 
 ---
 
@@ -190,10 +190,10 @@ can see what is used most and where flow begins
 **As an** AI agent **I want** a notion of symbol importance **So that** I can
 prioritize key components
 
-| ID       | Acceptance Criterion                                                                 |
-| -------- | ------------------------------------------------------------------------------------ |
-| AC-009.1 | WHEN a symbol graph is available THE SYSTEM SHALL compute a centrality score         |
-| AC-009.2 | WHEN exporting context THE SYSTEM SHALL provide importance rankings for symbols      |
+| ID       | Acceptance Criterion                                                            |
+| -------- | ------------------------------------------------------------------------------- |
+| AC-009.1 | WHEN a symbol graph is available THE SYSTEM SHALL compute a centrality score    |
+| AC-009.2 | WHEN exporting context THE SYSTEM SHALL provide importance rankings for symbols |
 
 ---
 

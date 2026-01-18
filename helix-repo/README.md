@@ -126,13 +126,13 @@ for repo in manager.list()? {
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
-| `helix-repo clone <url>` | Clone a repository |
-| `helix-repo list` | List cloned repositories |
-| `helix-repo info <name>` | Show repository details |
-| `helix-repo remove <name>` | Remove a cloned repository |
-| `helix-repo root` | Print the root directory path |
+| Command                    | Description                   |
+| -------------------------- | ----------------------------- |
+| `helix-repo clone <url>`   | Clone a repository            |
+| `helix-repo list`          | List cloned repositories      |
+| `helix-repo info <name>`   | Show repository details       |
+| `helix-repo remove <name>` | Remove a cloned repository    |
+| `helix-repo root`          | Print the root directory path |
 
 ### Clone Options
 
@@ -165,6 +165,7 @@ helix-repo takes git-grab's simplicity and adds library APIs for tool integratio
 MIT
 
 <!-- Links -->
+
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md
 [tasks]: ./specs/tasks.md

@@ -204,16 +204,19 @@ Implementation roadmap for `helix-repo`.
 ## Future Phases
 
 ### Phase 9: Update Support (v2)
+
 - [ ] `helix-repo update <name>` - pull latest
 - [ ] `helix-repo update --all` - update all repos
 - [ ] Track last update time
 
 ### Phase 10: VCS Abstraction (v2)
+
 - [ ] Abstract `VcsClient` trait
 - [ ] Mercurial support
 - [ ] Per-URL VCS configuration
 
 ### Phase 11: Multiple Roots (v2)
+
 - [ ] Support multiple root directories
 - [ ] Primary vs secondary roots
 - [ ] Search all roots for existing repos
@@ -222,12 +225,12 @@ Implementation roadmap for `helix-repo`.
 
 ## Dependencies
 
-| Phase | Depends On |
-|-------|------------|
-| Phase 2 | Phase 1 |
-| Phase 3 | Phase 1 |
+| Phase   | Depends On       |
+| ------- | ---------------- |
+| Phase 2 | Phase 1          |
+| Phase 3 | Phase 1          |
 | Phase 4 | Phase 2, Phase 3 |
-| Phase 5 | Phase 1 |
+| Phase 5 | Phase 1          |
 | Phase 6 | Phase 4, Phase 5 |
-| Phase 7 | Phase 6 |
-| Phase 8 | Phase 7 |
+| Phase 7 | Phase 6          |
+| Phase 8 | Phase 7          |

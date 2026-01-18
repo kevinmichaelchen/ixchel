@@ -11,6 +11,7 @@ All decisions must be markdown files in `.decisions/` with YAML frontmatter.
 ```
 
 Examples:
+
 - `001-initial-architecture.md`
 - `002-database-selection.md`
 - `003-api-versioning-strategy.md`
@@ -150,19 +151,20 @@ helix-decisions init-hooks
 ```
 
 This installs a pre-commit hook that:
+
 - Blocks modifications to accepted decisions
 - Allows new decisions (including amendments)
 - Can be bypassed with `git commit --no-verify`
 
 ### Hook Behavior
 
-| Change | Status | Result |
-|--------|--------|--------|
-| New decision | any | Allowed |
-| Modify decision | proposed | Allowed |
-| Modify decision | accepted (no hash) | Allowed |
-| Modify decision | accepted (with hash) | **Blocked** |
-| New decision with `amends: [id]` | any | Allowed |
+| Change                           | Status               | Result      |
+| -------------------------------- | -------------------- | ----------- |
+| New decision                     | any                  | Allowed     |
+| Modify decision                  | proposed             | Allowed     |
+| Modify decision                  | accepted (no hash)   | Allowed     |
+| Modify decision                  | accepted (with hash) | **Blocked** |
+| New decision with `amends: [id]` | any                  | Allowed     |
 
 ## Testing Changes
 
