@@ -1,0 +1,530 @@
+# AI Agent Integration Guide
+
+This document describes how AI agents (Claude, GPT, Copilot, etc.) can interact with the Helix knowledge graph to provide better assistance.
+
+## Philosophy
+
+Helix treats AI agents as **first-class collaborators**, not just consumers. Agents can:
+
+1. **Read** the knowledge graph to understand context
+2. **Create** entities when discovering work items or insights
+3. **Link** entities to maintain relationship integrity
+4. **Search** semantically to find relevant information
+5. **Generate** context for other agents or humans
+
+All agent actions are **attributed** and **traceable**.
+
+## Agent Attribution
+
+Every entity tracks its creator:
+
+```yaml
+created_by: claude
+created_by_type: agent
+agent_id: claude-opus-4-20250514
+session_id: sess-abc123
+```
+
+This enables:
+
+- Filtering by human vs agent-created content
+- Auditing agent contributions
+- Grouping related agent actions
+- Understanding provenance
+
+## CLI Flags for Agents
+
+### `--agent <id>`
+
+Marks the operation as agent-initiated:
+
+```bash
+helix create issue "Memory leak in parser" --agent claude-opus-4
+```
+
+### `--session <id>`
+
+Groups related agent operations:
+
+```bash
+# All commands in a session are linked
+helix create issue "Fix parser" --agent claude --session sess-123
+helix create issue "Add tests" --agent claude --session sess-123
+helix link iss-a1 blocks iss-b2 --agent claude --session sess-123
+```
+
+### `--json`
+
+Machine-readable output for programmatic parsing:
+
+```bash
+helix show dec-42 --json | jq '.relationships'
+```
+
+## Context Generation
+
+The `helix context` command generates AI-ready summaries:
+
+```bash
+helix context iss-17 --depth 2 --max-tokens 8000 --format markdown
+```
+
+### Output Structure
+
+```markdown
+# Context for iss-b2c3d4: Implement connection pooling
+
+## This Issue
+
+**Status:** open | **Priority:** high | **Type:** feature
+**Assignee:** alice | **Created:** 2026-01-16 by kevin
+
+### Description
+
+Implement PgBouncer-style connection pooling for the database layer.
+This should support both transaction and session pooling modes.
+
+## Implements Decision
+
+### dec-a1b2c3: Use PostgreSQL for Primary Storage (accepted)
+
+**Date:** 2026-01-15 | **Deciders:** kevin, alice, bob
+
+We decided to use PostgreSQL 16 for primary storage because:
+
+- Strong ACID guarantees
+- Excellent JSON support
+- Mature ecosystem
+
+## Blocking Issues
+
+### iss-x1y2z3: Set up dev database (open)
+
+Development database environment needs to be configured before
+connection pooling can be implemented and tested.
+
+## Relevant Sources
+
+### src-pg2024: PostgreSQL 16 Connection Management
+
+Official documentation on connection handling, pooling strategies,
+and configuration parameters.
+
+Key sections:
+
+- 20.3 Connection via TCP/IP
+- 20.4 Resource Limits
+```
+
+### Format Options
+
+| Format     | Use Case                                      |
+| ---------- | --------------------------------------------- |
+| `markdown` | Human-readable, works well in chat interfaces |
+| `xml`      | Structured for Claude-style XML tags          |
+| `json`     | Programmatic processing                       |
+
+### XML Format Example
+
+```xml
+<context entity="iss-b2c3d4">
+  <issue>
+    <id>iss-b2c3d4</id>
+    <title>Implement connection pooling</title>
+    <status>open</status>
+    <priority>1</priority>
+    <body>Implement PgBouncer-style connection pooling...</body>
+  </issue>
+
+  <implements>
+    <decision id="dec-a1b2c3">
+      <title>Use PostgreSQL for Primary Storage</title>
+      <status>accepted</status>
+      <body>We decided to use PostgreSQL 16...</body>
+    </decision>
+  </implements>
+
+  <blocked_by>
+    <issue id="iss-x1y2z3">
+      <title>Set up dev database</title>
+      <status>open</status>
+    </issue>
+  </blocked_by>
+</context>
+```
+
+## MCP Server Integration
+
+Helix can run as an MCP (Model Context Protocol) server, exposing tools to AI assistants:
+
+### Starting the Server
+
+```bash
+helix mcp serve
+```
+
+### Available Tools
+
+#### `helix_search`
+
+Semantic search across the knowledge graph.
+
+```json
+{
+  "name": "helix_search",
+  "arguments": {
+    "query": "database performance optimization",
+    "types": ["decision", "issue", "source"],
+    "limit": 10
+  }
+}
+```
+
+#### `helix_show`
+
+Get full details of an entity.
+
+```json
+{
+  "name": "helix_show",
+  "arguments": {
+    "id": "dec-a1b2c3"
+  }
+}
+```
+
+#### `helix_list`
+
+List entities with filters.
+
+```json
+{
+  "name": "helix_list",
+  "arguments": {
+    "type": "issue",
+    "status": ["open", "in_progress"],
+    "limit": 20
+  }
+}
+```
+
+#### `helix_graph`
+
+Traverse relationships.
+
+```json
+{
+  "name": "helix_graph",
+  "arguments": {
+    "id": "dec-42",
+    "depth": 2,
+    "direction": "both"
+  }
+}
+```
+
+#### `helix_create`
+
+Create a new entity.
+
+```json
+{
+  "name": "helix_create",
+  "arguments": {
+    "type": "issue",
+    "title": "Fix memory leak in parser",
+    "properties": {
+      "priority": 1,
+      "type": "bug",
+      "tags": ["parser", "memory"]
+    },
+    "relationships": {
+      "implements": ["dec-42"]
+    }
+  }
+}
+```
+
+#### `helix_link`
+
+Add a relationship.
+
+```json
+{
+  "name": "helix_link",
+  "arguments": {
+    "from": "dec-42",
+    "relationship": "spawns",
+    "to": "iss-17"
+  }
+}
+```
+
+#### `helix_context`
+
+Generate context for an entity.
+
+```json
+{
+  "name": "helix_context",
+  "arguments": {
+    "id": "iss-17",
+    "depth": 2,
+    "max_tokens": 8000,
+    "format": "markdown"
+  }
+}
+```
+
+### MCP Configuration
+
+Add to your Claude Code MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "helix": {
+      "command": "helix",
+      "args": ["mcp", "serve"],
+      "cwd": "/path/to/project"
+    }
+  }
+}
+```
+
+## Agent Workflows
+
+### 1. Issue Triage
+
+When an agent encounters a bug report:
+
+```bash
+# 1. Search for similar issues
+helix search "memory leak parser" --types issue --limit 5 --json
+
+# 2. Check if related decision exists
+helix search "parser architecture" --types decision --limit 3 --json
+
+# 3. Create issue if new
+helix create issue "Memory leak when parsing large files" \
+  --type bug \
+  --priority 1 \
+  --tags parser,memory \
+  --agent claude \
+  --session $SESSION_ID
+
+# 4. Link to related decision
+helix link iss-new implements dec-42 --agent claude --session $SESSION_ID
+```
+
+### 2. Code Review Context
+
+Before reviewing code, gather context:
+
+```bash
+# Get context for the issue being addressed
+helix context iss-17 --depth 3 --format markdown
+
+# Find related decisions
+helix search "API error handling" --types decision
+
+# Check for relevant sources
+helix search "retry patterns" --types source,citation
+```
+
+### 3. Knowledge Discovery
+
+When asked "why did we build it this way?":
+
+```bash
+# Find the relevant decision
+helix search "authentication JWT" --types decision
+
+# Show full context including sources and related decisions
+helix context dec-42 --depth 3
+
+# Visualize the decision chain
+helix graph dec-42 --depth 4 --direction incoming --format tree
+```
+
+### 4. Automated Issue Creation
+
+When an agent discovers work needed:
+
+```bash
+# Create parent epic
+helix create issue "Improve database performance" \
+  --type epic \
+  --priority 2 \
+  --agent claude \
+  --session $SESSION_ID
+
+# Create child tasks
+helix create issue "Implement connection pooling" \
+  --type task \
+  --parent iss-epic \
+  --implements dec-42 \
+  --agent claude \
+  --session $SESSION_ID
+
+helix create issue "Add query caching" \
+  --type task \
+  --parent iss-epic \
+  --depends-on iss-pooling \
+  --agent claude \
+  --session $SESSION_ID
+```
+
+### 5. Research Documentation
+
+When researching a topic:
+
+```bash
+# Create source for paper found
+helix create source "Database Connection Pooling Best Practices" \
+  --type article \
+  --url "https://example.com/pooling" \
+  --agent claude \
+  --session $SESSION_ID
+
+# Create citation for key insight
+helix create citation "Connection pool sizing formula" \
+  --from src-pooling \
+  --quote "Optimal pool size = (core_count * 2) + effective_spindle_count" \
+  --page "Section 4.2" \
+  --supports dec-42 \
+  --agent claude \
+  --session $SESSION_ID
+```
+
+## Best Practices for Agents
+
+### 1. Always Use Attribution
+
+```bash
+# Good
+helix create issue "Fix bug" --agent claude --session sess-123
+
+# Bad (no attribution)
+helix create issue "Fix bug"
+```
+
+### 2. Check Before Creating
+
+```bash
+# Search first to avoid duplicates
+existing=$(helix search "connection pooling" --types issue --json)
+if [ "$(echo $existing | jq '.results | length')" -eq 0 ]; then
+  helix create issue "Implement connection pooling" ...
+fi
+```
+
+### 3. Maintain Relationships
+
+```bash
+# When creating implementation issues, link to decisions
+helix create issue "Add caching" --implements dec-42
+
+# When closing issues, check for blocking relationships
+helix graph iss-17 --direction incoming --types blocks
+```
+
+### 4. Use Sessions for Related Work
+
+```bash
+SESSION_ID="sess-$(date +%s)"
+
+# All related operations share session
+helix create issue "Epic" --session $SESSION_ID
+helix create issue "Task 1" --session $SESSION_ID
+helix create issue "Task 2" --session $SESSION_ID
+helix link iss-epic spawns iss-task1 --session $SESSION_ID
+helix link iss-epic spawns iss-task2 --session $SESSION_ID
+```
+
+### 5. Generate Context Proactively
+
+When starting work on an issue:
+
+```bash
+# Get full context before diving in
+context=$(helix context iss-17 --depth 2 --format markdown)
+echo "$context"
+```
+
+## Filtering Agent Content
+
+### View Only Human-Created
+
+```bash
+helix list issues --created-by-type human
+```
+
+### View Agent Contributions
+
+```bash
+helix list --created-by-type agent
+helix list --agent claude
+helix list --session sess-123
+```
+
+### Audit Agent Actions
+
+```bash
+# All entities created in a session
+helix list --session sess-123 --json | jq '.[] | {id, title, created_at}'
+```
+
+## Error Handling
+
+### Graceful Degradation
+
+If helix commands fail, agents should:
+
+1. **Log the error** for debugging
+2. **Continue without blocking** the main task
+3. **Inform the user** if critical
+
+### Common Errors
+
+| Error            | Handling                               |
+| ---------------- | -------------------------------------- |
+| Entity not found | Create if appropriate, or inform user  |
+| Cycle detected   | Don't create the blocking relationship |
+| Ambiguous ID     | Use full ID or ask user to clarify     |
+| Sync conflict    | Retry after sync, or use `--no-sync`   |
+
+## Future: Autonomous Knowledge Management
+
+Planned capabilities for agents:
+
+### 1. Automatic Linking
+
+Agent detects relationships in conversation and suggests links:
+
+> "I notice you're discussing the authentication decision (dec-42). Should I link
+> this new issue to that decision?"
+
+### 2. Knowledge Health Alerts
+
+Agent proactively surfaces issues:
+
+> "3 ideas have been in draft status for over 30 days. Would you like to review
+> them?"
+
+### 3. Context-Aware Search
+
+Agent automatically searches relevant knowledge when user asks questions:
+
+> User: "How should we handle API retries?"
+> Agent: _[searches helix]_ "Based on dec-78 (API Resilience Decision) and the
+> cited source (Exponential Backoff paper), we should..."
+
+### 4. Automatic Summarization
+
+Agent compacts old issues:
+
+```bash
+helix compact iss-old --agent claude --session $SESSION_ID
+# Creates summary, archives original, preserves relationships
+```

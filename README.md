@@ -6,13 +6,13 @@ AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-firs
 
 ## Tools
 
-| Tool | Description | Status |
-|------|-------------|--------|
-| **[hbd][hbd]** | Git-first issue tracker | Active |
+| Tool                                   | Description                         | Status     |
+| -------------------------------------- | ----------------------------------- | ---------- |
+| **[hbd][hbd]**                         | Git-first issue tracker             | Active     |
 | **[helix-decisions][helix-decisions]** | Decision graph with semantic search | Scaffolded |
-| **[helix-docs][helix-docs]** | Documentation cache for AI research | Scaffolded |
-| **[helix-map][helix-map]** | Codebase structure indexer | PoC |
-| **[helix-repo][helix-repo]** | Repository clone manager | Scaffolded |
+| **[helix-docs][helix-docs]**           | Documentation cache for AI research | Scaffolded |
+| **[helix-map][helix-map]**             | Codebase structure indexer          | PoC        |
+| **[helix-repo][helix-repo]**           | Repository clone manager            | Scaffolded |
 
 ## Quick Start
 
@@ -37,24 +37,26 @@ hbd create "My first issue" --type task
 
 ## Learn More
 
-| Resource | Description |
-|----------|-------------|
-| [Documentation][docs] | Full docs site |
-| [Configuration][config] | How settings work |
-| [Architecture][architecture] | System design |
-| [Contributing][contributing] | How to help |
+| Resource                     | Description       |
+| ---------------------------- | ----------------- |
+| [Documentation][docs]        | Full docs site    |
+| [Configuration][config]      | How settings work |
+| [Architecture][architecture] | System design     |
+| [Contributing][contributing] | How to help       |
 
 ## License
 
 [MIT][license]
 
 <!-- Docs -->
+
 [docs]: https://kevinmichaelchen.github.io/helix-tools
 [getting-started]: https://kevinmichaelchen.github.io/helix-tools/docs/getting-started
 [architecture]: https://kevinmichaelchen.github.io/helix-tools/docs/architecture
 [config]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
 
 <!-- Tools -->
+
 [helix-decisions]: ./helix-decisions/
 [hbd]: ./hbd/
 [helix-docs]: ./helix-docs/
@@ -62,8 +64,10 @@ hbd create "My first issue" --type task
 [helix-repo]: ./helix-repo/
 
 <!-- Project -->
+
 [contributing]: ./CONTRIBUTING.md
 [license]: ./LICENSE
 
 <!-- External -->
+
 [helixdb]: https://github.com/HelixDB/helix-db
