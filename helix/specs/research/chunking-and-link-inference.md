@@ -149,12 +149,12 @@ summaries[graphrag].
 
 ### Near-Term Enhancements
 
-1. **Reranker/classifier ablation**: ColBERT-style late interaction models are
-   typically retrieval-focused; using them as a reranker/classifier may
-   complicate per-relation labels. Run a small ablation before committing infra
-   changes:
-   - BGE cross-encoder (baseline)
-   - ColBERT-v2 rerank
+1. **Reranker/classifier selection**: ColBERT-style late interaction models are
+   retrieval-focused; use them for retrieval ablations only. For relation
+   labeling, prefer cross-encoders unless investing in a custom late-interaction
+   classifier. Run a small ablation before committing infra changes:
+   - BGE cross-encoder (baseline, recommended for relation labeling)
+   - ColBERT-v2 (retrieval stage only)
    - Lightweight ModernBERT cross-encoder
    - Measure latency and precision on a sampled edge-label dataset
 
@@ -169,17 +169,25 @@ summaries[graphrag].
    - Start with lower ef, increase until k qualified results found[arxiv-hnsw]
    - Add latency guardrail (e.g., p99 < 50ms) and log when falling back to
      higher ef
-   - Consider raising M only for collections with sparse edges to avoid
-     over-dense graphs
+   - M parameter tuning: higher M for smaller collections or high-accuracy
+     slices; lower M for very large collections prioritizing speed/memory
 
 ### Provenance-Backed Invalidation
 
 When source chunks change, suggestion validity degrades. Implement automatic
-invalidation:
+invalidation based on three triggers:
 
-- Detect chunk changes via `content_hash` comparison during sync
+- **Content hash change**: Detect chunk modifications via `content_hash`
+  comparison during sync
+- **Model version change**: Invalidate when embedding model version changes
+  (stored alongside vectors)
+- **TTL expiry**: Time-based invalidation for suggestions that haven't been
+  confirmed within a threshold
+
+On invalidation:
+
 - Downgrade or remove suggestions that cite changed chunks
-- Re-run the suggestion pipeline for impacted nodes
+- Cascade re-embedding and re-evaluation for impacted nodes
 - This preserves confidence semantics over time and bounds re-eval cost
 
 Track **chunk drift** (how often source chunks change) as a leading indicator of
@@ -187,12 +195,12 @@ suggestion invalidation volume.
 
 ### Evaluation Harness
 
-Define a small, versioned eval harness to gate changes to chunking, retrieval
-params, and rerankers:
+Define a small, versioned eval harness (MT-RAIG/RAGAS/ARES style) to gate
+changes to chunking, retrieval params, rerankers, and calibrators:
 
 - ~200-500 labeled pairs (relation type + ground truth label)
 - Run on every config change before deploy
-- Track regression on precision, recall, and latency
+- Track regression on precision, recall, and latency SLOs
 - Version the eval set alongside pipeline config
 
 This de-risks all proposed enhancements by catching regressions early.
