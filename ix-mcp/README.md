@@ -4,3 +4,11 @@ MCP server for **Ixchel**.
 
 This crate should expose a stable, agent-friendly tool surface and delegate the
 actual behavior to `ix-core`.
+
+## Tools
+
+- `ixchel_sync` — rebuild `.ixchel/data/` from Markdown
+- `ixchel_search` — semantic search over entities
+- `ixchel_show` — read an entity by id
+- `ixchel_graph` — list outgoing relationships
+- `ixchel_context` — assemble a basic 1-hop context pack

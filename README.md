@@ -30,6 +30,20 @@ hbd init
 hbd create "My first issue" --type task
 ```
 
+## Try Ixchel
+
+Ixchel is a git-first, Markdown-canonical knowledge weaving system.
+
+```bash
+cargo install --path ix-cli
+cd your-project
+
+ixchel init
+ixchel create decision "Use PostgreSQL for primary storage"
+ixchel sync
+ixchel search "database performance"
+```
+
 ## Why Helix?
 
 - **Git-first** — Data lives in Markdown files, not a database

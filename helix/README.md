@@ -1,5 +1,9 @@
 # Helix
 
+Note: `./helix` is a brainstorming/specs directory. The implemented tool is now
+**Ixchel** (`ix-cli/`, `ix-core/`, `ix-mcp/`, `ix-storage-helixdb/`) and the
+canonical on-disk directory is `.ixchel/`.
+
 An AI-aware, git-native knowledge graph for agent swarms. Knowledge artifacts stay central, with lightweight agent attribution. Run logs and code-surface indexing are future extensions.
 
 ```

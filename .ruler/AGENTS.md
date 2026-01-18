@@ -5,7 +5,7 @@ Workspace guide for the helix-tools Rust monorepo. Each crate now has its own
 
 ## Overview
 
-- Tools: `hbd`, `helix-decisions`, `helix-docs`, `helix-map`, `helix-repo`, `hbd-ui`
+- Tools: `hbd`, `helix-decisions`, `helix-docs`, `helix-map`, `helix-repo`, `hbd-ui`, `ixchel`
 - Shared HelixDB helpers: `helix-graph-ops`
 - Shared crates live under `shared/`
 - Docs site (Next.js/Fumadocs) lives in `docs/`
@@ -22,6 +22,10 @@ helix-tools/
 ├── helix-docs/              # Global docs cache CLI + library
 ├── helix-map/               # Codebase indexer CLI + library
 ├── helix-repo/              # Repo clone manager CLI + library
+├── ix-cli/                  # Ixchel CLI (binary: ixchel)
+├── ix-core/                 # Ixchel core library (git-first, markdown-canonical)
+├── ix-mcp/                  # Ixchel MCP server (binary: ixchel-mcp)
+├── ix-storage-helixdb/      # Ixchel HelixDB-backed index/cache adapter
 ├── shared/                  # Shared Rust crates
 └── docs/                    # Next.js documentation site
 ```
@@ -45,6 +49,7 @@ helix-tools/
 ## Commands
 
 ```bash
+dprint check
 cargo build --all-features
 cargo test --all-features
 cargo clippy --all-targets --all-features -- -D warnings
