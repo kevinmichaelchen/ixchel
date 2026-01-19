@@ -6,9 +6,9 @@ use ix_core::markdown::{parse_markdown, render_markdown};
 use ix_core::repo::IxchelRepo;
 use tempfile::TempDir;
 
-fn read_demo_got(name: &str) -> String {
+fn read_fixture(name: &str) -> String {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let path = crate_dir.join("../../apps/demo-got/data").join(name);
+    let path = crate_dir.join("tests/fixtures").join(name);
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 
@@ -27,26 +27,22 @@ fn e2e_sync_then_search_returns_expected_source() {
     let temp = TempDir::new().expect("tempdir");
     let repo = IxchelRepo::init_at(temp.path(), false).expect("init ixchel repo");
 
-    let aerys = repo
-        .create_entity(
-            EntityKind::Source,
-            "Aerys II Targaryen (The Mad King)",
-            None,
-        )
+    let primary = repo
+        .create_entity(EntityKind::Source, "Primary source", None)
         .expect("create source");
-    replace_entity_body(&repo, &aerys.id, &read_demo_got("aerys-ii.md"));
+    replace_entity_body(&repo, &primary.id, &read_fixture("source-alpha.md"));
 
-    let jon = repo
-        .create_entity(EntityKind::Source, "Jon Snow", None)
+    let secondary = repo
+        .create_entity(EntityKind::Source, "Secondary source", None)
         .expect("create source");
-    replace_entity_body(&repo, &jon.id, &read_demo_got("jon-snow.md"));
+    replace_entity_body(&repo, &secondary.id, &read_fixture("source-beta.md"));
 
     let mut index = ix_storage_helixdb::HelixDbIndex::open(&repo).expect("open index");
     let stats = index.sync(&repo).expect("sync");
     assert_eq!(stats.scanned, 2);
     assert_eq!(stats.added, 2);
 
-    let hits = index.search("mad king", 5).expect("search");
+    let hits = index.search("sealed archive", 5).expect("search");
     assert!(!hits.is_empty(), "expected search hits");
-    assert_eq!(hits[0].id, aerys.id, "{hits:#?}");
+    assert_eq!(hits[0].id, primary.id, "{hits:#?}");
 }
