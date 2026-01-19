@@ -93,12 +93,24 @@ html.dark body {
 
 /* Glow card - light mode default */
 .glow-card {
-  @apply relative overflow-hidden rounded-xl border border-black/10 bg-black/[0.02] p-6 transition-all duration-300 hover:border-sky-500/50 hover:bg-black/[0.04] hover:shadow-[0_0_30px_-10px_rgba(14,165,233,0.2)];
+  @apply relative overflow-hidden rounded-xl border border-black/10 bg-black/[0.02] p-6;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-card:hover {
+  @apply border-sky-500/50 bg-black/[0.04];
+  box-shadow: 0 0 30px -10px rgba(14, 165, 233, 0.2);
+  transform: translateY(-2px);
 }
 
 /* Glow card - dark mode */
 html.dark .glow-card {
-  @apply border-white/10 bg-white/5 hover:bg-white/10 hover:shadow-[0_0_30px_-10px_rgba(14,165,233,0.3)];
+  @apply border-white/10 bg-white/5;
+}
+
+html.dark .glow-card:hover {
+  @apply bg-white/10;
+  box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.35);
 }
 
 /* Scrollbar styling - light mode default */
@@ -178,11 +190,14 @@ a, button, input, textarea, select {
 .prose a {
   color: var(--color-fd-primary);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
 }
 
 .prose a:hover {
   color: hsl(199 89% 38%);
+  text-decoration-color: currentColor;
 }
 
 html.dark .prose a:hover {
@@ -229,13 +244,18 @@ html.dark .prose table th {
 [data-fd-sidebar] a,
 [data-fd-toc] a {
   color: var(--color-fd-muted-foreground);
+  position: relative;
 }
 
 [data-fd-sidebar] a:hover,
-[data-fd-toc] a:hover,
+[data-fd-toc] a:hover {
+  color: var(--color-fd-foreground);
+}
+
 [data-fd-sidebar] a[data-active="true"],
 [data-fd-toc] a[data-active="true"] {
-  color: var(--color-fd-foreground);
+  color: var(--color-fd-primary);
+  font-weight: 500;
 }
 
 /* Card components in light mode */
