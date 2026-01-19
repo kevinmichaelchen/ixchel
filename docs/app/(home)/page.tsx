@@ -421,9 +421,9 @@ function SearchScenario({ step, setStep }: { step: number; setStep: (s: number) 
             <span>Dependency graph for iss-a1b2c3</span>
           </div>
           <pre className="text-[10px] leading-relaxed text-slate-500">
-{`  iss-a1b2c3 (Add OAuth2 authentication)
-  ├── blocks → iss-d4e5f6 (JWT refresh tokens)
-  └── related → iss-g7h8i9 (Session management)`}
+{`iss-a1b2c3 (Add OAuth2 authentication)
+   ├── blocks → iss-d4e5f6 (JWT refresh tokens)
+     └── related  → iss-g7h8i9 (Session management)`}
           </pre>
         </div>
       )}
@@ -533,16 +533,14 @@ function ContextScenario({ step, setStep }: { step: number; setStep: (s: number)
 
       {step >= 1 && (
         <div className="pl-4 text-xs border-l-2 border-amber-500/30 ml-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <pre className="text-[11px] leading-relaxed">
-            <span className="text-slate-500">{'{'}</span>{'\n'}
-            <span className="text-sky-400">  "id"</span><span className="text-slate-500">:</span> <span className="text-emerald-400">"iss-a1b2c3"</span><span className="text-slate-500">,</span>{'\n'}
-            <span className="text-sky-400">  "title"</span><span className="text-slate-500">:</span> <span className="text-amber-300">"Add OAuth2 authentication"</span><span className="text-slate-500">,</span>{'\n'}
-            <span className="text-sky-400">  "status"</span><span className="text-slate-500">:</span> <span className="text-amber-300">"in_progress"</span><span className="text-slate-500">,</span>{'\n'}
-            <span className="text-sky-400">  "blocks"</span><span className="text-slate-500">:</span> <span className="text-slate-400">[</span><span className="text-emerald-400">"iss-d4e5f6"</span><span className="text-slate-400">]</span><span className="text-slate-500">,</span>{'\n'}
-            <span className="text-sky-400">  "related"</span><span className="text-slate-500">:</span> <span className="text-slate-400">[</span><span className="text-emerald-400">"iss-g7h8i9"</span><span className="text-slate-400">]</span><span className="text-slate-500">,</span>{'\n'}
-            <span className="text-sky-400">  "similarity"</span><span className="text-slate-500">:</span> <span className="text-purple-400">0.94</span>{'\n'}
-            <span className="text-slate-500">{'}'}</span>
-          </pre>
+          <pre className="font-mono text-[11px] leading-relaxed text-left whitespace-pre">{`{
+  "id": "iss-a1b2c3",
+  "title": "Add OAuth2 authentication",
+  "status": "in_progress",
+  "blocks": ["iss-d4e5f6"],
+  "related": ["iss-g7h8i9"],
+  "similarity": 0.94
+}`}</pre>
         </div>
       )}
 
