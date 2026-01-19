@@ -1,348 +1,125 @@
-# ix-embeddings: Design Specification
+# ix-embeddings Design
 
-**Document:** design.md\
-**Status:** Active (2026-01-06)\
+**Status:** Active (2026-01-19)\
 **Author:** Kevin Chen
 
 ## Overview
 
-ix-embeddings provides shared embedding infrastructure for Ixchel using fastembed. It generates semantic embeddings for text, enabling similarity search across decisions and issues.
+`ix-embeddings` provides pluggable embedding infrastructure for Ixchel.
 
-## Design Goals
+It standardizes:
 
-1. **Unified API** — Single `Embedder` struct for all tools
-2. **Offline-first** — CPU-only inference, no external APIs
-3. **Configurable** — Model selection via ix-config
-4. **Efficient** — Batch processing for throughput
-5. **Minimal surface** — Simple API, hide fastembed complexity
+- How tools turn text into vectors (`Embedder`)
+- How providers are selected (`EmbeddingProvider` + `[embedding]` config)
+- How embeddings are normalized (L2 unit vectors)
+
+## Consumers
+
+Current consumers in this workspace:
+
+- `ix-storage-helixdb` — embed entities + query vectors
+- `demo-got` — demo graph + vector search over character bios
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Consumer Tools                       │
-│      helix-decisions    hbd    helix-docs               │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                   ix-embeddings                       │
-│  • Embedder::new() → Result<Self>                       │
-│  • embed(&str) → Result<Vec<f32>>                       │
-│  • embed_batch(&[&str]) → Result<Vec<Vec<f32>>>         │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                     fastembed-rs                         │
-│  • ONNX Runtime inference                               │
-│  • Model caching in ~/.cache/fastembed/                 │
-│  • CPU-only (no GPU required)                           │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                   Workspace consumers                        │
+│        ix-storage-helixdb        demo-got                    │
+└────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌────────────────────────────────────────────────────────────┐
+│                      ix-embeddings                           │
+│  Embedder (public API)                                       │
+│    └── Box<dyn EmbeddingProvider>                            │
+└────────────────────────────────────────────────────────────┘
+                          │
+        ┌─────────────────┴─────────────────┐
+        ▼                                   ▼
+┌───────────────────────┐         ┌──────────────────────────┐
+│ fastembed provider     │         │ candle provider          │
+│ (default feature)      │         │ (optional feature)       │
+└───────────────────────┘         └──────────────────────────┘
 ```
 
-## API Design
+## Public API
 
-### Core API
+### `EmbeddingProvider`
+
+Providers implement the `EmbeddingProvider` trait:
+
+- `embed(text) -> Vec<f32>`
+- `embed_batch(texts) -> Vec<Vec<f32>>`
+- `dimension() -> usize`
+- `model_name() -> &str`
+- `provider_name() -> &'static str`
+
+### `Embedder`
+
+`Embedder` is a thin wrapper around a boxed provider:
+
+- `Embedder::new()` loads `[embedding]` config via `ix-config`
+- `Embedder::with_config(&EmbeddingConfig)` selects a provider explicitly
+- `Embedder::from_provider(Box<dyn EmbeddingProvider>)` supports injection (tests / custom)
+
+Example:
 
 ```rust
-use ix_embeddings::{Embedder, EmbedderConfig};
+use ix_embeddings::Embedder;
 
-/// Create embedder with default config
 let embedder = Embedder::new()?;
-
-/// Create embedder with custom config
-let config = EmbedderConfig {
-    model: "BAAI/bge-base-en-v1.5".to_string(),
-    batch_size: 64,
-    normalize: true,
-};
-let embedder = Embedder::with_config(config)?;
-
-/// Embed single text
-let embedding: Vec<f32> = embedder.embed("How to handle authentication?")?;
-
-/// Embed batch (more efficient)
-let embeddings: Vec<Vec<f32>> = embedder.embed_batch(&[
-    "First document",
-    "Second document",
-    "Third document",
-])?;
-
-/// Get embedding dimension
-let dim = embedder.dimension();  // e.g., 384
+let v = embedder.embed("authentication bug")?;
 ```
 
-### Configuration
+## Configuration
 
-```rust
-#[derive(Debug, Clone, Deserialize)]
-pub struct EmbedderConfig {
-    /// Model identifier (HuggingFace format)
-    #[serde(default = "default_model")]
-    pub model: String,
-    
-    /// Batch size for embed_batch
-    #[serde(default = "default_batch_size")]
-    pub batch_size: usize,
-    
-    /// Normalize embeddings to unit length
-    #[serde(default = "default_normalize")]
-    pub normalize: bool,
-}
+`ix-embeddings` reads from the shared config files:
 
-fn default_model() -> String {
-    "BAAI/bge-small-en-v1.5".to_string()
-}
+- `~/.ixchel/config/config.toml`
+- `.ixchel/config.toml` (repo root)
 
-fn default_batch_size() -> usize {
-    32
-}
+Schema:
 
-fn default_normalize() -> bool {
-    true
-}
+```toml
+[embedding]
+provider = "fastembed"          # "fastembed" (default) | "candle"
+model = "BAAI/bge-small-en-v1.5"
+batch_size = 32
+dimension = 384                # optional; validated against provider metadata when possible
 ```
 
-### Integration with ix-config
+Note: config merging uses **global precedence** (global overrides project) via `ix-config`.
 
-```rust
-impl Embedder {
-    /// Create embedder using ix-config settings
-    pub fn new() -> Result<Self, EmbedderError> {
-        let shared = ix_config::load_shared_config()?;
-        let config = EmbedderConfig {
-            model: shared.embedding.model,
-            batch_size: shared.embedding.batch_size,
-            normalize: true,
-        };
-        Self::with_config(config)
-    }
-}
-```
+## Providers
 
-## Model Selection
+### fastembed (default)
 
-### Supported Models
+- Feature: `fastembed` (enabled by default)
+- Implementation: `fastembed::TextEmbedding`
+- Model resolution:
+  - Accepts exact fastembed model enum strings
+  - Accepts HuggingFace-style identifiers when they match a supported model
+- Output normalization: always L2-normalized in `ix-embeddings`
 
-| Model                                    | Dimensions | Size   | Speed   | Quality    | Use Case               |
-| ---------------------------------------- | ---------- | ------ | ------- | ---------- | ---------------------- |
-| `BAAI/bge-small-en-v1.5`                 | 384        | ~30MB  | Fast    | Good       | **Default** — balanced |
-| `BAAI/bge-base-en-v1.5`                  | 768        | ~110MB | Medium  | Better     | Higher quality needs   |
-| `sentence-transformers/all-MiniLM-L6-v2` | 384        | ~22MB  | Fastest | Acceptable | Resource-constrained   |
+### candle (optional)
 
-### Model Selection Guide
+- Feature: `candle`
+- Optional acceleration: `metal` (Apple Silicon), `cuda` (NVIDIA)
+- Downloads model assets via `hf-hub` when enabled
+- Uses mean pooling + L2 normalization for sentence embeddings
 
-```
-Decision tree:
-1. Resource-constrained environment? → all-MiniLM-L6-v2
-2. Need highest quality? → bge-base-en-v1.5
-3. Default (balanced) → bge-small-en-v1.5
-```
+## Error Model
 
-### Why These Models?
+Errors are returned as `EmbeddingError` and include:
 
-1. **English-focused** — helix-tools targets English codebases
-2. **Open weights** — No API keys or licensing issues
-3. **ONNX support** — Works with fastembed's runtime
-4. **Proven quality** — Top performers on MTEB benchmark
+- Provider not compiled (feature missing)
+- Unknown provider or model
+- Init failures (download / model load / runtime)
+- Embed failures
+- Dimension mismatches (configured vs detected)
 
-## Performance Targets
+## Implementation Notes
 
-### Single Embedding
-
-| Operation                | Target   | Notes           |
-| ------------------------ | -------- | --------------- |
-| First embed (cold)       | < 2s     | Model loading   |
-| Subsequent embed         | 50-100ms | Inference only  |
-| Short text (< 100 chars) | ~50ms    | Typical queries |
-| Long text (> 1000 chars) | ~100ms   | Full documents  |
-
-### Batch Embedding
-
-| Batch Size | Target  | Throughput  |
-| ---------- | ------- | ----------- |
-| 10 docs    | < 500ms | 20 docs/sec |
-| 32 docs    | < 1.5s  | 21 docs/sec |
-| 100 docs   | < 4s    | 25 docs/sec |
-
-**Note:** Batch processing amortizes model overhead and is significantly more efficient than individual calls.
-
-### Memory Usage
-
-| Model      | RAM (loaded) | Peak (inference) |
-| ---------- | ------------ | ---------------- |
-| bge-small  | ~150MB       | ~300MB           |
-| bge-base   | ~400MB       | ~700MB           |
-| all-MiniLM | ~100MB       | ~200MB           |
-
-## Storage Independence
-
-ix-embeddings is a **pure utility** that returns `Vec<f32>`. It has no knowledge of storage.
-
-```
-┌──────────────┐     embed()     ┌──────────────┐
-│   Document   │ ───────────────▶│   Vec<f32>   │
-│   (text)     │                 │  (384 dims)  │
-└──────────────┘                 └──────────────┘
-                                        │
-                                        ▼
-                                 ┌──────────────┐
-                                 │  Consumer    │
-                                 │  decides     │
-                                 └──────────────┘
-```
-
-**What consumers do with embeddings is their concern:**
-
-- helix-decisions: Stores in its `DecisionStore` (HelixDB backend)
-- hbd: Stores in its `IssueStore` (HelixDB backend)
-- helix-docs: Stores in its storage backend
-
-This crate does NOT depend on HelixDB or any storage system.
-
-### Embedding Consistency
-
-**All embeddings for a tool MUST use the same model.** Mixing models produces incompatible vectors.
-
-```rust
-// CORRECT: Same model for index and query
-let embedder = Embedder::new()?;  // Uses configured model
-let doc_embedding = embedder.embed(&document)?;
-let query_embedding = embedder.embed(&query)?;
-
-// WRONG: Different models
-let index_embedder = Embedder::with_config(bge_small)?;
-let query_embedder = Embedder::with_config(bge_base)?;  // Incompatible!
-```
-
-**Migration:** If you change models, you must re-embed all documents.
-
-## Error Handling
-
-```rust
-#[derive(Debug, Error)]
-pub enum EmbedderError {
-    #[error("Model not found: {model}")]
-    ModelNotFound { model: String },
-    
-    #[error("Model download failed: {source}")]
-    DownloadFailed {
-        #[source]
-        source: std::io::Error,
-    },
-    
-    #[error("Inference failed: {message}")]
-    InferenceFailed { message: String },
-    
-    #[error("Config error: {source}")]
-    ConfigError {
-        #[from]
-        source: ix_config::ConfigError,
-    },
-}
-```
-
-## Caching
-
-### Model Cache
-
-fastembed caches downloaded models in `~/.cache/fastembed/`:
-
-```
-~/.cache/fastembed/
-├── BAAI--bge-small-en-v1.5/
-│   ├── model.onnx
-│   ├── tokenizer.json
-│   └── config.json
-└── sentence-transformers--all-MiniLM-L6-v2/
-    └── ...
-```
-
-**First run:** Downloads model (~30MB for default)
-**Subsequent runs:** Uses cached model (instant startup)
-
-### Embedding Cache
-
-ix-embeddings does NOT cache embeddings. That's the consumer's responsibility. Each tool manages its own storage via its storage trait.
-
-## Thread Safety
-
-`Embedder` is `Send + Sync` and can be shared across threads:
-
-```rust
-let embedder = Arc::new(Embedder::new()?);
-
-// Multiple threads can call embed concurrently
-let handles: Vec<_> = texts.into_iter().map(|text| {
-    let e = Arc::clone(&embedder);
-    thread::spawn(move || e.embed(&text))
-}).collect();
-```
-
-**Note:** Internal model is NOT parallel. Concurrent calls are serialized via internal mutex. For throughput, use `embed_batch()` instead of parallel `embed()` calls.
-
-## Testing
-
-### Unit Tests
-
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    #[ignore]  // Requires model download
-    fn test_embed_single() {
-        let embedder = Embedder::new().unwrap();
-        let embedding = embedder.embed("test").unwrap();
-        assert_eq!(embedding.len(), 384);
-    }
-    
-    #[test]
-    #[ignore]  // Requires model download
-    fn test_embed_batch() {
-        let embedder = Embedder::new().unwrap();
-        let embeddings = embedder.embed_batch(&["a", "b", "c"]).unwrap();
-        assert_eq!(embeddings.len(), 3);
-        assert!(embeddings.iter().all(|e| e.len() == 384));
-    }
-    
-    #[test]
-    #[ignore]  // Requires model download
-    fn test_similarity() {
-        let embedder = Embedder::new().unwrap();
-        let e1 = embedder.embed("database migration").unwrap();
-        let e2 = embedder.embed("database schema changes").unwrap();
-        let e3 = embedder.embed("cooking recipes").unwrap();
-        
-        let sim_12 = cosine_similarity(&e1, &e2);
-        let sim_13 = cosine_similarity(&e1, &e3);
-        
-        assert!(sim_12 > sim_13);  // Related texts more similar
-    }
-}
-```
-
-### Integration Tests
-
-Tests are `#[ignore]` by default because they require model download (~30MB).
-
-Run with: `cargo test --ignored -p ix-embeddings`
-
-## Consumers
-
-| Tool            | Use Case         | Batch Size | Model                 |
-| --------------- | ---------------- | ---------- | --------------------- |
-| helix-decisions | Decision search  | 10-50      | bge-small (default)   |
-| hbd             | Issue search     | 10-100     | bge-small (default)   |
-| helix-docs      | Doc chunk search | 100-1000   | bge-small or bge-base |
-
----
-
-## See Also
-
-- [requirements.md](./requirements.md) — Requirements specification
-- [ix-config/specs/design.md](../../ix-config/specs/design.md) — Configuration
-- [ADR-004](../../../.decisions/004-trait-based-storage-architecture.md) — Why storage is consumer's concern
-- [fastembed docs](https://docs.rs/fastembed) — Underlying library
+- Batch behavior is provider-specific; providers advertise their preferred batch size.
+- Deterministic tests should inject a custom provider via `Embedder::from_provider(...)`.

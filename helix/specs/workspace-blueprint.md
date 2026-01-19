@@ -8,6 +8,7 @@ should not live under `./helix`.
 
 ## Layout (concise)
 
+- `ix-app` (wiring layer for apps)
 - `ix-cli` (CLI app)
 - `ix-mcp` (MCP server app)
 - `ix-core` (core library + façade)
@@ -20,7 +21,7 @@ should not live under `./helix`.
 
 ## Coupling Rules (non-negotiables)
 
-- Apps depend on `ix-core` only (no direct adapter/index/embedding deps).
+- Apps depend on `ix-core` + `ix-app` only (no direct adapter/index/embedding deps).
 - `ix-core` depends on traits/interfaces, not concrete storage adapters.
 - `ix-types` has no I/O and no runtime framework dependencies (no tokio).
 - Adapters implement `ix-storage` traits and do not contain business logic.
@@ -31,7 +32,8 @@ should not live under `./helix`.
 
 - `ix-types`: ID newtypes, enums, DTOs; serde only, no I/O.
 - `ix-config`: Load/validate `.ixchel/config.toml` + dynamic entities/relationships.
-- `ix-core`: Facade/orchestrator for registry, validation, context build, sync; depends on traits, not adapters.
+- `ix-core`: Domain layer for registry, validation, context build; depends on traits, not adapters.
+- `ix-app`: Wiring layer that selects adapters and calls `ix-core` traits.
 - `ix-storage` (traits): `FileStorage`, `GraphStorage`, `VectorStorage`, `ChunkStore`.
 - `ix-storage-file`: Markdown/frontmatter I/O, directory helpers, content hashing + TTL checks.
 - `ix-storage-helixdb`: Typed edges/nodes (HelixDB adapter), enforce validity matrix + lease expiry at the boundary.

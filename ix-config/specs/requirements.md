@@ -96,11 +96,11 @@ This document defines requirements for `ix-config` using [EARS notation](https:/
 
 **As a** developer\
 **I want to** config values to merge predictably\
-**So that** I can override global settings per-project
+**So that** I can apply global defaults consistently
 
 | ID       | Acceptance Criterion                                                        |
 | -------- | --------------------------------------------------------------------------- |
-| AC-006.1 | THE SYSTEM SHALL merge configs with project values overriding global values |
+| AC-006.1 | THE SYSTEM SHALL merge configs with global values overriding project values |
 | AC-006.2 | THE SYSTEM SHALL merge nested tables recursively                            |
 | AC-006.3 | THE SYSTEM SHALL replace arrays entirely (not append)                       |
 | AC-006.4 | THE SYSTEM SHALL treat missing keys as "use parent value"                   |
@@ -147,13 +147,14 @@ This document defines requirements for `ix-config` using [EARS notation](https:/
 **I want to** access shared settings\
 **So that** I can use GitHub tokens and embedding models consistently
 
-| ID       | Acceptance Criterion                                                                 |
-| -------- | ------------------------------------------------------------------------------------ |
-| AC-009.1 | THE SYSTEM SHALL provide `SharedConfig` struct with common fields                    |
-| AC-009.2 | THE SYSTEM SHALL include `github.token` in shared config                             |
-| AC-009.3 | THE SYSTEM SHALL include `embedding.model` in shared config                          |
-| AC-009.4 | THE SYSTEM SHALL include `embedding.batch_size` in shared config                     |
-| AC-009.5 | THE SYSTEM SHALL include `storage.base` in shared config (default: `~/.ixchel/data`) |
+| ID       | Acceptance Criterion                                                              |
+| -------- | --------------------------------------------------------------------------------- |
+| AC-009.1 | THE SYSTEM SHALL provide `SharedConfig` struct with common fields                 |
+| AC-009.2 | THE SYSTEM SHALL include `github.token` in shared config                          |
+| AC-009.3 | THE SYSTEM SHALL include `embedding.model` in shared config                       |
+| AC-009.4 | THE SYSTEM SHALL include `embedding.batch_size` in shared config                  |
+| AC-009.5 | THE SYSTEM SHALL include `storage.backend` in shared config (default: `helixdb`)  |
+| AC-009.6 | THE SYSTEM SHALL include `storage.path` in shared config (default: `data/ixchel`) |
 
 ---
 

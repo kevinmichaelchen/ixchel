@@ -3,7 +3,7 @@
 MCP server for **Ixchel**.
 
 This crate should expose a stable, agent-friendly tool surface and delegate the
-actual behavior to `ix-core`.
+actual behavior to `ix-core` (domain) and `ix-app` (wiring).
 
 ## Tools
 

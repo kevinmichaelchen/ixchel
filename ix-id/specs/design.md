@@ -245,11 +245,11 @@ pub enum IdError {
 
 This crate is used by:
 
-| Crate        | ID Types                 | Prefix              |
-| ------------ | ------------------------ | ------------------- |
-| `hbd`        | IssueId                  | `bd`                |
-| `helix-docs` | SourceId, DocId, ChunkId | `src`, `doc`, `chk` |
-| `helix-map`  | SymbolId, FileId         | `sym`, `fil`        |
+| Crate     | ID Usage                                           | Prefix Examples             |
+| --------- | -------------------------------------------------- | --------------------------- |
+| `ix-core` | canonical Ixchel entity IDs                        | `dec`, `iss`, `src`, `idea` |
+| `hbd`     | issue IDs (legacy format, planned migrate)         | `bd`                        |
+| (future)  | docs/map/repo ideas tracked under `.ixchel/ideas/` | `doc`, `chk`, `sym`, `fil`  |
 
 ## Migration Notes
 
@@ -258,13 +258,13 @@ This crate is used by:
 Current `hbd/src/id.rs` uses the same algorithm. Migration:
 
 1. Add `ix-id` dependency
-2. Replace local `generate_id` with `helix_id::generate_id`
+2. Replace local `generate_id` with `ix_id::generate_id`
 3. Replace `define_id!` macro invocations (API compatible)
 
 ### From helix-docs
 
-Current `helix-docs/src/domain/id.rs` uses the same algorithm. Migration:
+The archived `helix-docs` design used the same algorithm. Migration (if revived as an Ixchel idea):
 
 1. Add `ix-id` dependency
 2. Remove local `id.rs` module
-3. Re-export from `helix_id`: `pub use helix_id::{define_id, SourceId, DocId, ChunkId};`
+3. Re-export from `ix_id`: `pub use ix_id::{define_id, SourceId, DocId, ChunkId};`

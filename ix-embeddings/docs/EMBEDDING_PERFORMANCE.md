@@ -128,7 +128,7 @@ Total: < 10ms
 
 ## Recommendations
 
-### For helix-tools (hbd, helix-decisions)
+### For this workspace (ixchel, hbd)
 
 | Provider    | Model             | When to Use                     |
 | ----------- | ----------------- | ------------------------------- |

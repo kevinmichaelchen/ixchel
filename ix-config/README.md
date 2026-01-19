@@ -46,10 +46,10 @@ See the [Configuration docs][config-docs] for full details.
 ```
 Priority (highest to lowest):
 1. Environment variables (IXCHEL_*, GITHUB_TOKEN, etc.)
-2. Project tool config (.ixchel/<tool>.toml)
-3. Project shared config (.ixchel/config.toml)
-4. Global tool config (~/.ixchel/config/<tool>.toml)
-5. Global shared config (~/.ixchel/config/config.toml)
+2. Global tool config (~/.ixchel/config/<tool>.toml)
+3. Global shared config (~/.ixchel/config/config.toml)
+4. Project tool config (.ixchel/<tool>.toml)
+5. Project shared config (.ixchel/config.toml)
 6. Defaults (from Default trait)
 ```
 
@@ -88,7 +88,8 @@ model = "BAAI/bge-small-en-v1.5"
 batch_size = 32
 
 [storage]
-base = "~/.ixchel/data"  # Override data location if needed
+backend = "helixdb"
+path = "data/ixchel" # relative to .ixchel/
 ```
 
 ## Path Helpers
@@ -144,7 +145,9 @@ export IXCHEL__SYNC__CONCURRENCY=10
 
 | Crate           | Notes                                |
 | --------------- | ------------------------------------ |
+| `ix-core`       | Loads merged Ixchel config           |
 | `ix-embeddings` | Reads embedding settings from config |
+| `ix-app`        | Selects backends for apps            |
 
 ## Specifications
 

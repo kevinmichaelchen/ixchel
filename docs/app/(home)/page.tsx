@@ -6,8 +6,7 @@ import {
   Network, 
   Terminal, 
   BookOpen, 
-  Map, 
-  Mail,
+  Map,
   ArrowRight,
   Github
 } from 'lucide-react';
@@ -84,8 +83,8 @@ export default function HomePage() {
       <section className="px-4 py-16 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-end justify-between mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-slate-100">The Helix Suite</h2>
-            <p className="mt-2 text-slate-400"> specialized tools composing via standard interfaces</p>
+            <h2 className="text-3xl font-bold text-slate-100">The Toolkit</h2>
+            <p className="mt-2 text-slate-400">specialized tools composing via standard interfaces</p>
           </div>
         </div>
         
@@ -93,30 +92,23 @@ export default function HomePage() {
           <ToolCard 
             icon={<Terminal className="h-8 w-8" />}
             name="hbd"
-            tag="In Development"
-            tagColor="bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+            tag="Active"
+            tagColor="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
             description="Git-first issue tracker for AI-supervised workflows. Bridge the gap between conceptual specs and tasks."
           />
           <ToolCard 
             icon={<BookOpen className="h-8 w-8" />}
-            name="helix-docs"
-            tag="Planned"
-            tagColor="bg-slate-500/10 text-slate-400 border-slate-500/20"
-            description="Local cache for fetched documentation. Give your agents instant access to library docs during research."
+            name="ixchel"
+            tag="MVP"
+            tagColor="bg-sky-500/10 text-sky-400 border-sky-500/20"
+            description="Git-first knowledge weaving system. Canonical Markdown artifacts + semantic search over your project memory."
           />
           <ToolCard 
             icon={<Map className="h-8 w-8" />}
-            name="helix-map"
+            name="ideas"
             tag="Planned"
             tagColor="bg-slate-500/10 text-slate-400 border-slate-500/20"
-            description="Codebase structure cache for fast exploration. Helps agents understand project architecture."
-          />
-          <ToolCard 
-            icon={<Mail className="h-8 w-8" />}
-            name="helix-mail"
-            tag="Planned"
-            tagColor="bg-slate-500/10 text-slate-400 border-slate-500/20"
-            description="Agent-to-agent messaging and coordination system for multi-agent workflows."
+            description="Future tools and experiments are tracked as Ixchel ideas under .ixchel/ideas/ (git-first Markdown)."
           />
         </div>
       </section>

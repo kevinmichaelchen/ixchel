@@ -5,7 +5,8 @@ weaves durable Markdown artifacts into a queryable graph + vector index.
 
 ## Responsibilities
 
-- Own the main orchestration façade used by apps (`ix-cli`, `ix-mcp`).
+- Provide the shared domain layer used by apps (`ix-cli`, `ix-mcp`).
+- Keep adapters out of the domain (wiring lives in `ix-app`).
 - Define “ports” (traits) for storage/backends to keep adapters swappable.
 - Keep business rules close to the domain (validation, sync decisions, context assembly).
 

@@ -55,7 +55,7 @@ So that I can search decisions/issues without internet access.
 ### FR-3: Model Configuration
 
 - **EARS:** The system SHALL support model selection via ix-config.
-- **Config path:** `~/.helix/config/config.toml` → `[embedding].model`
+- **Config path:** `~/.ixchel/config/config.toml` → `[embedding].model`
 - **Default:** `BAAI/bge-small-en-v1.5`
 
 ### FR-4: Normalization
@@ -101,17 +101,17 @@ So that I can search decisions/issues without internet access.
 
 ## Out of Scope
 
-- GPU acceleration (use fastembed directly if needed)
+- Cross-encoder reranking (handled by higher-level retrieval components)
 - Embedding caching (consumer responsibility, stored in HelixDB)
 - Non-English models (English-focused for now)
 
 ## Consumers
 
-| Tool            | Use Case                            |
-| --------------- | ----------------------------------- |
-| helix-decisions | Embed decisions for semantic search |
-| hbd             | Embed issues for similarity search  |
-| helix-docs      | Embed documentation chunks          |
+| Tool / Crate         | Use Case                                |
+| -------------------- | --------------------------------------- |
+| `ix-storage-helixdb` | Embed entities for sync + vector search |
+| `demo-got`           | Demo: embed bios for semantic search    |
+| `hbd`                | (Planned) issue similarity workflows    |
 
 ## See Also
 

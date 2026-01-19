@@ -59,11 +59,4 @@ ixchel context dec-xxxx
 
 ## Migration
 
-If you have legacy ADRs in a `.decisions/` directory, Ixchel can migrate them into `.ixchel/decisions/`:
-
-```bash
-ixchel migrate decisions
-```
-
-Use `--dry-run` to preview and `--force` to overwrite existing migrated files.
-
+If you have legacy ADRs in a `.decisions/` directory, migrate them into `.ixchel/decisions/` (keeping Markdown canonical). A built-in migrator is planned; for now, treat this as a one-off scripted/manual conversion.

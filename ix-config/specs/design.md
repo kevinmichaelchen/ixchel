@@ -28,14 +28,8 @@ This document describes the design decisions and implementation details for `ix-
 │   ├── config.toml               # Shared settings
 │   ├── hbd.toml                  # hbd-specific
 │   ├── ixchel.toml               # ixchel-specific
-│   ├── helix-map.toml            # helix-map-specific
-│   ├── helix-repo.toml           # helix-repo-specific
-│   └── helix-mail.toml           # helix-mail-specific
 │
 ├── data/                         # Caches & databases (auto-generated)
-│   ├── docs/                     # helix-docs cache (HelixDB)
-│   ├── repos/                    # helix-repo clones
-│   └── index/                    # helix-map index (HelixDB)
 │
 ├── state/                        # Runtime metadata (ephemeral)
 │   ├── agents/                   # Agent registry
@@ -43,9 +37,6 @@ This document describes the design decisions and implementation details for `ix-
 │   └── cache/                    # Computed caches
 │
 ├── log/                          # Operation logs
-│   ├── helix-docs.log
-│   ├── helix-map.log
-│   └── helix-repo.log
 │
 └── .helix-version                # Metadata
 ```
@@ -56,7 +47,6 @@ This document describes the design decisions and implementation details for `ix-
 {project}/.ixchel/                 # Project config only (no data)
 ├── config.toml                   # Project shared config
 ├── hbd.toml                      # hbd project overrides
-├── helix-docs.toml               # helix-docs project overrides
 └── ...
 ```
 
@@ -98,26 +88,26 @@ Benefits:
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│                  Project Tool Config                     │  Priority 2
-│                  .ixchel/<tool>.toml                      │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                 Project Shared Config                    │  Priority 3
-│                   .ixchel/config.toml                     │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Global Tool Config                      │  Priority 4
+│                  Global Tool Config                      │  Priority 2
 │              ~/.ixchel/config/<tool>.toml                 │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│                 Global Shared Config                     │  Priority 5
+│                 Global Shared Config                     │  Priority 3
 │               ~/.ixchel/config/config.toml                │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│                  Project Tool Config                     │  Priority 4
+│                  .ixchel/<tool>.toml                      │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│                 Project Shared Config                    │  Priority 5
+│                   .ixchel/config.toml                     │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
@@ -139,22 +129,20 @@ token = "ghp_xxx"  # Most tools need GitHub access
 
 [embedding]
 provider = "fastembed"
-model = "BAAI/bge-small-en-v1.5"  # helix-docs, helix-map
+model = "BAAI/bge-small-en-v1.5"
 batch_size = 32
 dimension = 384
 
 [storage]
-base = "~/.ixchel/data"  # Override data location if needed
-
-[agent]
-registry_url = "https://..."  # For helix-mail
+backend = "helixdb"
+path = "data/ixchel" # relative to .ixchel/
 ```
 
 ### SharedConfig Struct
 
 ```rust
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct SharedConfig {
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct IxchelConfig {
     #[serde(default)]
     pub github: GitHubConfig,
     #[serde(default)]
@@ -163,12 +151,12 @@ pub struct SharedConfig {
     pub storage: StorageConfig,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct GitHubConfig {
     pub token: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct EmbeddingConfig {
     #[serde(default = "default_embedding_provider")]
     pub provider: String,
@@ -180,10 +168,12 @@ pub struct EmbeddingConfig {
     pub dimension: Option<usize>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StorageConfig {
-    #[serde(default = "default_storage_base")]
-    pub base: PathBuf,
+    #[serde(default = "default_storage_backend")]
+    pub backend: String,
+    #[serde(default = "default_storage_path")]
+    pub path: String,
 }
 ```
 
@@ -194,7 +184,7 @@ pub struct StorageConfig {
 ### Path Helpers
 
 ```rust
-/// Get the helix home directory (~/.ixchel or $IXCHEL_HOME)
+/// Get the Ixchel home directory (~/.ixchel or $IXCHEL_HOME)
 pub fn ixchel_home() -> PathBuf {
     if let Ok(home) = std::env::var("IXCHEL_HOME") {
         return PathBuf::from(home);
@@ -205,7 +195,7 @@ pub fn ixchel_home() -> PathBuf {
 }
 
 /// Get the config directory (~/.ixchel/config)
-pub fn ix_config_dir() -> PathBuf {
+pub fn ixchel_config_dir() -> PathBuf {
     ixchel_home().join("config")
 }
 
@@ -227,8 +217,9 @@ pub fn ixchel_log_dir() -> PathBuf {
 /// Find project config directory (.ixchel/) by walking up from cwd
 pub fn find_project_config_dir() -> Option<PathBuf> {
     let cwd = std::env::current_dir().ok()?;
-    let helix_dir = cwd.join(".ixchel");
-    helix_dir.exists().then_some(helix_dir)
+    let root = find_git_root(&cwd)?;
+    let ixchel_dir = root.join(".ixchel");
+    ixchel_dir.exists().then_some(ixchel_dir)
 }
 ```
 
@@ -368,13 +359,19 @@ pub enum ConfigError {
         source: toml::de::Error,
     },
 
-    #[error("Invalid config value: {message}")]
-    ValidationError {
-        message: String,
+    #[error("Failed to write config file {}: {source}", path.display())]
+    WriteError {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
     },
-    
-    #[error("Home directory not found")]
-    HomeDirNotFound,
+
+    #[error("Failed to serialize config file {}: {source}", path.display())]
+    SerializeError {
+        path: PathBuf,
+        #[source]
+        source: toml::ser::Error,
+    },
 }
 ```
 
@@ -403,19 +400,7 @@ pub enum ConfigError {
 pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
     let mut merged = toml::Table::new();
 
-    // 1. Global shared config: ~/.ixchel/config/config.toml
-    let global_dir = self.global_dir.unwrap_or_else(ix_config_dir);
-    if let Some(table) = load_toml_file(&global_dir.join("config.toml"))? {
-        merge_tables(&mut merged, table);
-    }
-
-    // 2. Global tool config: ~/.ixchel/config/<tool>.toml
-    let tool_config = global_dir.join(format!("{}.toml", self.tool_name));
-    if let Some(table) = load_toml_file(&tool_config)? {
-        merge_tables(&mut merged, table);
-    }
-
-    // 3. Project shared config: .ixchel/config.toml
+    // 1. Project shared config: .ixchel/config.toml
     let project_dir = self.project_dir.or_else(find_project_config_dir);
     if let Some(dir) = &project_dir {
         if let Some(table) = load_toml_file(&dir.join("config.toml"))? {
@@ -423,12 +408,24 @@ pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
         }
     }
 
-    // 4. Project tool config: .ixchel/<tool>.toml
+    // 2. Project tool config: .ixchel/<tool>.toml
     if let Some(dir) = project_dir {
         let tool_config = dir.join(format!("{}.toml", self.tool_name));
         if let Some(table) = load_toml_file(&tool_config)? {
             merge_tables(&mut merged, table);
         }
+    }
+
+    // 3. Global shared config: ~/.ixchel/config/config.toml
+    let global_dir = self.global_dir.unwrap_or_else(ixchel_config_dir);
+    if let Some(table) = load_toml_file(&global_dir.join("config.toml"))? {
+        merge_tables(&mut merged, table);
+    }
+
+    // 4. Global tool config: ~/.ixchel/config/<tool>.toml
+    let tool_config = global_dir.join(format!("{}.toml", self.tool_name));
+    if let Some(table) = load_toml_file(&tool_config)? {
+        merge_tables(&mut merged, table);
     }
 
     // 5. Environment variables (TODO: implement env overlay)
@@ -451,13 +448,11 @@ pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
 
 ## Consumers
 
-| Crate        | Tool Name    | Config Path                        | Data Path                   |
-| ------------ | ------------ | ---------------------------------- | --------------------------- |
-| `hbd`        | `hbd`        | `~/.ixchel/config/hbd.toml`        | `.ixchel/issues/` (project) |
-| `helix-docs` | `helix-docs` | `~/.ixchel/config/helix-docs.toml` | `~/.ixchel/data/docs/`      |
-| `helix-map`  | `helix-map`  | `~/.ixchel/config/helix-map.toml`  | `~/.ixchel/data/index/`     |
-| `helix-repo` | `helix-repo` | `~/.ixchel/config/helix-repo.toml` | `~/.ixchel/data/repos/`     |
-| `helix-mail` | `helix-mail` | `~/.ixchel/config/helix-mail.toml` | `~/.ixchel/state/agents/`   |
+| Tool / Crate | Tool Name | Config Path                    | Primary Data Location    |
+| ------------ | --------- | ------------------------------ | ------------------------ |
+| `ix-cli`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`        |
+| `ix-mcp`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`        |
+| `hbd`        | `hbd`     | `~/.ixchel/config/hbd.toml`    | `{repo}/.ixchel/issues/` |
 
 ---
 
@@ -469,16 +464,14 @@ Old:
 
 ```
 ~/.config/helix/config.toml
-~/.config/helix/helix-docs.toml
-~/.cache/helix/docs/
+~/.cache/helix/
 ```
 
 New:
 
 ```
 ~/.ixchel/config/config.toml
-~/.ixchel/config/helix-docs.toml
-~/.ixchel/data/docs/
+~/.ixchel/data/
 ```
 
 Migration steps:
