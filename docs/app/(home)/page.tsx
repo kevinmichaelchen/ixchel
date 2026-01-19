@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   GitBranch,
   Database,
@@ -20,7 +20,8 @@ import {
   Sparkles,
   FileText,
   Cpu,
-  ExternalLink
+  ExternalLink,
+  RotateCcw
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -224,7 +225,90 @@ export default function HomePage() {
   );
 }
 
+// Typing animation hook
+function useTypewriter(text: string, speed: number = 40, startDelay: number = 0, enabled: boolean = true) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) {
+      setDisplayedText('');
+      setIsComplete(false);
+      return;
+    }
+
+    setDisplayedText('');
+    setIsComplete(false);
+
+    const startTimeout = setTimeout(() => {
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < text.length) {
+          setDisplayedText(text.slice(0, index + 1));
+          index++;
+        } else {
+          setIsComplete(true);
+          clearInterval(interval);
+        }
+      }, speed);
+
+      return () => clearInterval(interval);
+    }, startDelay);
+
+    return () => clearTimeout(startTimeout);
+  }, [text, speed, startDelay, enabled]);
+
+  return { displayedText, isComplete };
+}
+
 function TerminalPreview() {
+  const [step, setStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const command1 = 'ixchel search "authentication flow"';
+  const command2 = 'ixchel graph iss-a1b2c3';
+
+  const { displayedText: typed1, isComplete: cmd1Done } = useTypewriter(
+    command1, 35, 500, isPlaying && step >= 0
+  );
+  const { displayedText: typed2, isComplete: cmd2Done } = useTypewriter(
+    command2, 35, 0, step >= 2
+  );
+
+  // Progress through steps
+  useEffect(() => {
+    if (cmd1Done && step === 0) {
+      const timer = setTimeout(() => setStep(1), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [cmd1Done, step]);
+
+  useEffect(() => {
+    if (step === 1) {
+      const timer = setTimeout(() => setStep(2), 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (cmd2Done && step === 2) {
+      const timer = setTimeout(() => setStep(3), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [cmd2Done, step]);
+
+  useEffect(() => {
+    if (step === 3) {
+      const timer = setTimeout(() => setStep(4), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const restart = useCallback(() => {
+    setStep(0);
+    setIsPlaying(true);
+  }, []);
+
   return (
     <div className="bg-slate-950/80 backdrop-blur-sm rounded-xl border border-white/10 shadow-2xl shadow-sky-500/10 overflow-hidden">
       {/* Terminal header */}
@@ -235,67 +319,104 @@ function TerminalPreview() {
           <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
         </div>
         <span className="text-xs text-slate-500 font-mono">~/my-project</span>
-        <div className="w-16"></div>
+        <button
+          onClick={restart}
+          className="p-1 rounded hover:bg-white/10 transition-colors text-slate-500 hover:text-slate-300"
+          title="Replay"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Terminal content */}
-      <div className="p-4 font-mono text-sm space-y-3">
+      <div className="p-4 font-mono text-sm space-y-3 min-h-[280px]">
+        {/* Command 1 */}
         <div className="flex items-start gap-2">
           <span className="text-sky-400">$</span>
-          <span className="text-slate-300">ixchel search <span className="text-amber-300">"authentication flow"</span></span>
+          <span className="text-slate-300">
+            {typed1.includes('"') ? (
+              <>
+                {typed1.split('"')[0]}
+                {typed1.includes('"') && <span className="text-amber-300">"{typed1.split('"')[1]}{typed1.split('"').length > 2 ? '"' : ''}</span>}
+              </>
+            ) : typed1}
+            {!cmd1Done && <span className="animate-pulse text-slate-400">▊</span>}
+          </span>
         </div>
 
-        <div className="pl-4 text-slate-400 text-xs space-y-2 border-l-2 border-sky-500/30 ml-1">
-          <div className="flex items-center gap-2">
-            <Search className="h-3 w-3 text-sky-400" />
-            <span>Searching with hybrid (vector + BM25)...</span>
+        {/* Output 1 - Search results */}
+        {step >= 1 && (
+          <div className="pl-4 text-slate-400 text-xs space-y-2 border-l-2 border-sky-500/30 ml-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex items-center gap-2">
+              <Search className="h-3 w-3 text-sky-400" />
+              <span>Searching with hybrid (vector + BM25)...</span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '100ms' }}>
+                <FileText className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400">iss-a1b2c3</span>
+                <span className="text-slate-500">•</span>
+                <span>Add OAuth2 authentication</span>
+                <span className="text-sky-400 ml-auto">0.94</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '200ms' }}>
+                <FileText className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400">iss-d4e5f6</span>
+                <span className="text-slate-500">•</span>
+                <span>Implement JWT refresh tokens</span>
+                <span className="text-sky-400 ml-auto">0.87</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-300 animate-in fade-in slide-in-from-left-2 duration-300" style={{ animationDelay: '300ms' }}>
+                <FileText className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400">iss-g7h8i9</span>
+                <span className="text-slate-500">•</span>
+                <span>Session management refactor</span>
+                <span className="text-sky-400 ml-auto">0.82</span>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-slate-300">
-              <FileText className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">iss-a1b2c3</span>
-              <span className="text-slate-500">•</span>
-              <span>Add OAuth2 authentication</span>
-              <span className="text-sky-400 ml-auto">0.94</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <FileText className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">iss-d4e5f6</span>
-              <span className="text-slate-500">•</span>
-              <span>Implement JWT refresh tokens</span>
-              <span className="text-sky-400 ml-auto">0.87</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <FileText className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">iss-g7h8i9</span>
-              <span className="text-slate-500">•</span>
-              <span>Session management refactor</span>
-              <span className="text-sky-400 ml-auto">0.82</span>
-            </div>
-          </div>
-        </div>
+        )}
 
-        <div className="flex items-start gap-2 pt-2">
-          <span className="text-sky-400">$</span>
-          <span className="text-slate-300">ixchel graph <span className="text-emerald-400">iss-a1b2c3</span></span>
-        </div>
-
-        <div className="pl-4 text-slate-400 text-xs border-l-2 border-purple-500/30 ml-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Share2 className="h-3 w-3 text-purple-400" />
-            <span>Dependency graph for iss-a1b2c3</span>
+        {/* Command 2 */}
+        {step >= 2 && (
+          <div className="flex items-start gap-2 pt-2 animate-in fade-in duration-200">
+            <span className="text-sky-400">$</span>
+            <span className="text-slate-300">
+              {typed2.split(' ').map((word, i) => (
+                <span key={i}>
+                  {i > 0 && ' '}
+                  {word === 'iss-a1b2c3' ? (
+                    <span className="text-emerald-400">{word}</span>
+                  ) : word}
+                </span>
+              ))}
+              {!cmd2Done && <span className="animate-pulse text-slate-400">▊</span>}
+            </span>
           </div>
-          <pre className="text-[10px] leading-relaxed text-slate-500">
+        )}
+
+        {/* Output 2 - Graph */}
+        {step >= 3 && (
+          <div className="pl-4 text-slate-400 text-xs border-l-2 border-purple-500/30 ml-1 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Share2 className="h-3 w-3 text-purple-400" />
+              <span>Dependency graph for iss-a1b2c3</span>
+            </div>
+            <pre className="text-[10px] leading-relaxed text-slate-500">
 {`  iss-a1b2c3 (Add OAuth2 authentication)
   ├── blocks → iss-d4e5f6 (JWT refresh tokens)
   └── related → iss-g7h8i9 (Session management)`}
-          </pre>
-        </div>
+            </pre>
+          </div>
+        )}
 
-        <div className="flex items-start gap-2 pt-2">
-          <span className="text-sky-400">$</span>
-          <span className="text-slate-400 animate-pulse">▊</span>
-        </div>
+        {/* Final prompt */}
+        {step >= 4 && (
+          <div className="flex items-start gap-2 pt-2 animate-in fade-in duration-200">
+            <span className="text-sky-400">$</span>
+            <span className="text-slate-400 animate-pulse">▊</span>
+          </div>
+        )}
       </div>
     </div>
   );
