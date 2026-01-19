@@ -109,3 +109,15 @@ model = "BAAI/bge-large-en-v1.5"
 ## License
 
 MIT
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

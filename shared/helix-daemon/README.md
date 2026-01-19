@@ -18,6 +18,12 @@ sync, single-writer enforcement, and queueing across repos and tools.
 
 ## Specs
 
-- `specs/requirements.md`
-- `specs/design.md`
-- `specs/tasks.md`
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

@@ -162,9 +162,11 @@ export HELIX_MAP__INDEXING__LANGUAGES=rust,typescript
 
 - [specs/requirements.md][requirements] - Requirements in EARS notation
 - [specs/design.md][design] - Design decisions and API details
+- [specs/tasks.md][tasks] - Implementation plan and backlog
 
 <!-- Links -->
 
 [config-docs]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md
+[tasks]: ./specs/tasks.md

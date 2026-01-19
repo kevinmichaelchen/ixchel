@@ -80,8 +80,10 @@ See [specs/design.md][design] for detailed guidance.
 
 - [specs/requirements.md][requirements] - Requirements in EARS notation
 - [specs/design.md][design] - Design decisions and rationale
+- [specs/tasks.md][tasks] - Implementation plan and backlog
 
 <!-- Links -->
 
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md
+[tasks]: ./specs/tasks.md
