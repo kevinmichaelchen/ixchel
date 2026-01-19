@@ -158,7 +158,7 @@ async fn test_status_shows_queued_jobs() {
         .unwrap();
 
     client
-        .enqueue_sync("/repo2", "hbd", ".ixchel/issues", false)
+        .enqueue_sync("/repo2", "issues", ".ixchel/issues", false)
         .await
         .unwrap();
 

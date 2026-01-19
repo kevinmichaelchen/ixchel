@@ -15,7 +15,7 @@ Requests are namespaced by `{repo_root, tool}` to keep data scoped to a repo.
 ## Architecture
 
 ```
-CLI (ixchel, hbd, ...)
+CLI (ixchel, ixchel-mcp, ...)
     │
     ├─ JSON line IPC over local socket
     │

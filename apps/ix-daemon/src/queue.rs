@@ -365,7 +365,7 @@ mod tests {
             .enqueue("/repo1", "decisions", ".ixchel/decisions", false)
             .await;
         queue
-            .enqueue("/repo2", "hbd", ".ixchel/issues", false)
+            .enqueue("/repo2", "issues", ".ixchel/issues", false)
             .await;
 
         let queues = queue.list_queues().await;

@@ -96,7 +96,7 @@ pub struct Request {
     /// Absolute path to repository root.
     pub repo_root: String,
 
-    /// Tool name (e.g., "decisions", "hbd", "docs").
+    /// Tool name (e.g., "decisions", "issues", "reports").
     pub tool: String,
 
     /// Command to execute.
@@ -358,7 +358,7 @@ mod tests {
     fn test_request_roundtrip() {
         let req = Request::new(
             "/path/to/repo",
-            "hbd",
+            "issues",
             Command::WaitSync(WaitSyncPayload {
                 sync_id: "sync-123".to_string(),
                 timeout_ms: 5000,
@@ -367,7 +367,7 @@ mod tests {
         let json = serde_json::to_string(&req).unwrap();
         let parsed: Request = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.repo_root, "/path/to/repo");
-        assert_eq!(parsed.tool, "hbd");
+        assert_eq!(parsed.tool, "issues");
     }
 
     #[test]
