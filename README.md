@@ -6,13 +6,12 @@ AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-firs
 
 ## Tools
 
-| Tool                         | Description                         | Status     |
-| ---------------------------- | ----------------------------------- | ---------- |
-| **[hbd][hbd]**               | Git-first issue tracker             | Active     |
-| **[ixchel][ixchel]**         | Git-first knowledge weaving system  | MVP        |
-| **[helix-docs][helix-docs]** | Documentation cache for AI research | Scaffolded |
-| **[helix-map][helix-map]**   | Codebase structure indexer          | PoC        |
-| **[helix-repo][helix-repo]** | Repository clone manager            | Scaffolded |
+| Tool                 | Description                        | Status |
+| -------------------- | ---------------------------------- | ------ |
+| **[hbd][hbd]**       | Git-first issue tracker            | Active |
+| **[ixchel][ixchel]** | Git-first knowledge weaving system | MVP    |
+
+Future tools and experiments are tracked as Ixchel ideas under `.ixchel/ideas/`.
 
 ## Quick Start
 
@@ -73,9 +72,6 @@ ixchel search "database performance"
 
 [ixchel]: ./ix-cli/
 [hbd]: ./hbd/
-[helix-docs]: ./helix-docs/
-[helix-map]: ./helix-map/
-[helix-repo]: ./helix-repo/
 
 <!-- Project -->
 
