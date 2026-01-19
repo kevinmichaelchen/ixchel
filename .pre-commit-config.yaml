@@ -1,0 +1,34 @@
+# prek configuration - replaces .husky/hooks/pre-commit
+# Install: cargo binstall prek && prek install
+# Run manually: prek run --all-files
+
+repos:
+  # Markdown formatting with dprint
+  - repo: local
+    hooks:
+      - id: dprint
+        name: dprint (markdown)
+        entry: dprint check --allow-no-files
+        language: system
+        types: [markdown]
+        pass_filenames: false
+
+  # Rust formatting
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Rust linting
+  - repo: local
+    hooks:
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
