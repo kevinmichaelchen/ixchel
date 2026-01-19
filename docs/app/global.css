@@ -225,6 +225,26 @@ code, kbd, pre, samp {
   font-family: var(--font-mono);
 }
 
+/* Fenced code blocks - override fumadocs shiki defaults */
+.shiki {
+  background: hsl(220 14% 96%) !important;
+  border-color: hsl(220 13% 88%) !important;
+}
+
+.shiki pre {
+  background: transparent !important;
+}
+
+.shiki code {
+  background: transparent !important;
+}
+
+/* Dark mode code blocks */
+html.dark .shiki {
+  background: hsl(222 47% 8%) !important;
+  border-color: hsl(217 33% 17%) !important;
+}
+
 /* Table styling - light mode visibility */
 .prose table th {
   color: var(--color-fd-foreground);
