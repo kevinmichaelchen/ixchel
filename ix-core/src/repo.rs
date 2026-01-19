@@ -6,7 +6,7 @@ use chrono::{SecondsFormat, Utc};
 use serde_yaml::{Mapping, Value};
 
 use crate::config::IxchelConfig;
-use crate::entity::{EntityKind, kind_from_id};
+use crate::entity::{EntityKind, kind_from_id, looks_like_entity_id};
 use crate::markdown::{
     MarkdownDocument, get_string, get_string_list, parse_markdown, render_markdown, set_string,
     set_string_list,
@@ -494,7 +494,7 @@ fn extract_relationships(frontmatter: &serde_yaml::Mapping) -> Vec<(String, Vec<
 
         let targets = targets
             .into_iter()
-            .filter(|t| kind_from_id(t).is_some())
+            .filter(|t| looks_like_entity_id(t))
             .collect::<Vec<_>>();
 
         if targets.is_empty() {
