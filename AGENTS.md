@@ -5,7 +5,7 @@ Workspace guide for the helix-tools Rust monorepo. Each crate now has its own
 
 ## Overview
 
-- Tools: `hbd`, `hbd-ui`, `ixchel`
+- Tools: `hbd`, `hbd-ui`, `ixchel` (apps under `apps/`)
 - Shared HelixDB helpers: `ix-helixdb-ops`
 - Docs site (Next.js/Fumadocs) lives in `docs/`
 
@@ -13,18 +13,22 @@ Workspace guide for the helix-tools Rust monorepo. Each crate now has its own
 
 ```
 helix-tools/
-├── hbd/                    # Git-first issue tracker CLI
-├── hbd-ui/                 # Svelte UI for hbd (frontend)
-│   └── src-tauri/           # Tauri shell (Rust)
-├── ix-helixdb-ops/          # HelixDB graph helper crate
-├── ix-cli/                  # Ixchel CLI (binary: ixchel)
-├── ix-config/               # Global + project config loading helpers
-├── ix-core/                 # Ixchel core library (git-first, markdown-canonical)
-├── ix-daemon/               # Background daemon + IPC (binary: ixcheld)
-├── ix-embeddings/           # Embedding providers + Embedder API
-├── ix-id/                   # Hash-based id helpers (prefix-hash ids)
-├── ix-mcp/                  # Ixchel MCP server (binary: ixchel-mcp)
-├── ix-storage-helixdb/      # Ixchel HelixDB-backed index/cache adapter
+├── apps/                    # CLIs, daemons, servers, UIs
+│   ├── hbd/                 # Git-first issue tracker CLI
+│   ├── hbd-ui/              # Svelte UI for hbd (frontend)
+│   │   └── src-tauri/       # Tauri shell (Rust)
+│   ├── demo-got/            # HelixDB demo app
+│   ├── ix-cli/              # Ixchel CLI (binary: ixchel)
+│   ├── ix-daemon/           # Background daemon + IPC (binary: ixcheld)
+│   └── ix-mcp/              # Ixchel MCP server (binary: ixchel-mcp)
+├── crates/                  # Shared libraries
+│   ├── ix-app/              # Ixchel wiring layer
+│   ├── ix-helixdb-ops/       # HelixDB graph helper crate
+│   ├── ix-config/           # Global + project config loading helpers
+│   ├── ix-core/             # Ixchel core library (git-first, markdown-canonical)
+│   ├── ix-embeddings/        # Embedding providers + Embedder API
+│   ├── ix-id/               # Hash-based id helpers (prefix-hash ids)
+│   └── ix-storage-helixdb/  # Ixchel HelixDB-backed index/cache adapter
 └── docs/                    # Next.js documentation site
 ```
 

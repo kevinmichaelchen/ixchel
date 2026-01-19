@@ -1,22 +1,22 @@
 [workspace]
 resolver = "2"
 members = [
-    "demo-got",
-    "hbd",
-    "hbd-ui/src-tauri",
-    "ix-app",
-    "ix-cli",
-    "ix-config",
-    "ix-core",
-    "ix-daemon",
-    "ix-embeddings",
-    "ix-helixdb-ops",
-    "ix-id",
-    "ix-mcp",
-    "ix-storage-helixdb",
-    # "ix-embed",
-    # "ix-search",
-    # "ix-chunk",
+    "apps/demo-got",
+    "apps/hbd",
+    "apps/hbd-ui/src-tauri",
+    "apps/ix-cli",
+    "apps/ix-daemon",
+    "apps/ix-mcp",
+    "crates/ix-app",
+    "crates/ix-config",
+    "crates/ix-core",
+    "crates/ix-embeddings",
+    "crates/ix-helixdb-ops",
+    "crates/ix-id",
+    "crates/ix-storage-helixdb",
+    # "crates/ix-embed",
+    # "crates/ix-search",
+    # "crates/ix-chunk",
 ]
 
 [workspace.package]

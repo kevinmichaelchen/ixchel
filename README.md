@@ -22,7 +22,7 @@ cd helix-tools
 cargo build --release
 
 # Try hbd (the most complete tool)
-cargo install --path hbd
+cargo install --path apps/hbd
 cd your-project
 hbd init
 hbd create "My first issue" --type task
@@ -33,7 +33,7 @@ hbd create "My first issue" --type task
 Ixchel is a git-first, Markdown-canonical knowledge weaving system.
 
 ```bash
-cargo install --path ix-cli
+cargo install --path apps/ix-cli
 cd your-project
 
 ixchel init
@@ -70,8 +70,8 @@ ixchel search "database performance"
 
 <!-- Tools -->
 
-[ixchel]: ./ix-cli/
-[hbd]: ./hbd/
+[ixchel]: ./apps/ix-cli/
+[hbd]: ./apps/hbd/
 
 <!-- Project -->
 

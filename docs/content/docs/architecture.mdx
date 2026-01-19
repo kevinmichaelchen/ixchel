@@ -21,8 +21,8 @@ Helix Tools share a common architecture that balances simplicity with power.
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                        Shared Libraries                              │
 │                                                                      │
-│   ix-id     ix-config     ix-embeddings     ix-daemon              │
-│   (hash IDs) (settings)   (embedders)       (background sync)      │
+│   ix-id     ix-config     ix-embeddings     ix-core                │
+│   (hash IDs) (settings)   (embedders)       (domain logic)         │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
@@ -76,17 +76,23 @@ When you `git pull` new changes:
 
 ```
 helix-tools/
-├── hbd/                    # Issue tracker CLI
-├── demo-got/               # Demo project (HelixDB + ix-embeddings)
+├── apps/
+│   ├── hbd/                 # Issue tracker CLI
+│   ├── hbd-ui/              # Svelte UI for hbd (frontend)
+│   │   └── src-tauri/       # Tauri shell (Rust)
+│   ├── demo-got/            # Demo project (HelixDB + ix-embeddings)
+│   ├── ix-cli/              # ixchel CLI (binary)
+│   ├── ix-daemon/           # Background daemon + IPC (binary: ixcheld)
+│   └── ix-mcp/              # ixchel MCP server
 │
-├── ix-cli/                 # ixchel CLI (binary)
-├── ix-core/                # ixchel core library
-├── ix-mcp/                 # ixchel MCP server
-├── ix-storage-helixdb/     # HelixDB-backed cache/index for ixchel
-├── ix-id/                  # Hash-based ID generation
-├── ix-config/              # Configuration loading
-├── ix-embeddings/          # Pluggable embedding providers
-├── ix-daemon/              # Background daemon + IPC (binary: ixcheld)
+├── crates/
+│   ├── ix-app/              # ixchel wiring layer
+│   ├── ix-core/             # ixchel core library
+│   ├── ix-storage-helixdb/  # HelixDB-backed cache/index for ixchel
+│   ├── ix-id/               # Hash-based ID generation
+│   ├── ix-config/           # Configuration loading
+│   ├── ix-embeddings/       # Pluggable embedding providers
+│   └── ix-helixdb-ops/       # HelixDB helper crate
 │
 ├── docs/                   # This documentation site
 │
