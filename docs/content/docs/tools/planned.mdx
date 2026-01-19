@@ -1,48 +1,23 @@
 ---
 title: Planned Tools
-description: Upcoming tools in the Helix ecosystem
+description: Future ideas tracked in Ixchel
 ---
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
 # Planned Tools
 
-Tools that are planned but not yet scaffolded.
-
-For scaffolded tools (architecture defined, implementation pending), see:
-- [helix-docs](/docs/tools/helix-docs) — Documentation cache
-- [helix-repo](/docs/tools/helix-repo) — Repository clone manager
+Future tools and experiments are tracked as **Ixchel ideas** under
+`.ixchel/ideas/` in this repository (git-first Markdown).
 
 For active tools, see:
-- [hbd](/docs/tools/hbd) — Issue tracker
-- [helix-map](/docs/tools/helix-map) — Codebase indexer
+
+- [ixchel](/docs/tools/ixchel) — Knowledge weaving system
 
 <Callout type="info">
   These tools are in the planning stage. APIs and features may change.
 </Callout>
 
-## helix-mail
-
-**Agent-to-agent messaging and coordination.**
-
-As multi-agent workflows become common, agents need to communicate. helix-mail will provide:
-
-- Asynchronous message passing
-- Topic-based routing
-- Message persistence
-- Integration with hbd issues
-
-```bash
-# Send a message
-helix-mail send --to agent-b --topic "refactoring" "Starting work on auth module"
-
-# Check messages
-helix-mail inbox
-
-# Subscribe to topics
-helix-mail subscribe "builds" "deployments"
-```
-
 ## Contributing
 
-Interested in helping build these tools? Check out the [GitHub repository](https://github.com/kevinmichaelchen/helix-tools) and look for issues labeled with the tool you're interested in.
+Interested in helping build these tools? Check out the [GitHub repository](https://github.com/kevinmichaelchen/ixchel-tools) and look for issues labeled with the tool you're interested in.

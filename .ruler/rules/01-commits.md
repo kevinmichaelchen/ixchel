@@ -9,6 +9,7 @@ Use the Conventional Commits format:
 ```
 
 Allowed types (common):
+
 - feat
 - fix
 - docs
@@ -20,6 +21,7 @@ Allowed types (common):
 - perf
 
 Rules:
+
 - Use present-tense, imperative mood ("add", "fix", "refactor").
 - Keep the subject concise but meaningful (aim for 50-72 chars).
 - Use a scope when the change is localized (crate, module, subsystem).
@@ -39,6 +41,7 @@ Every commit must include a body with concrete, scannable detail:
 ```
 
 Guidelines:
+
 - Prefer 3-6 bullets.
 - Mention user-facing behavior changes explicitly.
 - Include rationale when it is not obvious from the diff.

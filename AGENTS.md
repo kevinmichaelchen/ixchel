@@ -1,28 +1,31 @@
-# HELIX-TOOLS AGENTS
+# IXCHEL-TOOLS AGENTS
 
-Workspace guide for the helix-tools Rust monorepo. Each crate now has its own
+Workspace guide for the ixchel-tools Rust monorepo. Each crate now has its own
 `AGENTS.md` next to its `Cargo.toml` for crate-specific guidance.
 
 ## Overview
 
-- Tools: `hbd`, `helix-decisions`, `helix-docs`, `helix-map`, `helix-repo`, `hbd-ui`
-- Shared HelixDB helpers: `helix-graph-ops`
-- Shared crates live under `shared/`
+- Tools: `ixchel`, `ixcheld`, `ixchel-mcp` (apps under `apps/`)
+- Shared HelixDB helpers: `ix-helixdb-ops`
 - Docs site (Next.js/Fumadocs) lives in `docs/`
 
 ## Workspace Layout
 
 ```
-helix-tools/
-├── hbd/                    # Git-first issue tracker CLI
-├── hbd-ui/                 # Svelte UI for hbd (frontend)
-│   └── src-tauri/           # Tauri shell (Rust)
-├── helix-graph-ops/         # HelixDB graph helper crate
-├── helix-decisions/         # Decision graph CLI + library
-├── helix-docs/              # Global docs cache CLI + library
-├── helix-map/               # Codebase indexer CLI + library
-├── helix-repo/              # Repo clone manager CLI + library
-├── shared/                  # Shared Rust crates
+ixchel-tools/
+├── apps/                    # CLIs, daemons, servers, UIs
+│   ├── demo-got/            # HelixDB demo app
+│   ├── ix-cli/              # Ixchel CLI (binary: ixchel)
+│   ├── ix-daemon/           # Background daemon + IPC (binary: ixcheld)
+│   └── ix-mcp/              # Ixchel MCP server (binary: ixchel-mcp)
+├── crates/                  # Shared libraries
+│   ├── ix-app/              # Ixchel wiring layer
+│   ├── ix-helixdb-ops/       # HelixDB graph helper crate
+│   ├── ix-config/           # Global + project config loading helpers
+│   ├── ix-core/             # Ixchel core library (git-first, markdown-canonical)
+│   ├── ix-embeddings/        # Embedding providers + Embedder API
+│   ├── ix-id/               # Hash-based id helpers (prefix-hash ids)
+│   └── ix-storage-helixdb/  # Ixchel HelixDB-backed index/cache adapter
 └── docs/                    # Next.js documentation site
 ```
 
@@ -30,7 +33,7 @@ helix-tools/
 
 - Rust edition is `2024` for workspace crates unless overridden.
 - Workspace lints are enforced via `Cargo.toml` in the repo root.
-- Prefer shared crates (`helix-config`, `helix-id`, `helix-embeddings`, etc.) where appropriate.
+- Prefer shared Ixchel libs (`ix-config`, `ix-id`, `ix-embeddings`, etc.) where appropriate.
 - Use Conventional Commits for all commit messages.
 
 ## Where To Look
@@ -45,6 +48,7 @@ helix-tools/
 ## Commands
 
 ```bash
+dprint check
 cargo build --all-features
 cargo test --all-features
 cargo clippy --all-targets --all-features -- -D warnings

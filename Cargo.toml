@@ -1,29 +1,27 @@
 [workspace]
 resolver = "2"
 members = [
-    "demo-got",
-    "helix-graph-ops",
-    "hbd",
-    "hbd-ui/src-tauri",
-    "helix-decisions",
-    "helix-docs",
-    "helix-map",
-    "helix-repo",
-    "shared/helix-id",
-    "shared/helix-config",
-    "shared/helix-embeddings",
-    "shared/helix-discovery",
-    "shared/helix-daemon",
-    # "shared/helix-embed",
-    # "shared/helix-search",
-    # "shared/helix-chunk",
+    "apps/demo-got",
+    "apps/ix-cli",
+    "apps/ix-daemon",
+    "apps/ix-mcp",
+    "crates/ix-app",
+    "crates/ix-config",
+    "crates/ix-core",
+    "crates/ix-embeddings",
+    "crates/ix-helixdb-ops",
+    "crates/ix-id",
+    "crates/ix-storage-helixdb",
+    # "crates/ix-embed",
+    # "crates/ix-search",
+    # "crates/ix-chunk",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
-repository = "https://github.com/kevinmichaelchen/helix-tools"
+repository = "https://github.com/kevinmichaelchen/ixchel-tools"
 authors = ["Kevin Chen"]
 
 [workspace.dependencies]

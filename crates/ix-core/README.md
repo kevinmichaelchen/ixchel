@@ -1,0 +1,28 @@
+# ix-core
+
+Core library for **Ixchel** (ik-SHEL): a git-first, knowledge-first system that
+weaves durable Markdown artifacts into a queryable graph + vector index.
+
+## Responsibilities
+
+- Provide the shared domain layer used by apps (`ix-cli`, `ix-mcp`).
+- Keep adapters out of the domain (wiring lives in `ix-app`).
+- Define “ports” (traits) for storage/backends to keep adapters swappable.
+- Keep business rules close to the domain (validation, sync decisions, context assembly).
+
+## Canonical Storage
+
+- Source of truth: `.ixchel/**/*.md`
+- Rebuildable cache: `.ixchel/data/` (index + vectors)
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

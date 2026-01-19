@@ -4,9 +4,8 @@ TODO.md
 Cargo.lock
 
 # HelixDB data (local cache, not source of truth)
-.helix/helix.db/
-.helix/models/
-.helix-map/
+.ixchel/data/
+.ixchel/models/
 .fastembed_cache/
 
 # IDE

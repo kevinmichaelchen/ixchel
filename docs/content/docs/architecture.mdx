@@ -1,11 +1,11 @@
 ---
 title: Architecture
-description: How Helix Tools are structured
+description: How Ixchel Tools are structured
 ---
 
 # Architecture
 
-Helix Tools share a common architecture that balances simplicity with power.
+Ixchel Tools share a common architecture that balances simplicity with power.
 
 ## Overview
 
@@ -13,16 +13,16 @@ Helix Tools share a common architecture that balances simplicity with power.
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLI Tools Layer                              │
 │                                                                      │
-│   hbd        adr-search    helix-docs    helix-map    helix-repo   │
-│   (issues)   (decisions)   (research)    (codebase)   (clones)     │
+│   ixchel                demo-got                                  │
+│   (knowledge weaving)   (example project)                         │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                        Shared Libraries                              │
 │                                                                      │
-│   helix-id             helix-config          helix-embed (planned)  │
-│   (hash IDs)           (settings)            (fastembed)            │
+│   ix-id     ix-config     ix-embeddings     ix-core                │
+│   (hash IDs) (settings)   (embedders)       (domain logic)         │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
@@ -75,16 +75,21 @@ When you `git pull` new changes:
 ## Project Structure
 
 ```
-helix-tools/
-├── adr-search/             # ADR semantic search CLI
-├── hbd/                    # Issue tracker CLI
-├── helix-docs/             # Documentation cache CLI
-├── helix-map/              # Codebase indexer CLI
-├── helix-repo/             # Repository clone manager
+ixchel-tools/
+├── apps/
+│   ├── demo-got/            # Demo project (HelixDB + ix-embeddings)
+│   ├── ix-cli/              # ixchel CLI (binary)
+│   ├── ix-daemon/           # Background daemon + IPC (binary: ixcheld)
+│   └── ix-mcp/              # ixchel MCP server
 │
-├── shared/
-│   ├── helix-id/           # Hash-based ID generation
-│   └── helix-config/       # Configuration loading
+├── crates/
+│   ├── ix-app/              # ixchel wiring layer
+│   ├── ix-core/             # ixchel core library
+│   ├── ix-storage-helixdb/  # HelixDB-backed cache/index for ixchel
+│   ├── ix-id/               # Hash-based ID generation
+│   ├── ix-config/           # Configuration loading
+│   ├── ix-embeddings/       # Pluggable embedding providers
+│   └── ix-helixdb-ops/       # HelixDB helper crate
 │
 ├── docs/                   # This documentation site
 │

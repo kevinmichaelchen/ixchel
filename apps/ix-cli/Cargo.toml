@@ -1,0 +1,26 @@
+[package]
+name = "ix-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Ixchel CLI"
+readme = "README.md"
+keywords = ["cli", "knowledge-graph", "git", "rag"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+ix-app = { path = "../../crates/ix-app" }
+ix-core = { path = "../../crates/ix-core" }
+serde_yaml.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "ixchel"
+path = "src/main.rs"

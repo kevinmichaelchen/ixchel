@@ -1,4 +1,4 @@
-# Helix Tools
+# Ixchel Tools
 
 AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-first, agent-friendly.
 
@@ -6,30 +6,36 @@ AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-firs
 
 ## Tools
 
-| Tool | Description | Status |
-|------|-------------|--------|
-| **[hbd][hbd]** | Git-first issue tracker | Active |
-| **[helix-decisions][helix-decisions]** | Decision graph with semantic search | Scaffolded |
-| **[helix-docs][helix-docs]** | Documentation cache for AI research | Scaffolded |
-| **[helix-map][helix-map]** | Codebase structure indexer | PoC |
-| **[helix-repo][helix-repo]** | Repository clone manager | Scaffolded |
+| Tool                 | Description                        | Status |
+| -------------------- | ---------------------------------- | ------ |
+| **[ixchel][ixchel]** | Git-first knowledge weaving system | MVP    |
+
+Future tools and experiments are tracked as Ixchel ideas under `.ixchel/ideas/`.
 
 ## Quick Start
 
 ```bash
 # Clone and build
-git clone https://github.com/kevinmichaelchen/helix-tools.git
-cd helix-tools
+git clone https://github.com/kevinmichaelchen/ixchel-tools.git
+cd ixchel-tools
 cargo build --release
-
-# Try hbd (the most complete tool)
-cargo install --path hbd
-cd your-project
-hbd init
-hbd create "My first issue" --type task
 ```
 
-## Why Helix?
+## Try Ixchel
+
+Ixchel is a git-first, Markdown-canonical knowledge weaving system.
+
+```bash
+cargo install --path apps/ix-cli
+cd your-project
+
+ixchel init
+ixchel create decision "Use PostgreSQL for primary storage"
+ixchel sync
+ixchel search "database performance"
+```
+
+## Why Ixchel?
 
 - **Git-first** — Data lives in Markdown files, not a database
 - **Offline-first** — Local embeddings, no server required
@@ -37,33 +43,33 @@ hbd create "My first issue" --type task
 
 ## Learn More
 
-| Resource | Description |
-|----------|-------------|
-| [Documentation][docs] | Full docs site |
-| [Configuration][config] | How settings work |
-| [Architecture][architecture] | System design |
-| [Contributing][contributing] | How to help |
+| Resource                     | Description       |
+| ---------------------------- | ----------------- |
+| [Documentation][docs]        | Full docs site    |
+| [Configuration][config]      | How settings work |
+| [Architecture][architecture] | System design     |
+| [Contributing][contributing] | How to help       |
 
 ## License
 
 [MIT][license]
 
 <!-- Docs -->
-[docs]: https://kevinmichaelchen.github.io/helix-tools
-[getting-started]: https://kevinmichaelchen.github.io/helix-tools/docs/getting-started
-[architecture]: https://kevinmichaelchen.github.io/helix-tools/docs/architecture
-[config]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
+
+[docs]: https://kevinmichaelchen.github.io/ixchel-tools
+[getting-started]: https://kevinmichaelchen.github.io/ixchel-tools/docs/getting-started
+[architecture]: https://kevinmichaelchen.github.io/ixchel-tools/docs/architecture
+[config]: https://kevinmichaelchen.github.io/ixchel-tools/docs/configuration
 
 <!-- Tools -->
-[helix-decisions]: ./helix-decisions/
-[hbd]: ./hbd/
-[helix-docs]: ./helix-docs/
-[helix-map]: ./helix-map/
-[helix-repo]: ./helix-repo/
+
+[ixchel]: ./apps/ix-cli/
 
 <!-- Project -->
+
 [contributing]: ./CONTRIBUTING.md
 [license]: ./LICENSE
 
 <!-- External -->
+
 [helixdb]: https://github.com/HelixDB/helix-db

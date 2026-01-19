@@ -1,0 +1,28 @@
+[package]
+name = "ix-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Ixchel core library: registries, validation, sync orchestration, and context building"
+readme = "README.md"
+keywords = ["knowledge-graph", "rag", "git", "provenance"]
+categories = ["development-tools"]
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+chrono.workspace = true
+ix-config = { path = "../ix-config" }
+ix-id = { path = "../ix-id" }
+serde.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = "3"

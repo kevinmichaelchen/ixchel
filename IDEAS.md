@@ -1,10 +1,10 @@
 # Ideas
 
-Future tools and features for the helix-tools ecosystem.
+Future tools and features for the ixchel-tools ecosystem.
 
 ---
 
-## helix-recall
+## ixchel-recall
 
 **Status:** Idea
 **Priority:** High
@@ -35,18 +35,18 @@ A background daemon + CLI that:
 
 ### Why HelixDB?
 
-| Capability | Use Case |
-|------------|----------|
-| **Graph storage** | Link commits → repos → PRs → issues |
+| Capability            | Use Case                                               |
+| --------------------- | ------------------------------------------------------ |
+| **Graph storage**     | Link commits → repos → PRs → issues                    |
 | **Vector embeddings** | Semantic search: "what did I work on related to auth?" |
-| **Embedded** | No server, works offline, fast reads |
-| **`.db` file** | Single portable cache file |
+| **Embedded**          | No server, works offline, fast reads                   |
+| **`.db` file**        | Single portable cache file                             |
 
 ### Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      HELIX-RECALL DAEMON                        │
+│                      IXCHEL-RECALL DAEMON                        │
 │  (background service, polls on intervals)                       │
 └─────────────────────────────────────────────────────────────────┘
          │                                    │
@@ -141,7 +141,7 @@ recall --semantic "bug fixes" --since=week
 
 # Filtering
 recall --repo=fire-dept
-recall --repo=helix-tools --verbose
+recall --repo=ixchel-tools --verbose
 
 # Formats
 recall --format=greeting    # Shell startup (compact)
@@ -170,7 +170,7 @@ Output on shell startup:
 ```
 ╭─ RECALL ──────────────────────────────────────────────────╮
 │ TODAY: 3 repos, 8 commits                                 │
-│ • helix-tools: "add recall daemon", "fix embeddings"      │
+│ • ixchel-tools: "add recall daemon", "fix embeddings"      │
 │ • dotfiles: "docs: AGENTS.md files"                       │
 │ • fire-dept: "feat: scheduling API"                       │
 │                                                           │
@@ -180,11 +180,11 @@ Output on shell startup:
 
 ### Daemon Behavior
 
-| Source | Poll Interval | Trigger |
-|--------|---------------|---------|
-| Local git repos | 5 min | Also on `.git/index` change |
-| GitHub events | 15 min | Rate-limit aware |
-| PR/issue details | 1 hour | Or on event detection |
+| Source           | Poll Interval | Trigger                     |
+| ---------------- | ------------- | --------------------------- |
+| Local git repos  | 5 min         | Also on `.git/index` change |
+| GitHub events    | 15 min        | Rate-limit aware            |
+| PR/issue details | 1 hour        | Or on event detection       |
 
 ### Configuration
 
@@ -212,8 +212,8 @@ max_commits_per_repo = 3
 
 ### Implementation Notes
 
-- Use `helix-graph-ops` for HelixDB interactions (shared crate)
-- Reuse `helix-embeddings` for commit message embeddings
+- Use `ix-helixdb-ops` for HelixDB interactions (shared crate)
+- Reuse `ix-embeddings` for commit message embeddings
 - Daemon: `tokio` runtime with interval tasks
 - macOS: launchd plist for autostart
 - Linux: systemd user service
@@ -222,7 +222,6 @@ max_commits_per_repo = 3
 
 - **git-standup** — Inspiration for multi-repo scanning
 - **gh-dash** — GitHub CLI dashboard patterns
-- **hbd** — Similar HelixDB integration patterns to follow
 
 ### Open Questions
 
@@ -234,15 +233,15 @@ max_commits_per_repo = 3
 
 ## Future Ideas
 
-### helix-timetrack
+### ixchel-timetrack
 
 Automatic time tracking based on git activity and file watches. Infer time spent
 per project without manual logging.
 
-### helix-changelog
+### ixchel-changelog
 
 Auto-generate changelogs from commits + PR descriptions using semantic analysis.
 
-### helix-deps
+### ixchel-deps
 
 Dependency graph visualization and update tracking across repos.
