@@ -204,19 +204,21 @@ impl IxchelRepo {
     pub fn list(&self, kind: Option<EntityKind>) -> Result<Vec<EntitySummary>> {
         let mut out = Vec::new();
 
-        let kinds: Vec<EntityKind> = match kind {
-            Some(k) => vec![k],
-            None => vec![
-                EntityKind::Decision,
-                EntityKind::Issue,
-                EntityKind::Idea,
-                EntityKind::Report,
-                EntityKind::Source,
-                EntityKind::Citation,
-                EntityKind::Agent,
-                EntityKind::Session,
-            ],
-        };
+        let kinds: Vec<EntityKind> = kind.map_or_else(
+            || {
+                vec![
+                    EntityKind::Decision,
+                    EntityKind::Issue,
+                    EntityKind::Idea,
+                    EntityKind::Report,
+                    EntityKind::Source,
+                    EntityKind::Citation,
+                    EntityKind::Agent,
+                    EntityKind::Session,
+                ]
+            },
+            |k| vec![k],
+        );
 
         for kind in kinds {
             let dir = self.paths.kind_dir(kind);
@@ -241,7 +243,7 @@ impl IxchelRepo {
                     .or_else(|| {
                         path.file_stem()
                             .and_then(|s| s.to_str())
-                            .map(|s| s.to_string())
+                            .map(std::string::ToString::to_string)
                     })
                     .unwrap_or_default();
                 let title = get_string(&doc.frontmatter, "title").unwrap_or_default();
@@ -315,7 +317,7 @@ impl IxchelRepo {
         }
 
         if values.is_empty() {
-            doc.frontmatter.remove(&Value::String(rel.to_string()));
+            doc.frontmatter.remove(Value::String(rel.to_string()));
         } else {
             set_string_list(&mut doc.frontmatter, rel, values);
         }

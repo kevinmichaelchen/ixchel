@@ -16,7 +16,7 @@ pub enum EntityKind {
 
 impl EntityKind {
     #[must_use]
-    pub fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Decision => "decision",
             Self::Issue => "issue",
@@ -30,7 +30,7 @@ impl EntityKind {
     }
 
     #[must_use]
-    pub fn directory_name(self) -> &'static str {
+    pub const fn directory_name(self) -> &'static str {
         match self {
             Self::Decision => "decisions",
             Self::Issue => "issues",
@@ -44,7 +44,7 @@ impl EntityKind {
     }
 
     #[must_use]
-    pub fn id_prefix(self) -> &'static str {
+    pub const fn id_prefix(self) -> &'static str {
         match self {
             Self::Decision => "dec",
             Self::Issue => "iss",
@@ -88,7 +88,7 @@ pub fn kind_from_id(id: &str) -> Option<EntityKind> {
     let (prefix, _) = id.split_once('-')?;
     match prefix {
         "dec" => Some(EntityKind::Decision),
-        "iss" => Some(EntityKind::Issue),
+        "iss" | "bd" => Some(EntityKind::Issue),
         "idea" => Some(EntityKind::Idea),
         "rpt" => Some(EntityKind::Report),
         "src" => Some(EntityKind::Source),

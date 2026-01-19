@@ -13,7 +13,7 @@ pub struct IxchelPaths {
 
 impl IxchelPaths {
     #[must_use]
-    pub fn new(repo_root: PathBuf) -> Self {
+    pub const fn new(repo_root: PathBuf) -> Self {
         Self { repo_root }
     }
 

@@ -104,7 +104,7 @@ pub fn render_markdown(doc: &MarkdownDocument) -> Result<String, MarkdownError> 
 #[must_use]
 pub fn get_string(frontmatter: &Mapping, key: &str) -> Option<String> {
     frontmatter
-        .get(&Value::String(key.to_string()))
+        .get(Value::String(key.to_string()))
         .and_then(|v| match v {
             Value::String(s) => Some(s.clone()),
             _ => None,
@@ -117,7 +117,7 @@ pub fn set_string(frontmatter: &mut Mapping, key: &str, value: impl Into<String>
 
 #[must_use]
 pub fn get_string_list(frontmatter: &Mapping, key: &str) -> Vec<String> {
-    let Some(value) = frontmatter.get(&Value::String(key.to_string())) else {
+    let Some(value) = frontmatter.get(Value::String(key.to_string())) else {
         return Vec::new();
     };
 

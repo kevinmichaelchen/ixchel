@@ -33,21 +33,12 @@ pub enum ConfigError {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct IxchelConfig {
     #[serde(default)]
     pub embedding: EmbeddingConfig,
     #[serde(default)]
     pub storage: StorageConfig,
-}
-
-impl Default for IxchelConfig {
-    fn default() -> Self {
-        Self {
-            embedding: EmbeddingConfig::default(),
-            storage: StorageConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
