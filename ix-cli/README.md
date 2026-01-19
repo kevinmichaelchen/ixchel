@@ -20,3 +20,15 @@ ixchel search "database performance" --limit 10
 
 Ixchel stores canonical knowledge artifacts as Markdown under `.ixchel/`. The
 graph/vector index lives under `.ixchel/data/` and is rebuildable.
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

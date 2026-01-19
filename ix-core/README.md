@@ -13,3 +13,15 @@ weaves durable Markdown artifacts into a queryable graph + vector index.
 
 - Source of truth: `.ixchel/**/*.md`
 - Rebuildable cache: `.ixchel/data/` (index + vectors)
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

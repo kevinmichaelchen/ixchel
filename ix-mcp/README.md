@@ -12,3 +12,15 @@ actual behavior to `ix-core`.
 - `ixchel_show` — read an entity by id
 - `ixchel_graph` — list outgoing relationships
 - `ixchel_context` — assemble a basic 1-hop context pack
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md
