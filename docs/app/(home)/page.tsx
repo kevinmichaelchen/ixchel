@@ -4,7 +4,6 @@ import {
   Database, 
   WifiOff, 
   Network, 
-  Terminal, 
   BookOpen, 
   Map,
   ArrowRight,
@@ -43,7 +42,7 @@ export default function HomePage() {
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
           <a 
-            href="https://github.com/kevinmichaelchen/helix-tools" 
+            href="https://github.com/kevinmichaelchen/ixchel-tools" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center px-8 py-3 text-base font-medium text-slate-300 transition-all bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white active:scale-95"
@@ -89,13 +88,6 @@ export default function HomePage() {
         </div>
         
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <ToolCard 
-            icon={<Terminal className="h-8 w-8" />}
-            name="hbd"
-            tag="Active"
-            tagColor="bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-            description="Git-first issue tracker for AI-supervised workflows. Bridge the gap between conceptual specs and tasks."
-          />
           <ToolCard 
             icon={<BookOpen className="h-8 w-8" />}
             name="ixchel"
