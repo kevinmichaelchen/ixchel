@@ -102,12 +102,12 @@ async function runHbd(args: string, cwd: string): Promise<string> {
   return stdout;
 }
 
-export function findTicketsDir(startDir: string): string | null {
+export function findIxchelDir(startDir: string): string | null {
   let currentDir = startDir;
 
   while (currentDir !== path.dirname(currentDir)) {
-    const ticketsPath = path.join(currentDir, '.tickets');
-    if (fs.existsSync(ticketsPath) && fs.statSync(ticketsPath).isDirectory()) {
+    const issuesPath = path.join(currentDir, '.ixchel', 'issues');
+    if (fs.existsSync(issuesPath) && fs.statSync(issuesPath).isDirectory()) {
       return currentDir;
     }
     currentDir = path.dirname(currentDir);

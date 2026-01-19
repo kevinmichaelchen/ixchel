@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { findTicketsDir, listIssues } from '$lib/services/hbd-client';
+import { findIxchelDir, listIssues } from '$lib/services/hbd-client';
 import { DEMO_ISSUES } from '$lib/services/demo-data';
 import type { Issue } from '$lib/types/issue';
 
@@ -15,14 +15,14 @@ export const load: PageServerLoad = async ({ url }) => {
     };
   }
 
-  const projectPath = findTicketsDir(process.cwd());
+  const projectPath = findIxchelDir(process.cwd());
 
   if (!projectPath) {
     return {
       issues: DEMO_ISSUES,
       demoMode: true,
       projectPath: null,
-      error: 'No .tickets directory found. Running in demo mode.',
+      error: 'No .ixchel/issues directory found. Running in demo mode.',
     };
   }
 

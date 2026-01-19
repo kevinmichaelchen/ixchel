@@ -320,7 +320,7 @@ mod tests {
     async fn test_job_lifecycle() {
         let queue = SyncQueue::new();
         let (id, _) = queue
-            .enqueue("/repo", "decisions", ".decisions", false)
+            .enqueue("/repo", "decisions", ".ixchel/decisions", false)
             .await;
 
         assert!(queue.start(&id).await);
@@ -362,9 +362,11 @@ mod tests {
     async fn test_list_queues() {
         let queue = SyncQueue::new();
         queue
-            .enqueue("/repo1", "decisions", ".decisions", false)
+            .enqueue("/repo1", "decisions", ".ixchel/decisions", false)
             .await;
-        queue.enqueue("/repo2", "hbd", ".tickets", false).await;
+        queue
+            .enqueue("/repo2", "hbd", ".ixchel/issues", false)
+            .await;
 
         let queues = queue.list_queues().await;
         assert_eq!(queues.len(), 2);

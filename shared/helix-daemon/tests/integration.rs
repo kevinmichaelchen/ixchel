@@ -119,14 +119,14 @@ async fn test_enqueue_sync_coalescing() {
         .unwrap();
 
     let sync_id2 = client
-        .enqueue_sync("/test/repo", "decisions", ".decisions", false)
+        .enqueue_sync("/test/repo", "decisions", ".ixchel/decisions", false)
         .await
         .unwrap();
 
     assert_eq!(sync_id1, sync_id2);
 
     let sync_id3 = client
-        .enqueue_sync("/test/repo", "decisions", ".decisions", true)
+        .enqueue_sync("/test/repo", "decisions", ".ixchel/decisions", true)
         .await
         .unwrap();
 
@@ -153,12 +153,12 @@ async fn test_status_shows_queued_jobs() {
     let client = Client::with_socket_path(&socket_path);
 
     client
-        .enqueue_sync("/repo1", "decisions", ".decisions", false)
+        .enqueue_sync("/repo1", "decisions", ".ixchel/decisions", false)
         .await
         .unwrap();
 
     client
-        .enqueue_sync("/repo2", "hbd", ".tickets", false)
+        .enqueue_sync("/repo2", "hbd", ".ixchel/issues", false)
         .await
         .unwrap();
 

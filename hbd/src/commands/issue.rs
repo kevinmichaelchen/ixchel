@@ -5,9 +5,10 @@ pub fn init() -> hbd::Result<()> {
     let store = TicketStore::new(std::env::current_dir()?);
     store.init()?;
     println!("Initialized hbd in current directory");
-    println!("  Created .tickets/");
-    println!("  Created .helix/config.toml");
-    println!("  Updated .gitignore");
+    println!("  Created .ixchel/");
+    println!("  Created .ixchel/issues/");
+    println!("  Created .ixchel/config.toml");
+    println!("  Updated .gitignore (.ixchel/data, .ixchel/models)");
     Ok(())
 }
 

@@ -1,7 +1,7 @@
 //! hbd - Git-first issue tracker library
 //!
 //! This crate provides the core functionality for the hbd issue tracker.
-//! Issues are stored as Markdown files with YAML frontmatter in `.tickets/`.
+//! Issues are stored as Markdown files with YAML frontmatter in `.ixchel/issues/`.
 //!
 //! # Quick Start
 //!

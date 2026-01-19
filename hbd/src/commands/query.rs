@@ -14,9 +14,11 @@ pub fn info(store: &TicketStore, json: bool) -> hbd::Result<()> {
         .count();
 
     if json {
+        let issues_dir = store.tickets_dir();
         let info = serde_json::json!({
             "initialized": store.is_initialized(),
-            "tickets_dir": store.tickets_dir(),
+            "issues_dir": issues_dir,
+            "tickets_dir": issues_dir,
             "total_issues": ids.len(),
             "open_issues": open_count,
         });
@@ -24,7 +26,7 @@ pub fn info(store: &TicketStore, json: bool) -> hbd::Result<()> {
     } else {
         println!("hbd status:");
         println!("  Initialized: {}", store.is_initialized());
-        println!("  Tickets dir: {}", store.tickets_dir().display());
+        println!("  Issues dir: {}", store.tickets_dir().display());
         println!("  Total issues: {}", ids.len());
         println!("  Open issues: {open_count}");
     }
