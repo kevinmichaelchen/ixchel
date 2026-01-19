@@ -4,11 +4,16 @@
 
 /*
  * Custom theme extending fumadocs-ui neutral theme
+ * Typography: Geist Sans + Geist Mono
  * Light mode: clean slate with strong contrast and cyan accents
  * Dark mode: deep blue-black with cyan accents
  */
 
 @theme {
+  /* Typography - Geist font family */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', monospace;
+
   /* Primary accent colors */
   --color-primary: hsl(199 89% 48%);
   --color-primary-foreground: hsl(0 0% 100%);
@@ -129,6 +134,27 @@ html.dark ::-webkit-scrollbar-thumb {
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-fd-foreground);
   font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  letter-spacing: -0.035em;
+}
+
+/* Smooth transitions for all interactive elements */
+a, button, input, textarea, select {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus ring styling - accessible and on-brand */
+:focus-visible {
+  outline: 2px solid var(--color-fd-primary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* MDX prose content - light mode improvements */
@@ -165,16 +191,23 @@ html.dark .prose a:hover {
 
 /* Code blocks - light mode */
 .prose code {
+  font-family: var(--font-mono);
   background: hsl(210 40% 96%);
   color: hsl(222.2 47% 20%);
   padding: 0.2em 0.4em;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 0.875em;
+  font-weight: 500;
 }
 
 html.dark .prose code {
   background: hsl(217.2 32.6% 17.5%);
   color: hsl(199 89% 70%);
+}
+
+/* Monospace elements use Geist Mono */
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
 }
 
 /* Table styling - light mode visibility */
