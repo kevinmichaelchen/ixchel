@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
         let response = match request.method.as_str() {
             "initialize" => ok(id, initialize_result()),
             "tools/list" => ok(id, tools_list_result()),
-            "tools/call" => match handle_tools_call(request.params).await {
+            "tools/call" => match handle_tools_call(request.params) {
                 Ok(result) => ok(id, result),
                 Err(err) => error(id, -32000, err.to_string(), None),
             },
@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn ok(id: Value, result: Value) -> RpcResponse {
+const fn ok(id: Value, result: Value) -> RpcResponse {
     RpcResponse {
         jsonrpc: "2.0",
         id,
@@ -97,7 +97,7 @@ fn ok(id: Value, result: Value) -> RpcResponse {
     }
 }
 
-fn error(id: Value, code: i32, message: String, data: Option<Value>) -> RpcResponse {
+const fn error(id: Value, code: i32, message: String, data: Option<Value>) -> RpcResponse {
     RpcResponse {
         jsonrpc: "2.0",
         id,
@@ -189,7 +189,7 @@ fn tools_list_result() -> Value {
     })
 }
 
-async fn handle_tools_call(params: Option<Value>) -> Result<Value> {
+fn handle_tools_call(params: Option<Value>) -> Result<Value> {
     let params = params.unwrap_or_else(|| json!({}));
     let name = params
         .get("name")
@@ -201,11 +201,11 @@ async fn handle_tools_call(params: Option<Value>) -> Result<Value> {
         .unwrap_or_else(|| json!({}));
 
     match name {
-        "ixchel_sync" => tool_sync(args).await,
-        "ixchel_search" => tool_search(args).await,
-        "ixchel_show" => tool_show(args).await,
-        "ixchel_graph" => tool_graph(args).await,
-        "ixchel_context" => tool_context(args).await,
+        "ixchel_sync" => tool_sync(&args),
+        "ixchel_search" => tool_search(&args),
+        "ixchel_show" => tool_show(&args),
+        "ixchel_graph" => tool_graph(&args),
+        "ixchel_context" => tool_context(&args),
         _ => anyhow::bail!("Unknown tool: {name}"),
     }
 }
@@ -217,13 +217,13 @@ fn resolve_repo_path(args: &Value) -> Result<PathBuf> {
     Ok(std::env::current_dir()?)
 }
 
-async fn tool_sync(args: Value) -> Result<Value> {
-    let repo_path = resolve_repo_path(&args)?;
+fn tool_sync(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
     let mut index = ix_storage_helixdb::HelixDbIndex::open(&repo)?;
     let stats = ix_core::index::IndexBackend::sync(&mut index, &repo)?;
 
-    tool_text(json!({
+    tool_text(&json!({
         "scanned": stats.scanned,
         "added": stats.added,
         "modified": stats.modified,
@@ -232,13 +232,17 @@ async fn tool_sync(args: Value) -> Result<Value> {
     }))
 }
 
-async fn tool_search(args: Value) -> Result<Value> {
-    let repo_path = resolve_repo_path(&args)?;
+fn tool_search(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
     let query = args
         .get("query")
         .and_then(Value::as_str)
         .ok_or_else(|| anyhow::anyhow!("ixchel_search missing arguments.query"))?;
-    let limit = args.get("limit").and_then(Value::as_u64).unwrap_or(10) as usize;
+    let limit = args
+        .get("limit")
+        .and_then(Value::as_u64)
+        .and_then(|n| usize::try_from(n).ok())
+        .unwrap_or(10);
 
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
     let index = ix_storage_helixdb::HelixDbIndex::open(&repo)?;
@@ -250,17 +254,17 @@ async fn tool_search(args: Value) -> Result<Value> {
             json!({
                 "score": h.score,
                 "id": h.id,
-                "kind": h.kind.map(|k| k.as_str()),
+                "kind": h.kind.map(ix_core::entity::EntityKind::as_str),
                 "title": h.title,
             })
         })
         .collect::<Vec<_>>();
 
-    tool_text(json!({ "hits": hits }))
+    tool_text(&json!({ "hits": hits }))
 }
 
-async fn tool_show(args: Value) -> Result<Value> {
-    let repo_path = resolve_repo_path(&args)?;
+fn tool_show(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
     let id = args
         .get("id")
         .and_then(Value::as_str)
@@ -269,11 +273,11 @@ async fn tool_show(args: Value) -> Result<Value> {
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
     let raw = repo.read_raw(id)?;
 
-    tool_text(json!({ "id": id, "raw": raw }))
+    tool_text(&json!({ "id": id, "raw": raw }))
 }
 
-async fn tool_graph(args: Value) -> Result<Value> {
-    let repo_path = resolve_repo_path(&args)?;
+fn tool_graph(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
     let id = args
         .get("id")
         .and_then(Value::as_str)
@@ -282,11 +286,11 @@ async fn tool_graph(args: Value) -> Result<Value> {
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
     let graph = build_graph_json(&repo, id)?;
 
-    tool_text(graph)
+    tool_text(&graph)
 }
 
-async fn tool_context(args: Value) -> Result<Value> {
-    let repo_path = resolve_repo_path(&args)?;
+fn tool_context(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
     let id = args
         .get("id")
         .and_then(Value::as_str)
@@ -295,11 +299,11 @@ async fn tool_context(args: Value) -> Result<Value> {
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
     let context = build_context_json(&repo, id)?;
 
-    tool_text(context)
+    tool_text(&context)
 }
 
-fn tool_text(payload: Value) -> Result<Value> {
-    let text = serde_json::to_string_pretty(&payload)?;
+fn tool_text(payload: &Value) -> Result<Value> {
+    let text = serde_json::to_string_pretty(payload)?;
     Ok(json!({
         "content": [{ "type": "text", "text": text }],
     }))
@@ -339,10 +343,11 @@ fn build_context_json(repo: &ix_core::repo::IxchelRepo, id: &str) -> Result<Valu
     }))
 }
 
-fn collect_graph(
-    repo: &ix_core::repo::IxchelRepo,
-    id: &str,
-) -> Result<(String, Vec<(String, Vec<(String, Option<String>)>)>)> {
+type GraphEdgeTarget = (String, Option<String>);
+type GraphOutgoing = Vec<(String, Vec<GraphEdgeTarget>)>;
+type CollectedGraph = (String, GraphOutgoing);
+
+fn collect_graph(repo: &ix_core::repo::IxchelRepo, id: &str) -> Result<CollectedGraph> {
     let path = repo
         .paths
         .entity_path(id)
