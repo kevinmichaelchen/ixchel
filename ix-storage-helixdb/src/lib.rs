@@ -86,125 +86,36 @@ impl HelixDbIndex {
             .map_err(|e| anyhow::anyhow!("Failed to start write transaction: {e}"))
     }
 
-    fn commit_txn(&self, wtxn: RwTxn<'_>) -> Result<()> {
+    fn commit_txn(wtxn: RwTxn<'_>) -> Result<()> {
         wtxn.commit()
             .map_err(|e| anyhow::anyhow!("Failed to commit transaction: {e}"))
     }
 
     fn embed(&self, text: &str) -> Result<Vec<f32>> {
-        let model = self
-            .embedder
-            .lock()
-            .map_err(|_| anyhow::anyhow!("Embedding model lock poisoned"))?;
-        let mut embeddings = model
-            .embed(vec![text], None)
-            .map_err(|e| anyhow::anyhow!("Embedding failed: {e}"))?;
+        let mut embeddings = {
+            let model = self
+                .embedder
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Embedding model lock poisoned"))?;
+            model
+                .embed(vec![text], None)
+                .map_err(|e| anyhow::anyhow!("Embedding failed: {e}"))?
+        };
         embeddings
             .pop()
             .ok_or_else(|| anyhow::anyhow!("No embedding returned"))
     }
-}
 
-impl IndexBackend for HelixDbIndex {
-    fn sync(&mut self, repo: &IxchelRepo) -> Result<SyncStats> {
-        self.rebuild_storage()?;
-
-        let mut stats = SyncStats::default();
-        let mut records: Vec<EntityRecord> = Vec::new();
-        let mut id_to_node: BTreeMap<String, u128> = BTreeMap::new();
-
-        let mut wtxn = self.begin_write_txn()?;
-
-        for entity_path in iter_entity_paths(repo)? {
-            stats.scanned += 1;
-
-            let raw = std::fs::read_to_string(&entity_path)
-                .with_context(|| format!("Failed to read {}", entity_path.display()))?;
-            let doc = parse_markdown(&entity_path, &raw)?;
-
-            let id = get_string(&doc.frontmatter, "id")
-                .or_else(|| {
-                    entity_path
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string())
-                })
-                .unwrap_or_default();
-            if id.trim().is_empty() {
-                continue;
-            }
-
-            let kind = get_string(&doc.frontmatter, "type")
-                .and_then(|t| t.parse::<EntityKind>().ok())
-                .or_else(|| kind_from_id(&id))
-                .unwrap_or(EntityKind::Report);
-
-            let title = get_string(&doc.frontmatter, "title").unwrap_or_default();
-
-            let tags = get_string_list(&doc.frontmatter, "tags");
-            let tags_json = serde_json::to_string(&tags).unwrap_or_default();
-
-            let status = get_string(&doc.frontmatter, "status").unwrap_or_default();
-
-            let content_hash = blake3::hash(raw.as_bytes()).to_hex().to_string();
-            let normalized_path = normalize_path(&self.repo_root, &entity_path);
-
-            let embedding_text = build_embedding_text(&title, &doc.body, &tags, kind);
-            let embedding = self.embed(&embedding_text)?;
-
-            let node_id = Uuid::new_v4().as_u128();
-            let storage = self
-                .storage
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Storage not initialized"))?;
-            let vector_id = insert_vector(storage, &mut wtxn, &embedding)?;
-
-            let arena = Bump::new();
-            let label = arena.alloc_str(NODE_LABEL);
-
-            let mut props: Vec<(&str, Value)> = Vec::with_capacity(10);
-            props.push((arena.alloc_str("id"), Value::String(id.clone())));
-            props.push((
-                arena.alloc_str("kind"),
-                Value::String(kind.as_str().to_string()),
-            ));
-            props.push((arena.alloc_str("title"), Value::String(title.clone())));
-            props.push((arena.alloc_str("status"), Value::String(status)));
-            props.push((arena.alloc_str("file_path"), Value::String(normalized_path)));
-            props.push((arena.alloc_str("content_hash"), Value::String(content_hash)));
-            props.push((
-                arena.alloc_str("vector_id"),
-                Value::String(vector_id.to_string()),
-            ));
-            props.push((arena.alloc_str("tags"), Value::String(tags_json)));
-            props.push((arena.alloc_str("body"), Value::String(doc.body.clone())));
-
-            let properties = ImmutablePropertiesMap::new(props.len(), props.into_iter(), &arena);
-            let node = Node {
-                id: node_id,
-                label,
-                version: 1,
-                properties: Some(properties),
-            };
-
-            let storage = self
-                .storage
-                .as_ref()
-                .ok_or_else(|| anyhow::anyhow!("Storage not initialized"))?;
-
-            graph_ops::put_node(storage, &mut wtxn, &node)
-                .map_err(|e| anyhow::anyhow!("Failed to store node: {e}"))?;
-            graph_ops::update_secondary_indices(storage, &mut wtxn, &node)
-                .map_err(|e| anyhow::anyhow!("Failed to update secondary index: {e}"))?;
-
-            id_to_node.insert(id.clone(), node_id);
-            records.push(EntityRecord {
-                from_node: node_id,
-                rels: extract_relationships(&doc.frontmatter),
-            });
-
-            stats.added += 1;
-        }
+    fn insert_edges(
+        &self,
+        wtxn: &mut RwTxn<'_>,
+        id_to_node: &BTreeMap<String, u128>,
+        records: Vec<EntityRecord>,
+    ) -> Result<()> {
+        let storage = self
+            .storage
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Storage not initialized"))?;
 
         for record in records {
             for (rel, to_ids) in record.rels {
@@ -225,17 +136,115 @@ impl IndexBackend for HelixDbIndex {
                         properties: None,
                     };
 
-                    let storage = self
-                        .storage
-                        .as_ref()
-                        .ok_or_else(|| anyhow::anyhow!("Storage not initialized"))?;
-                    graph_ops::put_edge(storage, &mut wtxn, &edge)
+                    graph_ops::put_edge(storage, wtxn, &edge)
                         .map_err(|e| anyhow::anyhow!("Failed to store edge: {e}"))?;
                 }
             }
         }
 
-        self.commit_txn(wtxn)?;
+        Ok(())
+    }
+}
+
+impl IndexBackend for HelixDbIndex {
+    fn sync(&mut self, repo: &IxchelRepo) -> Result<SyncStats> {
+        self.rebuild_storage()?;
+
+        let mut stats = SyncStats::default();
+        let mut records: Vec<EntityRecord> = Vec::new();
+        let mut id_to_node: BTreeMap<String, u128> = BTreeMap::new();
+
+        let mut wtxn = self.begin_write_txn()?;
+        let storage = self
+            .storage
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Storage not initialized"))?;
+
+        for entity_path in iter_entity_paths(repo)? {
+            stats.scanned += 1;
+
+            let raw = std::fs::read_to_string(&entity_path)
+                .with_context(|| format!("Failed to read {}", entity_path.display()))?;
+            let doc = parse_markdown(&entity_path, &raw)?;
+
+            let id = get_string(&doc.frontmatter, "id")
+                .or_else(|| {
+                    entity_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .map(std::string::ToString::to_string)
+                })
+                .unwrap_or_default();
+            if id.trim().is_empty() {
+                continue;
+            }
+
+            let kind = get_string(&doc.frontmatter, "type")
+                .and_then(|t| t.parse::<EntityKind>().ok())
+                .or_else(|| kind_from_id(&id))
+                .unwrap_or(EntityKind::Report);
+
+            let title = get_string(&doc.frontmatter, "title").unwrap_or_default();
+
+            let tags = get_string_list(&doc.frontmatter, "tags");
+            let tags_json = serde_json::to_string(&tags).unwrap_or_default();
+
+            let entity_status = get_string(&doc.frontmatter, "status").unwrap_or_default();
+
+            let content_hash = blake3::hash(raw.as_bytes()).to_hex().to_string();
+            let normalized_path = normalize_path(&self.repo_root, &entity_path);
+
+            let embedding_text = build_embedding_text(&title, &doc.body, &tags, kind);
+            let embedding = self.embed(&embedding_text)?;
+
+            let node_id = Uuid::new_v4().as_u128();
+            let vector_id = insert_vector(storage, &mut wtxn, &embedding)?;
+
+            let arena = Bump::new();
+            let label = arena.alloc_str(NODE_LABEL);
+
+            let mut props: Vec<(&str, Value)> = Vec::with_capacity(10);
+            props.push((arena.alloc_str("id"), Value::String(id.clone())));
+            props.push((
+                arena.alloc_str("kind"),
+                Value::String(kind.as_str().to_string()),
+            ));
+            props.push((arena.alloc_str("title"), Value::String(title.clone())));
+            props.push((arena.alloc_str("status"), Value::String(entity_status)));
+            props.push((arena.alloc_str("file_path"), Value::String(normalized_path)));
+            props.push((arena.alloc_str("content_hash"), Value::String(content_hash)));
+            props.push((
+                arena.alloc_str("vector_id"),
+                Value::String(vector_id.to_string()),
+            ));
+            props.push((arena.alloc_str("tags"), Value::String(tags_json)));
+            props.push((arena.alloc_str("body"), Value::String(doc.body.clone())));
+
+            let properties = ImmutablePropertiesMap::new(props.len(), props.into_iter(), &arena);
+            let node = Node {
+                id: node_id,
+                label,
+                version: 1,
+                properties: Some(properties),
+            };
+
+            graph_ops::put_node(storage, &mut wtxn, &node)
+                .map_err(|e| anyhow::anyhow!("Failed to store node: {e}"))?;
+            graph_ops::update_secondary_indices(storage, &mut wtxn, &node)
+                .map_err(|e| anyhow::anyhow!("Failed to update secondary index: {e}"))?;
+
+            id_to_node.insert(id.clone(), node_id);
+            records.push(EntityRecord {
+                from_node: node_id,
+                rels: extract_relationships(&doc.frontmatter),
+            });
+
+            stats.added += 1;
+        }
+
+        self.insert_edges(&mut wtxn, &id_to_node, records)?;
+
+        Self::commit_txn(wtxn)?;
         Ok(stats)
     }
 
@@ -267,8 +276,9 @@ impl IndexBackend for HelixDbIndex {
 
         for hvector in vector_results {
             let vector_id = hvector.id;
-            let distance = hvector.get_distance() as f32;
-            let score = 1.0 / (1.0 + distance);
+            let distance = hvector.get_distance();
+            #[allow(clippy::cast_possible_truncation)]
+            let score = (1.0 / (1.0 + distance)) as f32;
 
             let Some(node_id) = lookup_node_by_vector_id(storage, &rtxn, vector_id)? else {
                 continue;
