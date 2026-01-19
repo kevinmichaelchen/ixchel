@@ -4,11 +4,16 @@
 
 /*
  * Custom theme extending fumadocs-ui neutral theme
+ * Typography: Geist Sans + Geist Mono
  * Light mode: clean slate with strong contrast and cyan accents
  * Dark mode: deep blue-black with cyan accents
  */
 
 @theme {
+  /* Typography - Geist font family */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', monospace;
+
   /* Primary accent colors */
   --color-primary: hsl(199 89% 48%);
   --color-primary-foreground: hsl(0 0% 100%);
@@ -88,12 +93,24 @@ html.dark body {
 
 /* Glow card - light mode default */
 .glow-card {
-  @apply relative overflow-hidden rounded-xl border border-black/10 bg-black/[0.02] p-6 transition-all duration-300 hover:border-sky-500/50 hover:bg-black/[0.04] hover:shadow-[0_0_30px_-10px_rgba(14,165,233,0.2)];
+  @apply relative overflow-hidden rounded-xl border border-black/10 bg-black/[0.02] p-6;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glow-card:hover {
+  @apply border-sky-500/50 bg-black/[0.04];
+  box-shadow: 0 0 30px -10px rgba(14, 165, 233, 0.2);
+  transform: translateY(-2px);
 }
 
 /* Glow card - dark mode */
 html.dark .glow-card {
-  @apply border-white/10 bg-white/5 hover:bg-white/10 hover:shadow-[0_0_30px_-10px_rgba(14,165,233,0.3)];
+  @apply border-white/10 bg-white/5;
+}
+
+html.dark .glow-card:hover {
+  @apply bg-white/10;
+  box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.35);
 }
 
 /* Scrollbar styling - light mode default */
@@ -129,6 +146,27 @@ html.dark ::-webkit-scrollbar-thumb {
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-fd-foreground);
   font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  letter-spacing: -0.035em;
+}
+
+/* Smooth transitions for all interactive elements */
+a, button, input, textarea, select {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus ring styling - accessible and on-brand */
+:focus-visible {
+  outline: 2px solid var(--color-fd-primary);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* MDX prose content - light mode improvements */
@@ -152,11 +190,14 @@ h1, h2, h3, h4, h5, h6 {
 .prose a {
   color: var(--color-fd-primary);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
 }
 
 .prose a:hover {
   color: hsl(199 89% 38%);
+  text-decoration-color: currentColor;
 }
 
 html.dark .prose a:hover {
@@ -165,16 +206,43 @@ html.dark .prose a:hover {
 
 /* Code blocks - light mode */
 .prose code {
+  font-family: var(--font-mono);
   background: hsl(210 40% 96%);
   color: hsl(222.2 47% 20%);
   padding: 0.2em 0.4em;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 0.875em;
+  font-weight: 500;
 }
 
 html.dark .prose code {
   background: hsl(217.2 32.6% 17.5%);
   color: hsl(199 89% 70%);
+}
+
+/* Monospace elements use Geist Mono */
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+}
+
+/* Fenced code blocks - override fumadocs shiki defaults */
+.shiki {
+  background: hsl(220 14% 96%) !important;
+  border-color: hsl(220 13% 88%) !important;
+}
+
+.shiki pre {
+  background: transparent !important;
+}
+
+.shiki code {
+  background: transparent !important;
+}
+
+/* Dark mode code blocks */
+html.dark .shiki {
+  background: hsl(222 47% 8%) !important;
+  border-color: hsl(217 33% 17%) !important;
 }
 
 /* Table styling - light mode visibility */
@@ -196,13 +264,18 @@ html.dark .prose table th {
 [data-fd-sidebar] a,
 [data-fd-toc] a {
   color: var(--color-fd-muted-foreground);
+  position: relative;
 }
 
 [data-fd-sidebar] a:hover,
-[data-fd-toc] a:hover,
+[data-fd-toc] a:hover {
+  color: var(--color-fd-foreground);
+}
+
 [data-fd-sidebar] a[data-active="true"],
 [data-fd-toc] a[data-active="true"] {
-  color: var(--color-fd-foreground);
+  color: var(--color-fd-primary);
+  font-weight: 500;
 }
 
 /* Card components in light mode */
