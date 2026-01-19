@@ -310,7 +310,7 @@ output = llm.encode("text")
 
 ## Implementation Priority
 
-Based on helix-tools requirements (offline-first, Rust-native, Apple Silicon support):
+Based on ixchel-tools requirements (offline-first, Rust-native, Apple Silicon support):
 
 ### Phase 1: Complete
 
@@ -331,7 +331,7 @@ Based on helix-tools requirements (offline-first, Rust-native, Apple Silicon sup
 
 ## Recommendation
 
-**For helix-tools specifically:**
+**For ixchel-tools specifically:**
 
 1. **Keep fastembed as default** — Works everywhere, no GPU required
 2. **Add Candle next** — Pure Rust, Metal support, aligns with project philosophy

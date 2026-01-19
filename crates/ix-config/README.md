@@ -157,7 +157,7 @@ export IXCHEL__SYNC__CONCURRENCY=10
 
 <!-- Links -->
 
-[config-docs]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
+[config-docs]: https://kevinmichaelchen.github.io/ixchel-tools/docs/configuration
 [requirements]: ./specs/requirements.md
 [design]: ./specs/design.md
 [tasks]: ./specs/tasks.md
