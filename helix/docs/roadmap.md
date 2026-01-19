@@ -11,13 +11,13 @@ prefer each crate’s `specs/tasks.md`.
 
 ### Existing Assets
 
-| Crate              | Status      | Capabilities                                                 |
-| ------------------ | ----------- | ------------------------------------------------------------ |
-| `hbd`              | ✅ Complete | Git-backed issue tracker, dependency graphs, cycle detection |
-| `helix-decisions`  | ✅ Complete | Decision records, semantic search, immutability hooks        |
-| `helix-embeddings` | ✅ Complete | Pluggable embedding providers (fastembed, candle)            |
-| `helix-db`         | ✅ Complete | Graph-vector database with HNSW                              |
-| `helix-config`     | ✅ Complete | Configuration management                                     |
+| Crate             | Status      | Capabilities                                                 |
+| ----------------- | ----------- | ------------------------------------------------------------ |
+| `hbd`             | ✅ Complete | Git-backed issue tracker, dependency graphs, cycle detection |
+| `helix-decisions` | Removed     | Replaced by `.ixchel/decisions/` (git-first Markdown)        |
+| `ix-embeddings`   | ✅ Complete | Pluggable embedding providers (fastembed, candle)            |
+| `helix-db`        | ✅ Complete | Graph-vector database with HNSW                              |
+| `ix-config`       | ✅ Complete | Configuration management                                     |
 
 ### What We Can Reuse
 

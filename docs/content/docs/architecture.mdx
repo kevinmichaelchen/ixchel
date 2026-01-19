@@ -13,16 +13,16 @@ Helix Tools share a common architecture that balances simplicity with power.
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLI Tools Layer                              │
 │                                                                      │
-│   hbd        adr-search    helix-docs    helix-map    helix-repo   │
-│   (issues)   (decisions)   (research)    (codebase)   (clones)     │
+│   hbd                  ixchel                demo-got              │
+│   (issues)             (knowledge weaving)   (example project)     │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
 ┌──────────────────────────────┴──────────────────────────────────────┐
 │                        Shared Libraries                              │
 │                                                                      │
-│   helix-id             helix-config          helix-embed (planned)  │
-│   (hash IDs)           (settings)            (fastembed)            │
+│   ix-id     ix-config     ix-embeddings     ix-daemon              │
+│   (hash IDs) (settings)   (embedders)       (background sync)      │
 │                                                                      │
 └──────────────────────────────┬──────────────────────────────────────┘
                                │
@@ -76,15 +76,17 @@ When you `git pull` new changes:
 
 ```
 helix-tools/
-├── adr-search/             # ADR semantic search CLI
 ├── hbd/                    # Issue tracker CLI
-├── helix-docs/             # Documentation cache CLI
-├── helix-map/              # Codebase indexer CLI
-├── helix-repo/             # Repository clone manager
+├── demo-got/               # Demo project (HelixDB + ix-embeddings)
 │
-├── shared/
-│   ├── helix-id/           # Hash-based ID generation
-│   └── helix-config/       # Configuration loading
+├── ix-cli/                 # ixchel CLI (binary)
+├── ix-core/                # ixchel core library
+├── ix-mcp/                 # ixchel MCP server
+├── ix-storage-helixdb/     # HelixDB-backed cache/index for ixchel
+├── ix-id/                  # Hash-based ID generation
+├── ix-config/              # Configuration loading
+├── ix-embeddings/          # Pluggable embedding providers
+├── ix-daemon/              # Background daemon + IPC (binary: ixcheld)
 │
 ├── docs/                   # This documentation site
 │

@@ -14,7 +14,7 @@ categories = ["development-tools"]
 anyhow.workspace = true
 blake3.workspace = true
 chrono.workspace = true
-helix-id = { path = "../shared/helix-id" }
+ix-id = { path = "../ix-id" }
 serde.workspace = true
 serde_yaml.workspace = true
 thiserror.workspace = true

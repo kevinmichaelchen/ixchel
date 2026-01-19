@@ -40,7 +40,7 @@ patches, and code-surface indexing are deferred.
 - `ix-cli`: the `ixchel` binary (thin frontend over `ix-core`)
 - `ix-mcp`: the `ixchel-mcp` binary (MCP tool surface)
 - `ix-storage-helixdb`: HelixDB-backed cache/index implementing `IndexBackend`
-- Shared crates under `shared/` (IDs, config, embeddings, discovery helpers)
+- Shared libs as top-level crates (`ix-id`, `ix-config`, `ix-embeddings`, `ix-daemon`)
 
 ## Persistence Model
 

@@ -118,7 +118,7 @@ impl IxchelRepo {
         let created_by = default_actor();
         let now = Utc::now();
 
-        let id = helix_id::id_random(kind.id_prefix());
+        let id = ix_id::id_random(kind.id_prefix());
         let path = self.paths.kind_dir(kind).join(format!("{id}.md"));
 
         if path.exists() {

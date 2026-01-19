@@ -80,7 +80,7 @@ Groups a set of actions/creations under one narrative unit of work.
 
 ## ID Generation
 
-Ixchel uses the shared `helix-id` helper crate:
+Ixchel uses the shared `ix-id` helper crate:
 
 - IDs are `{prefix}-{hex}` where `hex` is 6–12 characters
 - Current `ix-core` uses random IDs (UUIDv4 → BLAKE3 → hex) for user-created entities

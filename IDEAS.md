@@ -213,7 +213,7 @@ max_commits_per_repo = 3
 ### Implementation Notes
 
 - Use `helix-graph-ops` for HelixDB interactions (shared crate)
-- Reuse `helix-embeddings` for commit message embeddings
+- Reuse `ix-embeddings` for commit message embeddings
 - Daemon: `tokio` runtime with interval tasks
 - macOS: launchd plist for autostart
 - Linux: systemd user service

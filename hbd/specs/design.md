@@ -18,7 +18,7 @@ This document defines the technical architecture, data model, and query implemen
 > - HelixDB embedded in the binary (like SQLite—no server to run) as query cache
 > - fastembed for local semantic search (no API calls needed)
 > - BM25 + vector hybrid search
-> - helixd daemon for file watching and background sync
+> - ixcheld daemon for file watching and background sync
 >
 > **Note:** Markdown files remain the source of truth. HelixDB acts as a fast query cache
 > that can be rebuilt from `.ixchel/issues/` at any time.
@@ -73,7 +73,7 @@ This document defines the technical architecture, data model, and query implemen
                                    │
                              ┌─────v─────┐
                              │  Daemon   │
-                             │ (helixd)  │
+                             │ (ixcheld) │
                              │           │
                              │  - Sync   │
                              │  - Watch  │
@@ -83,9 +83,9 @@ This document defines the technical architecture, data model, and query implemen
 
 ### Daemon Integration (Planned)
 
-hbd uses the global helixd daemon for background sync and embedding. The CLI
+hbd uses the global ixcheld daemon for background sync and embedding. The CLI
 enqueues work via IPC and optionally waits with `--sync`. Protocol details live
-in `shared/helix-daemon/specs/design.md`.
+in `ix-daemon/specs/design.md`.
 
 ### Current Architecture (Implemented)
 
@@ -135,7 +135,7 @@ v v v
 │
 ┌─────v─────┐
 │ Daemon │
-│ (helixd) │
+│ (ixcheld) │
 │ │
 │ - Sync │
 │ - Watch │
@@ -151,7 +151,7 @@ v v v
 | **Git Layer** | Source of truth, merge-friendly storage, version history |
 | **HelixDB** | Fast queries, graph traversal, vector/BM25 search |
 | **Embedding Layer** | Text vectorization for semantic search |
-| **Daemon (helixd)** | Background sync, file watching, async embedding |
+| **Daemon (ixcheld)** | Background sync, file watching, async embedding |
 
 ### Data Flow
 

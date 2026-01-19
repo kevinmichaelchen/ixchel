@@ -158,7 +158,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             } else {
                 // Generate embeddings and ingest with vectors
                 println!("Initializing embedding model...");
-                let embedder = helix_embeddings::Embedder::new()
+                let embedder = ix_embeddings::Embedder::new()
                     .map_err(|e| anyhow::anyhow!("Failed to create embedder: {e}"))?;
 
                 // Build composite texts for people with bios
@@ -222,7 +222,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let storage = GotStorage::new(&db_path)?;
 
             // Generate query embedding
-            let embedder = helix_embeddings::Embedder::new()
+            let embedder = ix_embeddings::Embedder::new()
                 .map_err(|e| anyhow::anyhow!("Failed to create embedder: {e}"))?;
             let query_embedding = embedder
                 .embed(&query)
