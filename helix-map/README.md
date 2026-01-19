@@ -21,8 +21,9 @@ precise enough for tooling, search, and navigation.
 ## Repository Layout
 
 - `README.md` - project overview
-- `requirements.md` - requirements in EARS notation
-- `design.md` - architecture and data model
+- `specs/requirements.md` - requirements in EARS notation
+- `specs/design.md` - architecture and data model
+- `specs/tasks.md` - implementation plan and backlog
 
 ## Status
 
@@ -69,3 +70,15 @@ cargo run -p helix-map -- skeleton . --output -
 - Compute graph centrality to surface \"important\" nodes
 - Estimate complexity (LOC, nesting depth, cyclomatic hints)
 - Detect orchestrators vs. leaf functions (fan-out vs. fan-in)
+
+## Kiro Specs
+
+- [Requirements][requirements]
+- [Design][design]
+- [Tasks][tasks]
+
+<!-- Links -->
+
+[requirements]: specs/requirements.md
+[design]: specs/design.md
+[tasks]: specs/tasks.md

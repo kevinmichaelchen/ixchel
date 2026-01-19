@@ -20,8 +20,10 @@ helix-map/
 │   ├── indexer.rs         # Index orchestration
 │   ├── storage.rs         # JSON persistence
 │   └── skeleton.rs        # Skeleton rendering
-├── requirements.md
-├── design.md
+├── specs/
+│   ├── requirements.md
+│   ├── design.md
+│   └── tasks.md
 └── README.md
 ```
 
