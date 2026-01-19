@@ -26,8 +26,7 @@ This document describes the design decisions and implementation details for `ix-
 ~/.ixchel/                        # Ixchel root directory
 ├── config/                       # Configuration files (user-editable)
 │   ├── config.toml               # Shared settings
-│   ├── hbd.toml                  # hbd-specific
-│   ├── ixchel.toml               # ixchel-specific
+│   └── ixchel.toml               # ixchel-specific
 │
 ├── data/                         # Caches & databases (auto-generated)
 │
@@ -38,7 +37,7 @@ This document describes the design decisions and implementation details for `ix-
 │
 ├── log/                          # Operation logs
 │
-└── .helix-version                # Metadata
+└── .ixchel-version               # Metadata
 ```
 
 ### Project Local
@@ -46,8 +45,7 @@ This document describes the design decisions and implementation details for `ix-
 ```
 {project}/.ixchel/                 # Project config only (no data)
 ├── config.toml                   # Project shared config
-├── hbd.toml                      # hbd project overrides
-└── ...
+└── ixchel.toml                   # ixchel project overrides
 ```
 
 ### Why Unified?
@@ -55,8 +53,8 @@ This document describes the design decisions and implementation details for `ix-
 **Old model (problematic):**
 
 ```
-~/.config/helix/     ← configs
-~/.cache/helix/      ← data
+~/.config/<legacy>/  ← configs
+~/.cache/<legacy>/   ← data
 ```
 
 **New model (unified):**
@@ -83,7 +81,7 @@ Benefits:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                  Environment Variables                   │  Priority 1 (highest)
-│           IXCHEL_HOME, HELIX_GITHUB__TOKEN, etc.          │
+│          IXCHEL_HOME, IXCHEL_GITHUB__TOKEN, etc.          │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
@@ -448,23 +446,22 @@ pub fn load<T: DeserializeOwned + Default>(self) -> Result<T, ConfigError> {
 
 ## Consumers
 
-| Tool / Crate | Tool Name | Config Path                    | Primary Data Location    |
-| ------------ | --------- | ------------------------------ | ------------------------ |
-| `ix-cli`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`        |
-| `ix-mcp`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`        |
-| `hbd`        | `hbd`     | `~/.ixchel/config/hbd.toml`    | `{repo}/.ixchel/issues/` |
+| Tool / Crate | Tool Name | Config Path                    | Primary Data Location |
+| ------------ | --------- | ------------------------------ | --------------------- |
+| `ix-cli`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`     |
+| `ix-mcp`     | `ixchel`  | `~/.ixchel/config/ixchel.toml` | `{repo}/.ixchel/`     |
 
 ---
 
 ## Migration Guide
 
-### From Old Directory Structure
+### From Legacy Directory Structure
 
 Old:
 
 ```
-~/.config/helix/config.toml
-~/.cache/helix/
+~/.config/<legacy>/config.toml
+~/.cache/<legacy>/
 ```
 
 New:
@@ -477,8 +474,8 @@ New:
 Migration steps:
 
 1. Create `~/.ixchel/` directory
-2. Move `~/.config/helix/*` to `~/.ixchel/config/`
-3. Move `~/.cache/helix/*` to `~/.ixchel/data/`
+2. Move legacy config files into `~/.ixchel/config/`
+3. Move legacy cache files into `~/.ixchel/data/`
 4. Remove old directories
 
 ### For Tool Developers

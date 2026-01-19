@@ -130,7 +130,7 @@ For 6 hex characters (3 bytes = 24 bits):
 - Birthday problem: 50% collision at ~4,096 IDs
 - 1% collision at ~580 IDs
 
-For typical helix-tools usage:
+For typical ixchel-tools usage:
 
 - Issues per repo: 100-10,000 → Very low collision risk
 - Docs per library: 10-1,000 → Very low collision risk
@@ -245,25 +245,25 @@ pub enum IdError {
 
 This crate is used by:
 
-| Crate     | ID Usage                                           | Prefix Examples             |
-| --------- | -------------------------------------------------- | --------------------------- |
-| `ix-core` | canonical Ixchel entity IDs                        | `dec`, `iss`, `src`, `idea` |
-| `hbd`     | issue IDs (legacy format, planned migrate)         | `bd`                        |
-| (future)  | docs/map/repo ideas tracked under `.ixchel/ideas/` | `doc`, `chk`, `sym`, `fil`  |
+| Crate         | ID Usage                                           | Prefix Examples             |
+| ------------- | -------------------------------------------------- | --------------------------- |
+| `ix-core`     | canonical Ixchel entity IDs                        | `dec`, `iss`, `src`, `idea` |
+| legacy issues | issue IDs from early tracker (planned migrate)     | `bd`                        |
+| (future)      | docs/map/repo ideas tracked under `.ixchel/ideas/` | `doc`, `chk`, `sym`, `fil`  |
 
 ## Migration Notes
 
-### From hbd
+### From legacy issue IDs
 
-Current `apps/hbd/src/id.rs` uses the same algorithm. Migration:
+Legacy issue IDs use the same algorithm. Migration:
 
 1. Add `ix-id` dependency
 2. Replace local `generate_id` with `ix_id::generate_id`
 3. Replace `define_id!` macro invocations (API compatible)
 
-### From helix-docs
+### From archived docs cache idea
 
-The archived `helix-docs` design used the same algorithm. Migration (if revived as an Ixchel idea):
+The archived docs cache idea used the same algorithm. Migration (if revived as an Ixchel idea):
 
 1. Add `ix-id` dependency
 2. Remove local `id.rs` module
