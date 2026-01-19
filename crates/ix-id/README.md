@@ -5,7 +5,7 @@ identifiers suitable for distributed/offline-first systems.
 
 ## Why
 
-Git-backed tools like `ixchel` and `hbd` need IDs that:
+Git-backed tools like `ixchel` need IDs that:
 
 - Are **collision-resistant** across branches and machines
 - Are **short** for human readability (6-8 chars)
@@ -68,10 +68,9 @@ See [specs/design.md][design] for detailed guidance.
 
 ## Consumers
 
-| Crate     | ID Types          | Strategy                                 |
-| --------- | ----------------- | ---------------------------------------- |
-| `hbd`     | `IssueId` (`bd-`) | `random()` - duplicates allowed          |
-| `ix-core` | entity IDs        | `random()` (MVP; deterministic optional) |
+| Crate     | ID Types   | Strategy                                 |
+| --------- | ---------- | ---------------------------------------- |
+| `ix-core` | entity IDs | `random()` (MVP; deterministic optional) |
 
 ## Specifications
 

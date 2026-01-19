@@ -7,7 +7,7 @@ Shared embedding infrastructure for Ixchel with pluggable providers.
 Multiple Ixchel tools need semantic embeddings:
 
 - **ixchel** — Embed knowledge artifacts for semantic search
-- **hbd** — Embed issues for similarity search (planned)
+- **demo-got** — Example usage for graph + vector pipelines
   This crate provides a unified `Embedder` so each tool doesn't reinvent embedding
   logic.
 
@@ -96,12 +96,11 @@ provider = "candle"
 model = "BAAI/bge-large-en-v1.5"
 ```
 
-## Consumers (planned)
+## Consumers
 
 | Tool     | Use Case                       |
 | -------- | ------------------------------ |
 | Ixchel   | Semantic search over knowledge |
-| hbd      | Semantic search over issues    |
 | demo-got | Example usage + benchmarking   |
 
 ## License

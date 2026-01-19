@@ -111,7 +111,6 @@ So that I can search decisions/issues without internet access.
 | -------------------- | --------------------------------------- |
 | `ix-storage-helixdb` | Embed entities for sync + vector search |
 | `demo-got`           | Demo: embed bios for semantic search    |
-| `hbd`                | (Planned) issue similarity workflows    |
 
 ## See Also
 

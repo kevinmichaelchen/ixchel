@@ -22,7 +22,6 @@ Ixchel uses a unified `~/.ixchel/` directory for global config/state/data:
 ~/.ixchel/                        # Unified ixchel home
 ├── config/                       # Configuration (user-editable TOML)
 │   ├── config.toml               # Shared settings (GitHub token, embedding model)
-│   ├── hbd.toml                  # hbd settings
 │   └── ixchel.toml               # ixchel settings
 │
 ├── data/                         # Caches & databases (auto-generated)

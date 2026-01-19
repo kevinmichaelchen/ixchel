@@ -56,5 +56,5 @@ prefixes (`foo-123456`) during `check()`.
 
 ## Compatibility Notes
 
-- `bd-*` ids (legacy hbd issue ids) are accepted as `EntityKind::Issue` for
+- `bd-*` ids (legacy issue ids) are accepted as `EntityKind::Issue` for
   migration/compatibility, while `iss-*` remains the canonical Ixchel issue prefix.

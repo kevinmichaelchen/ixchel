@@ -128,7 +128,7 @@ Total: < 10ms
 
 ## Recommendations
 
-### For this workspace (ixchel, hbd)
+### For this workspace (ixchel, demo-got)
 
 | Provider    | Model             | When to Use                     |
 | ----------- | ----------------- | ------------------------------- |
