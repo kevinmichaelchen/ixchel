@@ -1,4 +1,4 @@
-# Helix Tools
+# Ixchel Tools
 
 AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-first, agent-friendly.
 
@@ -8,7 +8,6 @@ AI-native developer tools powered by [HelixDB][helixdb]. Git-first, offline-firs
 
 | Tool                 | Description                        | Status |
 | -------------------- | ---------------------------------- | ------ |
-| **[hbd][hbd]**       | Git-first issue tracker            | Active |
 | **[ixchel][ixchel]** | Git-first knowledge weaving system | MVP    |
 
 Future tools and experiments are tracked as Ixchel ideas under `.ixchel/ideas/`.
@@ -17,15 +16,9 @@ Future tools and experiments are tracked as Ixchel ideas under `.ixchel/ideas/`.
 
 ```bash
 # Clone and build
-git clone https://github.com/kevinmichaelchen/helix-tools.git
-cd helix-tools
+git clone https://github.com/kevinmichaelchen/ixchel-tools.git
+cd ixchel-tools
 cargo build --release
-
-# Try hbd (the most complete tool)
-cargo install --path apps/hbd
-cd your-project
-hbd init
-hbd create "My first issue" --type task
 ```
 
 ## Try Ixchel
@@ -42,7 +35,7 @@ ixchel sync
 ixchel search "database performance"
 ```
 
-## Why Helix?
+## Why Ixchel?
 
 - **Git-first** — Data lives in Markdown files, not a database
 - **Offline-first** — Local embeddings, no server required
@@ -63,15 +56,14 @@ ixchel search "database performance"
 
 <!-- Docs -->
 
-[docs]: https://kevinmichaelchen.github.io/helix-tools
-[getting-started]: https://kevinmichaelchen.github.io/helix-tools/docs/getting-started
-[architecture]: https://kevinmichaelchen.github.io/helix-tools/docs/architecture
-[config]: https://kevinmichaelchen.github.io/helix-tools/docs/configuration
+[docs]: https://kevinmichaelchen.github.io/ixchel-tools
+[getting-started]: https://kevinmichaelchen.github.io/ixchel-tools/docs/getting-started
+[architecture]: https://kevinmichaelchen.github.io/ixchel-tools/docs/architecture
+[config]: https://kevinmichaelchen.github.io/ixchel-tools/docs/configuration
 
 <!-- Tools -->
 
 [ixchel]: ./apps/ix-cli/
-[hbd]: ./apps/hbd/
 
 <!-- Project -->
 

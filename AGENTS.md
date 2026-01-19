@@ -1,22 +1,19 @@
-# HELIX-TOOLS AGENTS
+# IXCHEL-TOOLS AGENTS
 
-Workspace guide for the helix-tools Rust monorepo. Each crate now has its own
+Workspace guide for the ixchel-tools Rust monorepo. Each crate now has its own
 `AGENTS.md` next to its `Cargo.toml` for crate-specific guidance.
 
 ## Overview
 
-- Tools: `hbd`, `hbd-ui`, `ixchel` (apps under `apps/`)
+- Tools: `ixchel`, `ixcheld`, `ixchel-mcp` (apps under `apps/`)
 - Shared HelixDB helpers: `ix-helixdb-ops`
 - Docs site (Next.js/Fumadocs) lives in `docs/`
 
 ## Workspace Layout
 
 ```
-helix-tools/
+ixchel-tools/
 ├── apps/                    # CLIs, daemons, servers, UIs
-│   ├── hbd/                 # Git-first issue tracker CLI
-│   ├── hbd-ui/              # Svelte UI for hbd (frontend)
-│   │   └── src-tauri/       # Tauri shell (Rust)
 │   ├── demo-got/            # HelixDB demo app
 │   ├── ix-cli/              # Ixchel CLI (binary: ixchel)
 │   ├── ix-daemon/           # Background daemon + IPC (binary: ixcheld)

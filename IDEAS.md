@@ -1,10 +1,10 @@
 # Ideas
 
-Future tools and features for the helix-tools ecosystem.
+Future tools and features for the ixchel-tools ecosystem.
 
 ---
 
-## helix-recall
+## ixchel-recall
 
 **Status:** Idea
 **Priority:** High
@@ -46,7 +46,7 @@ A background daemon + CLI that:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      HELIX-RECALL DAEMON                        │
+│                      IXCHEL-RECALL DAEMON                        │
 │  (background service, polls on intervals)                       │
 └─────────────────────────────────────────────────────────────────┘
          │                                    │
@@ -141,7 +141,7 @@ recall --semantic "bug fixes" --since=week
 
 # Filtering
 recall --repo=fire-dept
-recall --repo=helix-tools --verbose
+recall --repo=ixchel-tools --verbose
 
 # Formats
 recall --format=greeting    # Shell startup (compact)
@@ -170,7 +170,7 @@ Output on shell startup:
 ```
 ╭─ RECALL ──────────────────────────────────────────────────╮
 │ TODAY: 3 repos, 8 commits                                 │
-│ • helix-tools: "add recall daemon", "fix embeddings"      │
+│ • ixchel-tools: "add recall daemon", "fix embeddings"      │
 │ • dotfiles: "docs: AGENTS.md files"                       │
 │ • fire-dept: "feat: scheduling API"                       │
 │                                                           │
@@ -222,7 +222,6 @@ max_commits_per_repo = 3
 
 - **git-standup** — Inspiration for multi-repo scanning
 - **gh-dash** — GitHub CLI dashboard patterns
-- **hbd** — Similar HelixDB integration patterns to follow
 
 ### Open Questions
 
@@ -234,15 +233,15 @@ max_commits_per_repo = 3
 
 ## Future Ideas
 
-### helix-timetrack
+### ixchel-timetrack
 
 Automatic time tracking based on git activity and file watches. Infer time spent
 per project without manual logging.
 
-### helix-changelog
+### ixchel-changelog
 
 Auto-generate changelogs from commits + PR descriptions using semantic analysis.
 
-### helix-deps
+### ixchel-deps
 
 Dependency graph visualization and update tracking across repos.
