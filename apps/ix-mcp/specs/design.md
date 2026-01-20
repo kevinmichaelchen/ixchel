@@ -38,6 +38,9 @@ similarity and synonyms themselves.
 
 Arguments:
 - `repo` (optional): Repository path
+- `kind` (optional): Filter tags to a specific entity kind
+- `untagged` (optional): Return entities missing tags instead of tag counts
 
 Returns: JSON object with `total` and `tags` array of `{tag, count}` objects,
-sorted alphabetically.
+sorted alphabetically. When `untagged` is true, returns `items` with entity
+summaries instead.

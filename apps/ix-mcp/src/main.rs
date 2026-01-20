@@ -191,7 +191,9 @@ fn tools_list_result() -> Value {
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "repo": { "type": "string", "description": "Path inside the target git repository (defaults to CWD)" }
+                        "repo": { "type": "string", "description": "Path inside the target git repository (defaults to CWD)" },
+                        "kind": { "type": "string", "description": "Filter tags to a specific entity kind" },
+                        "untagged": { "type": "boolean", "description": "List entities missing tags instead of tag counts" }
                     }
                 }
             }
@@ -314,7 +316,37 @@ fn tool_context(args: &Value) -> Result<Value> {
 fn tool_tags(args: &Value) -> Result<Value> {
     let repo_path = resolve_repo_path(args)?;
     let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
-    let tags = repo.collect_tags(None)?;
+    let kind = args
+        .get("kind")
+        .and_then(Value::as_str)
+        .map(|value| {
+            value
+                .parse::<ix_core::entity::EntityKind>()
+                .map_err(|err| anyhow::anyhow!("ixchel_tags invalid kind: {err}"))
+        })
+        .transpose()?;
+    let untagged = args
+        .get("untagged")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    if untagged {
+        let items = repo.list_untagged(kind)?;
+        let items = items
+            .into_iter()
+            .map(|item| {
+                json!({
+                    "id": item.id,
+                    "kind": item.kind.as_str(),
+                    "title": item.title,
+                    "path": item.path,
+                })
+            })
+            .collect::<Vec<_>>();
+        return tool_text(&json!({ "total": items.len(), "items": items }));
+    }
+
+    let tags = repo.collect_tags(kind)?;
 
     let mut items = tags
         .into_iter()
