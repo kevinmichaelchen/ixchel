@@ -23,3 +23,9 @@
 - [x] Provide a basic graph view from file relationships
 - [x] Provide a basic context builder (1-hop expansion)
 - [ ] Add configurable depth + edge-type prioritization
+
+## Phase 4: Tag Aggregation
+
+- [x] Implement `collect_tags()` to aggregate tags across all entities
+- [x] Implement `list_untagged()` to find entities missing tags
+- [x] Implement `add_tags()` / `remove_tags()` for tag mutation

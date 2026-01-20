@@ -116,3 +116,46 @@ fn check_reports_broken_and_unknown_links() {
         "{messages:#?}"
     );
 }
+
+#[test]
+fn add_remove_tags_are_idempotent() {
+    let (_temp, repo) = init_temp_git_repo();
+    let issue = repo
+        .create_entity(EntityKind::Issue, "Issue A", Some("open"))
+        .expect("create issue");
+
+    let changed = repo
+        .add_tags(
+            &issue.id,
+            &["cli".to_string(), "cli".to_string(), " ".to_string()],
+        )
+        .expect("add tags");
+    assert!(changed, "expected tag add to change document");
+
+    let changed = repo
+        .add_tags(&issue.id, &["cli".to_string()])
+        .expect("add tags idempotent");
+    assert!(!changed, "expected idempotent add to no-op");
+
+    let path = repo.paths.entity_path(&issue.id).expect("issue path");
+    let raw = std::fs::read_to_string(&path).expect("read issue");
+    let doc = parse_markdown(&path, &raw).expect("parse markdown");
+    assert_eq!(
+        ix_core::markdown::get_string_list(&doc.frontmatter, "tags"),
+        vec!["cli"]
+    );
+
+    let changed = repo
+        .remove_tags(&issue.id, &["cli".to_string(), "missing".to_string()])
+        .expect("remove tags");
+    assert!(changed, "expected tag remove to change document");
+
+    let changed = repo
+        .remove_tags(&issue.id, &["cli".to_string()])
+        .expect("remove tags idempotent");
+    assert!(!changed, "expected idempotent remove to no-op");
+
+    let raw = std::fs::read_to_string(&path).expect("read issue");
+    let doc = parse_markdown(&path, &raw).expect("parse markdown");
+    assert!(ix_core::markdown::get_string_list(&doc.frontmatter, "tags").is_empty());
+}
