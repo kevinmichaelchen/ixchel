@@ -25,18 +25,16 @@ ixchel (bin)
 
 `ixchel list` supports a `--sort` flag to control result ordering:
 
-| Flag Value | Behavior                                   |
-| ---------- | ------------------------------------------ |
-| `recent`   | Sort by `created_at` descending (default)  |
-| `updated`  | Sort by `updated_at` descending            |
-| `id`       | Sort by entity id ascending                |
+| Flag Value | Behavior                                  |
+| ---------- | ----------------------------------------- |
+| `recent`   | Sort by `created_at` descending (default) |
+| `updated`  | Sort by `updated_at` descending           |
 
 **Example:**
 
 ```sh
 ixchel list idea                 # Show newest ideas first (default)
 ixchel list --sort updated       # Show recently modified entities first
-ixchel list --sort id            # Sort alphabetically by id
 ```
 
 ## Tags Command

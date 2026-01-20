@@ -74,11 +74,10 @@ detect similarity and synonyms themselves—no need for built-in fuzzy matching.
 
 The `list()` function accepts an optional `ListSort` enum controlling result order:
 
-| Sort Option          | Behavior                                          |
-| -------------------- | ------------------------------------------------- |
-| `CreatedDesc` (default) | Sort by `created_at` descending (newest first) |
-| `UpdatedDesc`        | Sort by `updated_at` descending (recently modified first) |
-| `Id`                 | Sort by entity id ascending (alphabetic)          |
+| Sort Option             | Behavior                                              |
+| ----------------------- | ----------------------------------------------------- |
+| `CreatedDesc` (default) | Sort by `created_at` descending (newest first)        |
+| `UpdatedDesc`           | Sort by `updated_at` descending (recently modified first) |
 
 Timestamps are parsed from frontmatter. Entities missing timestamps sort after
 entities with valid dates (treated as epoch 0).
