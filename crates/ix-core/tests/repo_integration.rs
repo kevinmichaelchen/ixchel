@@ -12,7 +12,12 @@ fn init_temp_git_repo() -> (TempDir, IxchelRepo) {
     (temp, repo)
 }
 
-fn set_entity_timestamps(repo: &IxchelRepo, id: &str, created: Option<&str>, updated: Option<&str>) {
+fn set_entity_timestamps(
+    repo: &IxchelRepo,
+    id: &str,
+    created: Option<&str>,
+    updated: Option<&str>,
+) {
     let path = repo.paths.entity_path(id).expect("entity path");
     let raw = std::fs::read_to_string(&path).expect("read entity");
     let mut doc = parse_markdown(&path, &raw).expect("parse markdown");
@@ -21,7 +26,7 @@ fn set_entity_timestamps(repo: &IxchelRepo, id: &str, created: Option<&str>, upd
         Some(value) => set_string(&mut doc.frontmatter, "created_at", value),
         None => {
             doc.frontmatter
-                .remove(&YamlValue::String("created_at".to_string()));
+                .remove(YamlValue::String("created_at".to_string()));
         }
     }
 
@@ -29,7 +34,7 @@ fn set_entity_timestamps(repo: &IxchelRepo, id: &str, created: Option<&str>, upd
         Some(value) => set_string(&mut doc.frontmatter, "updated_at", value),
         None => {
             doc.frontmatter
-                .remove(&YamlValue::String("updated_at".to_string()));
+                .remove(YamlValue::String("updated_at".to_string()));
         }
     }
 

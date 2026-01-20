@@ -296,7 +296,12 @@ impl IxchelRepo {
         }
 
         out.sort_by(|a, b| {
-            cmp_timestamp_desc(&a.sort_ts, &b.sort_ts, &a.summary.id, &b.summary.id)
+            cmp_timestamp_desc(
+                a.sort_ts.as_ref(),
+                b.sort_ts.as_ref(),
+                &a.summary.id,
+                &b.summary.id,
+            )
         });
 
         Ok(out.into_iter().map(|entry| entry.summary).collect())
@@ -579,8 +584,8 @@ fn parse_timestamp(frontmatter: &Mapping, key: &str) -> Option<DateTime<Utc>> {
 }
 
 fn cmp_timestamp_desc(
-    a: &Option<DateTime<Utc>>,
-    b: &Option<DateTime<Utc>>,
+    a: Option<&DateTime<Utc>>,
+    b: Option<&DateTime<Utc>>,
     a_id: &str,
     b_id: &str,
 ) -> Ordering {
