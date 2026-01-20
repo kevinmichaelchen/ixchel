@@ -13,13 +13,15 @@ This document defines requirements for `ix-cli` (Ixchel CLI).
 
 ### US-002: Manage entities
 
-| ID       | Acceptance Criterion                                                                               |
-| -------- | -------------------------------------------------------------------------------------------------- |
-| AC-002.1 | WHEN a user runs `ixchel create <kind> <title>` THE SYSTEM SHALL create a Markdown entity          |
-| AC-002.2 | WHEN a user runs `ixchel list [kind]` THE SYSTEM SHALL list entities                               |
-| AC-002.3 | WHEN a user runs `ixchel show <id>` THE SYSTEM SHALL print raw Markdown for that id                |
-| AC-002.4 | WHEN a user runs `ixchel delete <id>` THE SYSTEM SHALL delete the entity file                      |
-| AC-002.5 | WHEN a user runs `ixchel edit <id>` THE SYSTEM SHALL open the entity in `$IXCHEL_EDITOR`/`$EDITOR` |
+| ID       | Acceptance Criterion                                                                                         |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| AC-002.1 | WHEN a user runs `ixchel create <kind> <title>` THE SYSTEM SHALL create a Markdown entity                    |
+| AC-002.2 | WHEN a user runs `ixchel list [kind]` THE SYSTEM SHALL list entities                                         |
+| AC-002.3 | WHEN a user runs `ixchel show <id>` THE SYSTEM SHALL print raw Markdown for that id                          |
+| AC-002.4 | WHEN a user runs `ixchel delete <id>` THE SYSTEM SHALL delete the entity file                                |
+| AC-002.5 | WHEN a user runs `ixchel edit <id>` THE SYSTEM SHALL open the entity in `$IXCHEL_EDITOR`/`$EDITOR`           |
+| AC-002.6 | WHERE `--sort recent` is provided (or default) THE SYSTEM SHALL sort list results by `created_at` descending |
+| AC-002.7 | WHERE `--sort updated` is provided THE SYSTEM SHALL sort list results by `updated_at` descending             |
 
 ### US-003: Manage relationships
 

@@ -1,6 +1,6 @@
 use ix_core::entity::EntityKind;
-use ix_core::markdown::{parse_markdown, render_markdown};
-use ix_core::repo::IxchelRepo;
+use ix_core::markdown::{parse_markdown, render_markdown, set_string};
+use ix_core::repo::{IxchelRepo, ListSort};
 use serde_yaml::Value as YamlValue;
 use tempfile::TempDir;
 
@@ -10,6 +10,36 @@ fn init_temp_git_repo() -> (TempDir, IxchelRepo) {
 
     let repo = IxchelRepo::init_from(temp.path(), false).expect("init ixchel repo");
     (temp, repo)
+}
+
+fn set_entity_timestamps(
+    repo: &IxchelRepo,
+    id: &str,
+    created: Option<&str>,
+    updated: Option<&str>,
+) {
+    let path = repo.paths.entity_path(id).expect("entity path");
+    let raw = std::fs::read_to_string(&path).expect("read entity");
+    let mut doc = parse_markdown(&path, &raw).expect("parse markdown");
+
+    match created {
+        Some(value) => set_string(&mut doc.frontmatter, "created_at", value),
+        None => {
+            doc.frontmatter
+                .remove(YamlValue::String("created_at".to_string()));
+        }
+    }
+
+    match updated {
+        Some(value) => set_string(&mut doc.frontmatter, "updated_at", value),
+        None => {
+            doc.frontmatter
+                .remove(YamlValue::String("updated_at".to_string()));
+        }
+    }
+
+    let rendered = render_markdown(&doc).expect("render markdown");
+    std::fs::write(&path, rendered).expect("write entity");
 }
 
 #[test]
@@ -158,4 +188,64 @@ fn add_remove_tags_are_idempotent() {
     let raw = std::fs::read_to_string(&path).expect("read issue");
     let doc = parse_markdown(&path, &raw).expect("parse markdown");
     assert!(ix_core::markdown::get_string_list(&doc.frontmatter, "tags").is_empty());
+}
+
+#[test]
+fn list_sorts_by_timestamps_and_puts_missing_last() {
+    let (_temp, repo) = init_temp_git_repo();
+    let issue_a = repo
+        .create_entity(EntityKind::Issue, "Issue A", Some("open"))
+        .expect("create issue a");
+    let issue_b = repo
+        .create_entity(EntityKind::Issue, "Issue B", Some("open"))
+        .expect("create issue b");
+    let issue_missing = repo
+        .create_entity(EntityKind::Issue, "Issue Missing", Some("open"))
+        .expect("create issue missing");
+
+    set_entity_timestamps(
+        &repo,
+        &issue_a.id,
+        Some("2024-01-01T00:00:00Z"),
+        Some("2024-02-01T00:00:00Z"),
+    );
+    set_entity_timestamps(
+        &repo,
+        &issue_b.id,
+        Some("2024-03-01T00:00:00Z"),
+        Some("2024-01-15T00:00:00Z"),
+    );
+    set_entity_timestamps(&repo, &issue_missing.id, None, None);
+
+    let created = repo
+        .list(Some(EntityKind::Issue), ListSort::CreatedDesc)
+        .expect("list created desc");
+    let created_ids = created
+        .iter()
+        .map(|item| item.id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        created_ids,
+        vec![
+            issue_b.id.as_str(),
+            issue_a.id.as_str(),
+            issue_missing.id.as_str()
+        ]
+    );
+
+    let updated = repo
+        .list(Some(EntityKind::Issue), ListSort::UpdatedDesc)
+        .expect("list updated desc");
+    let updated_ids = updated
+        .iter()
+        .map(|item| item.id.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        updated_ids,
+        vec![
+            issue_a.id.as_str(),
+            issue_b.id.as_str(),
+            issue_missing.id.as_str()
+        ]
+    );
 }

@@ -1,10 +1,13 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use anyhow::{Context, Result};
-use chrono::{SecondsFormat, Utc};
+use chrono::{DateTime, SecondsFormat, Utc};
 use ix_config::{ConfigLoader, IxchelConfig};
 use serde_yaml::{Mapping, Value};
+use thiserror::Error;
 
 use crate::entity::{EntityKind, kind_from_id, looks_like_entity_id};
 use crate::markdown::{
@@ -19,6 +22,34 @@ pub struct EntitySummary {
     pub kind: EntityKind,
     pub title: String,
     pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ListSort {
+    #[default]
+    CreatedDesc,
+    UpdatedDesc,
+}
+
+#[derive(Debug, Error)]
+pub enum ParseListSortError {
+    #[error("Unknown sort option: {0}")]
+    UnknownSort(String),
+}
+
+impl FromStr for ListSort {
+    type Err = ParseListSortError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let normalized = s.trim().to_ascii_lowercase();
+        match normalized.as_str() {
+            "recent" | "created" | "created_desc" | "created-desc" | "createddesc" => {
+                Ok(Self::CreatedDesc)
+            }
+            "updated" | "updated_desc" | "updated-desc" | "updateddesc" => Ok(Self::UpdatedDesc),
+            _ => Err(ParseListSortError::UnknownSort(s.to_string())),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -201,7 +232,7 @@ impl IxchelRepo {
         Ok(())
     }
 
-    pub fn list(&self, kind: Option<EntityKind>) -> Result<Vec<EntitySummary>> {
+    pub fn list(&self, kind: Option<EntityKind>, sort: ListSort) -> Result<Vec<EntitySummary>> {
         let mut out = Vec::new();
 
         let kinds: Vec<EntityKind> = kind.map_or_else(
@@ -248,23 +279,38 @@ impl IxchelRepo {
                     .unwrap_or_default();
                 let title = get_string(&doc.frontmatter, "title").unwrap_or_default();
 
-                out.push(EntitySummary {
+                let summary = EntitySummary {
                     id,
                     kind,
                     title,
                     path,
-                });
+                };
+
+                let sort_ts = match sort {
+                    ListSort::CreatedDesc => parse_timestamp(&doc.frontmatter, "created_at"),
+                    ListSort::UpdatedDesc => parse_timestamp(&doc.frontmatter, "updated_at"),
+                };
+
+                out.push(ListEntry { summary, sort_ts });
             }
         }
 
-        out.sort_by(|a, b| a.id.cmp(&b.id));
-        Ok(out)
+        out.sort_by(|a, b| {
+            cmp_timestamp_desc(
+                a.sort_ts.as_ref(),
+                b.sort_ts.as_ref(),
+                &a.summary.id,
+                &b.summary.id,
+            )
+        });
+
+        Ok(out.into_iter().map(|entry| entry.summary).collect())
     }
 
     pub fn collect_tags(&self, kind: Option<EntityKind>) -> Result<HashMap<String, Vec<String>>> {
         let mut out: HashMap<String, Vec<String>> = HashMap::new();
 
-        for item in self.list(kind)? {
+        for item in self.list(kind, ListSort::default())? {
             let raw = std::fs::read_to_string(&item.path)
                 .with_context(|| format!("Failed to read {}", item.path.display()))?;
             let doc = parse_markdown(&item.path, &raw)?;
@@ -284,7 +330,7 @@ impl IxchelRepo {
     pub fn list_untagged(&self, kind: Option<EntityKind>) -> Result<Vec<EntitySummary>> {
         let mut out = Vec::new();
 
-        for item in self.list(kind)? {
+        for item in self.list(kind, ListSort::default())? {
             let raw = std::fs::read_to_string(&item.path)
                 .with_context(|| format!("Failed to read {}", item.path.display()))?;
             let doc = parse_markdown(&item.path, &raw)?;
@@ -455,7 +501,7 @@ impl IxchelRepo {
         let mut errors = Vec::new();
         let mut seen_ids: BTreeSet<String> = BTreeSet::new();
 
-        for item in self.list(None)? {
+        for item in self.list(None, ListSort::default())? {
             if item.id.trim().is_empty() {
                 errors.push(CheckError {
                     path: item.path.clone(),
@@ -529,6 +575,31 @@ impl IxchelRepo {
 
         Ok(CheckReport { errors })
     }
+}
+
+fn parse_timestamp(frontmatter: &Mapping, key: &str) -> Option<DateTime<Utc>> {
+    let raw = get_string(frontmatter, key)?;
+    let parsed = DateTime::parse_from_rfc3339(&raw).ok()?;
+    Some(parsed.with_timezone(&Utc))
+}
+
+fn cmp_timestamp_desc(
+    a: Option<&DateTime<Utc>>,
+    b: Option<&DateTime<Utc>>,
+    a_id: &str,
+    b_id: &str,
+) -> Ordering {
+    match (a, b) {
+        (Some(a_ts), Some(b_ts)) => b_ts.cmp(a_ts).then_with(|| a_id.cmp(b_id)),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => a_id.cmp(b_id),
+    }
+}
+
+struct ListEntry {
+    summary: EntitySummary,
+    sort_ts: Option<DateTime<Utc>>,
 }
 
 fn default_actor() -> Option<String> {

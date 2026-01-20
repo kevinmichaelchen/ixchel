@@ -40,6 +40,8 @@ enum Command {
 
     List {
         kind: Option<ix_core::entity::EntityKind>,
+        #[arg(long, default_value = "recent")]
+        sort: ix_core::repo::ListSort,
     },
 
     Tags {
@@ -122,7 +124,7 @@ fn run(command: Command, start: &Path, json_output: bool) -> Result<()> {
             status,
         } => cmd_create(start, kind, &title, status.as_deref(), json_output),
         Command::Show { id } => cmd_show(start, &id, json_output),
-        Command::List { kind } => cmd_list(start, kind, json_output),
+        Command::List { kind, sort } => cmd_list(start, kind, sort, json_output),
         Command::Tags { kind, untagged } => cmd_tags(start, kind, untagged, json_output),
         Command::Tag { command } => cmd_tag(start, command, json_output),
         Command::Link { from, rel, to } => cmd_link(start, &from, &rel, &to, json_output),
@@ -183,10 +185,11 @@ fn cmd_show(start: &Path, id: &str, json_output: bool) -> Result<()> {
 fn cmd_list(
     start: &Path,
     kind: Option<ix_core::entity::EntityKind>,
+    sort: ix_core::repo::ListSort,
     json_output: bool,
 ) -> Result<()> {
     let repo = ix_core::repo::IxchelRepo::open_from(start)?;
-    let items = repo.list(kind)?;
+    let items = repo.list(kind, sort)?;
     if json_output {
         let items = items
             .into_iter()

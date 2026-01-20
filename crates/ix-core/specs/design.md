@@ -70,6 +70,18 @@ The `tags` frontmatter field is reserved for free-form labels. `ix-core` provide
 This enables CLI/MCP tools to expose the tag vocabulary. LLMs are smart enough to
 detect similarity and synonyms themselves—no need for built-in fuzzy matching.
 
+## List Sorting
+
+The `list()` function accepts an optional `ListSort` enum controlling result order:
+
+| Sort Option             | Behavior                                                  |
+| ----------------------- | --------------------------------------------------------- |
+| `CreatedDesc` (default) | Sort by `created_at` descending (newest first)            |
+| `UpdatedDesc`           | Sort by `updated_at` descending (recently modified first) |
+
+Timestamps are parsed from frontmatter. Entities missing timestamps sort after
+entities with valid dates (treated as epoch 0).
+
 ## Compatibility Notes
 
 - `bd-*` ids (legacy issue ids) are accepted as `EntityKind::Issue` for

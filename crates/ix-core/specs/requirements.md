@@ -51,11 +51,15 @@ Ixchel repositories.
 
 ### US-004: Read and list entities
 
-| ID       | Acceptance Criterion                                                             |
-| -------- | -------------------------------------------------------------------------------- |
-| AC-004.1 | WHEN `list(kind)` is called THE SYSTEM SHALL return summaries for matching files |
-| AC-004.2 | WHEN `read_raw(id)` is called THE SYSTEM SHALL read the Markdown file by id      |
-| AC-004.3 | IF the id prefix is unknown THEN THE SYSTEM SHALL return an error                |
+| ID       | Acceptance Criterion                                                                        |
+| -------- | ------------------------------------------------------------------------------------------- |
+| AC-004.1 | WHEN `list(kind, sort)` is called THE SYSTEM SHALL return summaries for matching files      |
+| AC-004.2 | WHEN `read_raw(id)` is called THE SYSTEM SHALL read the Markdown file by id                 |
+| AC-004.3 | IF the id prefix is unknown THEN THE SYSTEM SHALL return an error                           |
+| AC-004.4 | WHERE `sort=CreatedDesc` (default) THE SYSTEM SHALL sort results by `created_at` descending |
+| AC-004.5 | WHERE `sort=UpdatedDesc` THE SYSTEM SHALL sort results by `updated_at` descending           |
+| AC-004.7 | THE SYSTEM SHALL parse timestamps from frontmatter for sorting                              |
+| AC-004.8 | IF an entity lacks a timestamp THE SYSTEM SHALL treat it as older than entities with dates  |
 
 ### US-005: Delete entities
 

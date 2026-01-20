@@ -21,6 +21,22 @@ ixchel (bin)
 - Search: `search`
 - Metadata: `tags`, `tag`
 
+## List Command Sorting
+
+`ixchel list` supports a `--sort` flag to control result ordering:
+
+| Flag Value | Behavior                                  |
+| ---------- | ----------------------------------------- |
+| `recent`   | Sort by `created_at` descending (default) |
+| `updated`  | Sort by `updated_at` descending           |
+
+**Example:**
+
+```sh
+ixchel list idea                 # Show newest ideas first (default)
+ixchel list --sort updated       # Show recently modified entities first
+```
+
 ## Tags Command
 
 `ixchel tags` lists all unique tags from entity frontmatter across the repository.
