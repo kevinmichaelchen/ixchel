@@ -49,6 +49,11 @@ enum Command {
         untagged: bool,
     },
 
+    Tag {
+        #[command(subcommand)]
+        command: TagCommand,
+    },
+
     Link {
         from: String,
         rel: String,
@@ -88,6 +93,20 @@ enum Command {
     },
 }
 
+#[derive(Subcommand, Debug)]
+enum TagCommand {
+    Add {
+        id: String,
+        #[arg(num_args = 1..)]
+        tags: Vec<String>,
+    },
+    Remove {
+        id: String,
+        #[arg(num_args = 1..)]
+        tags: Vec<String>,
+    },
+}
+
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let start = cli.repo.clone().unwrap_or(std::env::current_dir()?);
@@ -105,6 +124,7 @@ fn run(command: Command, start: &Path, json_output: bool) -> Result<()> {
         Command::Show { id } => cmd_show(start, &id, json_output),
         Command::List { kind } => cmd_list(start, kind, json_output),
         Command::Tags { kind, untagged } => cmd_tags(start, kind, untagged, json_output),
+        Command::Tag { command } => cmd_tag(start, command, json_output),
         Command::Link { from, rel, to } => cmd_link(start, &from, &rel, &to, json_output),
         Command::Unlink { from, rel, to } => cmd_unlink(start, &from, &rel, &to, json_output),
         Command::Check => cmd_check(start, json_output),
@@ -249,6 +269,51 @@ fn cmd_tags(
                 println!("{tag:width$}  {count}", width = width);
             }
         }
+    }
+    Ok(())
+}
+
+fn cmd_tag(start: &Path, command: TagCommand, json_output: bool) -> Result<()> {
+    match command {
+        TagCommand::Add { id, tags } => cmd_tag_add(start, &id, &tags, json_output),
+        TagCommand::Remove { id, tags } => cmd_tag_remove(start, &id, &tags, json_output),
+    }
+}
+
+fn cmd_tag_add(start: &Path, id: &str, tags: &[String], json_output: bool) -> Result<()> {
+    let repo = ix_core::repo::IxchelRepo::open_from(start)?;
+    let changed = repo.add_tags(id, tags)?;
+
+    if json_output {
+        print_json(&json!({
+            "id": id,
+            "action": "add",
+            "changed": changed,
+            "tags": tags,
+        }))?;
+    } else if changed {
+        println!("Added tags to {id}: {}", tags.join(", "));
+    } else {
+        println!("No tag changes for {id}");
+    }
+    Ok(())
+}
+
+fn cmd_tag_remove(start: &Path, id: &str, tags: &[String], json_output: bool) -> Result<()> {
+    let repo = ix_core::repo::IxchelRepo::open_from(start)?;
+    let changed = repo.remove_tags(id, tags)?;
+
+    if json_output {
+        print_json(&json!({
+            "id": id,
+            "action": "remove",
+            "changed": changed,
+            "tags": tags,
+        }))?;
+    } else if changed {
+        println!("Removed tags from {id}: {}", tags.join(", "));
+    } else {
+        println!("No tag changes for {id}");
     }
     Ok(())
 }

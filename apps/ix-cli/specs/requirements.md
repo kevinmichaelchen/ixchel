@@ -75,3 +75,12 @@ This document defines requirements for `ix-cli` (Ixchel CLI).
 | AC-008.6 | THE SYSTEM SHALL sort tags alphabetically                                              |
 | AC-008.7 | WHERE `--json` is provided THE SYSTEM SHALL output a JSON object with `total` and `tags` |
 | AC-008.8 | WHERE `--untagged --json` is provided THE SYSTEM SHALL output a JSON object with `total` and `items` |
+
+### US-009: Modify tags
+
+| ID       | Acceptance Criterion                                                                           |
+| -------- | ---------------------------------------------------------------------------------------------- |
+| AC-009.1 | WHEN a user runs `ixchel tag add <id> <tag>...` THE SYSTEM SHALL add those tags to the entity |
+| AC-009.2 | WHEN a user runs `ixchel tag remove <id> <tag>...` THE SYSTEM SHALL remove those tags          |
+| AC-009.3 | THE SYSTEM SHALL treat tag add/remove operations as idempotent                                 |
+| AC-009.4 | WHERE `--json` is provided THE SYSTEM SHALL output `id`, `action`, `changed`, and `tags`       |

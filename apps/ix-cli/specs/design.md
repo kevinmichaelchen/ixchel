@@ -19,7 +19,7 @@ ixchel (bin)
 - Entity CRUD: `create`, `show`, `list`, `delete`, `edit`
 - Relationships: `link`, `unlink`, `graph`, `context`
 - Search: `search`
-- Metadata: `tags`
+- Metadata: `tags`, `tag`
 
 ## Tags Command
 
@@ -39,6 +39,22 @@ single entity count once. When `--untagged` is set, list entities missing tags
 - `--json`: Output as JSON object with `total` and `tags` array
 - `--kind <kind>`: Filter tags to a specific entity kind
 - `--untagged`: List entities with no tags instead of tag counts
+
+## Tag Mutation
+
+`ixchel tag` modifies `tags` frontmatter for a single entity.
+
+**Subcommands:**
+
+| Command                          | Description                          |
+| -------------------------------- | ------------------------------------ |
+| `ixchel tag add <id> <tag>...`   | Add one or more tags to an entity    |
+| `ixchel tag remove <id> <tag>...`| Remove one or more tags from an entity |
+
+Tag operations are idempotent: adding an existing tag or removing a missing tag
+results in no changes.
+
+`--json` returns `{id, action, changed, tags}` for tag mutations.
 
 ## JSON Output
 

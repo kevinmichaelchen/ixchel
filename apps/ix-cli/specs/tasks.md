@@ -7,3 +7,4 @@
 - [x] Add `delete` command with safe defaults
 - [x] Add `edit` command with safe defaults
 - [x] Add `tags` command for listing all tags
+- [x] Add `tag add/remove` commands for tag mutation
