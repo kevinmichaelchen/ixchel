@@ -107,13 +107,13 @@ Ixchel repositories.
 **I want to** aggregate all tags from entity frontmatter\
 **So that** agents and users can discover the existing tag vocabulary
 
-| ID       | Acceptance Criterion                                                                      |
-| -------- | ----------------------------------------------------------------------------------------- |
+| ID       | Acceptance Criterion                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------- |
 | AC-009.1 | WHEN `collect_tags(kind)` is called THE SYSTEM SHALL scan all entities (or only `kind`) for `tags` frontmatter |
-| AC-009.2 | THE SYSTEM SHALL return a map of tag → list of entity ids                                 |
-| AC-009.3 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values    |
-| AC-009.4 | THE SYSTEM SHALL include each entity id at most once per tag                              |
-| AC-009.5 | THE SYSTEM SHALL handle entities without tags gracefully (skip them)                      |
+| AC-009.2 | THE SYSTEM SHALL return a map of tag → list of entity ids                                                      |
+| AC-009.3 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values                         |
+| AC-009.4 | THE SYSTEM SHALL include each entity id at most once per tag                                                   |
+| AC-009.5 | THE SYSTEM SHALL handle entities without tags gracefully (skip them)                                           |
 
 ### US-010: List entities missing tags
 
@@ -124,7 +124,7 @@ Ixchel repositories.
 | ID       | Acceptance Criterion                                                                     |
 | -------- | ---------------------------------------------------------------------------------------- |
 | AC-010.1 | WHEN `list_untagged(kind)` is called THE SYSTEM SHALL scan all entities (or only `kind`) |
-| AC-010.2 | THE SYSTEM SHALL return entities missing tags or containing only empty/whitespace tags  |
+| AC-010.2 | THE SYSTEM SHALL return entities missing tags or containing only empty/whitespace tags   |
 | AC-010.3 | THE SYSTEM SHALL sort results by entity id                                               |
 
 ### US-011: Modify tags on an entity
@@ -133,9 +133,9 @@ Ixchel repositories.
 **I want to** add or remove tags from an entity\
 **So that** tools can keep frontmatter metadata up to date
 
-| ID       | Acceptance Criterion                                                                      |
-| -------- | ----------------------------------------------------------------------------------------- |
-| AC-011.1 | WHEN `add_tags(id, tags)` is called THE SYSTEM SHALL add tags idempotently                |
-| AC-011.2 | WHEN `remove_tags(id, tags)` is called THE SYSTEM SHALL remove tags idempotently          |
-| AC-011.3 | THE SYSTEM SHALL ignore empty/whitespace tags                                             |
-| AC-011.4 | WHERE tags change THE SYSTEM SHALL update `updated_at`                                    |
+| ID       | Acceptance Criterion                                                             |
+| -------- | -------------------------------------------------------------------------------- |
+| AC-011.1 | WHEN `add_tags(id, tags)` is called THE SYSTEM SHALL add tags idempotently       |
+| AC-011.2 | WHEN `remove_tags(id, tags)` is called THE SYSTEM SHALL remove tags idempotently |
+| AC-011.3 | THE SYSTEM SHALL ignore empty/whitespace tags                                    |
+| AC-011.4 | WHERE tags change THE SYSTEM SHALL update `updated_at`                           |

@@ -65,22 +65,22 @@ This document defines requirements for `ix-cli` (Ixchel CLI).
 
 ### US-008: List tags
 
-| ID       | Acceptance Criterion                                                                   |
-| -------- | -------------------------------------------------------------------------------------- |
-| AC-008.1 | WHEN a user runs `ixchel tags` THE SYSTEM SHALL list all unique tags with usage counts |
-| AC-008.2 | WHERE `--kind <kind>` is provided THE SYSTEM SHALL list tags from that kind only       |
-| AC-008.3 | WHERE `--untagged` is provided THE SYSTEM SHALL list entities missing tags             |
-| AC-008.4 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values |
-| AC-008.5 | THE SYSTEM SHALL count each tag at most once per entity                                |
-| AC-008.6 | THE SYSTEM SHALL sort tags alphabetically                                              |
-| AC-008.7 | WHERE `--json` is provided THE SYSTEM SHALL output a JSON object with `total` and `tags` |
+| ID       | Acceptance Criterion                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------- |
+| AC-008.1 | WHEN a user runs `ixchel tags` THE SYSTEM SHALL list all unique tags with usage counts               |
+| AC-008.2 | WHERE `--kind <kind>` is provided THE SYSTEM SHALL list tags from that kind only                     |
+| AC-008.3 | WHERE `--untagged` is provided THE SYSTEM SHALL list entities missing tags                           |
+| AC-008.4 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values               |
+| AC-008.5 | THE SYSTEM SHALL count each tag at most once per entity                                              |
+| AC-008.6 | THE SYSTEM SHALL sort tags alphabetically                                                            |
+| AC-008.7 | WHERE `--json` is provided THE SYSTEM SHALL output a JSON object with `total` and `tags`             |
 | AC-008.8 | WHERE `--untagged --json` is provided THE SYSTEM SHALL output a JSON object with `total` and `items` |
 
 ### US-009: Modify tags
 
-| ID       | Acceptance Criterion                                                                           |
-| -------- | ---------------------------------------------------------------------------------------------- |
+| ID       | Acceptance Criterion                                                                          |
+| -------- | --------------------------------------------------------------------------------------------- |
 | AC-009.1 | WHEN a user runs `ixchel tag add <id> <tag>...` THE SYSTEM SHALL add those tags to the entity |
-| AC-009.2 | WHEN a user runs `ixchel tag remove <id> <tag>...` THE SYSTEM SHALL remove those tags          |
-| AC-009.3 | THE SYSTEM SHALL treat tag add/remove operations as idempotent                                 |
-| AC-009.4 | WHERE `--json` is provided THE SYSTEM SHALL output `id`, `action`, `changed`, and `tags`       |
+| AC-009.2 | WHEN a user runs `ixchel tag remove <id> <tag>...` THE SYSTEM SHALL remove those tags         |
+| AC-009.3 | THE SYSTEM SHALL treat tag add/remove operations as idempotent                                |
+| AC-009.4 | WHERE `--json` is provided THE SYSTEM SHALL output `id`, `action`, `changed`, and `tags`      |

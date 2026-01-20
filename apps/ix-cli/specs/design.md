@@ -46,10 +46,10 @@ single entity count once. When `--untagged` is set, list entities missing tags
 
 **Subcommands:**
 
-| Command                          | Description                          |
-| -------------------------------- | ------------------------------------ |
-| `ixchel tag add <id> <tag>...`   | Add one or more tags to an entity    |
-| `ixchel tag remove <id> <tag>...`| Remove one or more tags from an entity |
+| Command                           | Description                            |
+| --------------------------------- | -------------------------------------- |
+| `ixchel tag add <id> <tag>...`    | Add one or more tags to an entity      |
+| `ixchel tag remove <id> <tag>...` | Remove one or more tags from an entity |
 
 Tag operations are idempotent: adding an existing tag or removing a missing tag
 results in no changes.

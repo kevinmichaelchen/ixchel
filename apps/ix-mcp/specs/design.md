@@ -37,6 +37,7 @@ the existing vocabulary before creating entities. LLMs are smart enough to detec
 similarity and synonyms themselves.
 
 Arguments:
+
 - `repo` (optional): Repository path
 - `kind` (optional): Filter tags to a specific entity kind
 - `untagged` (optional): Return entities missing tags instead of tag counts
