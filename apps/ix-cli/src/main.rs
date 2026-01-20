@@ -42,6 +42,8 @@ enum Command {
         kind: Option<ix_core::entity::EntityKind>,
     },
 
+    Tags,
+
     Link {
         from: String,
         rel: String,
@@ -97,6 +99,7 @@ fn run(command: Command, start: &Path, json_output: bool) -> Result<()> {
         } => cmd_create(start, kind, &title, status.as_deref(), json_output),
         Command::Show { id } => cmd_show(start, &id, json_output),
         Command::List { kind } => cmd_list(start, kind, json_output),
+        Command::Tags => cmd_tags(start, json_output),
         Command::Link { from, rel, to } => cmd_link(start, &from, &rel, &to, json_output),
         Command::Unlink { from, rel, to } => cmd_unlink(start, &from, &rel, &to, json_output),
         Command::Check => cmd_check(start, json_output),
@@ -175,6 +178,29 @@ fn cmd_list(
     } else {
         for item in items {
             println!("{}\t{}\t{}", item.id, item.kind.as_str(), item.title);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_tags(start: &Path, json_output: bool) -> Result<()> {
+    let repo = ix_core::repo::IxchelRepo::open_from(start)?;
+    let tags = repo.collect_tags()?;
+    let mut items = tags
+        .into_iter()
+        .map(|(tag, ids)| (tag, ids.len()))
+        .collect::<Vec<_>>();
+    items.sort_by(|a, b| a.0.cmp(&b.0));
+
+    if json_output {
+        let tags = items
+            .iter()
+            .map(|(tag, count)| json!({ "tag": tag, "count": count }))
+            .collect::<Vec<_>>();
+        print_json(&json!({ "total": tags.len(), "tags": tags }))?;
+    } else {
+        for (tag, count) in items {
+            println!("{tag}\t{count}");
         }
     }
     Ok(())

@@ -60,3 +60,15 @@ This document defines requirements for `ix-cli` (Ixchel CLI).
 | -------- | ------------------------------------------------------------------------------- |
 | AC-007.1 | WHERE `--json` is provided THE SYSTEM SHALL print stable-ish JSON payloads      |
 | AC-007.2 | IF JSON output is enabled and `check` fails THEN THE SYSTEM SHALL exit non-zero |
+
+## 4. Metadata Discovery
+
+### US-008: List tags
+
+| ID       | Acceptance Criterion                                                                   |
+| -------- | -------------------------------------------------------------------------------------- |
+| AC-008.1 | WHEN a user runs `ixchel tags` THE SYSTEM SHALL list all unique tags with usage counts |
+| AC-008.2 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values |
+| AC-008.3 | THE SYSTEM SHALL count each tag at most once per entity                                |
+| AC-008.4 | THE SYSTEM SHALL sort tags alphabetically                                              |
+| AC-008.5 | WHERE `--json` is provided THE SYSTEM SHALL output a JSON object with `total` and `tags` |

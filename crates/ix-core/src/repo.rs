@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -261,6 +261,33 @@ impl IxchelRepo {
         Ok(out)
     }
 
+    pub fn collect_tags(&self) -> Result<HashMap<String, Vec<String>>> {
+        let mut out: HashMap<String, Vec<String>> = HashMap::new();
+
+        for item in self.list(None)? {
+            let raw = std::fs::read_to_string(&item.path)
+                .with_context(|| format!("Failed to read {}", item.path.display()))?;
+            let doc = parse_markdown(&item.path, &raw)?;
+            let tags = get_string_list(&doc.frontmatter, "tags");
+            if tags.is_empty() {
+                continue;
+            }
+
+            let mut seen = BTreeSet::new();
+            for tag in tags {
+                let Some(tag) = normalize_tag(&tag) else {
+                    continue;
+                };
+                if !seen.insert(tag.clone()) {
+                    continue;
+                }
+                out.entry(tag).or_default().push(item.id.clone());
+            }
+        }
+
+        Ok(out)
+    }
+
     pub fn link(&self, from_id: &str, rel: &str, to_id: &str) -> Result<()> {
         let from_path = self
             .paths
@@ -505,4 +532,13 @@ fn extract_relationships(frontmatter: &serde_yaml::Mapping) -> Vec<(String, Vec<
     }
 
     rels
+}
+
+fn normalize_tag(tag: &str) -> Option<String> {
+    let trimmed = tag.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
 }

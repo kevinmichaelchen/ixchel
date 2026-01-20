@@ -98,3 +98,19 @@ Ixchel repositories.
 | -------- | ------------------------------------------------------------------------------------ |
 | AC-008.1 | THE SYSTEM SHALL define an `IndexBackend` trait for `sync`, `search`, `health_check` |
 | AC-008.2 | `ix-core` SHALL NOT depend on concrete storage backends (adapters live elsewhere)    |
+
+## 5. Tag Aggregation
+
+### US-009: Collect tags across repository
+
+**As a** caller (CLI, MCP server)\
+**I want to** aggregate all tags from entity frontmatter\
+**So that** agents and users can discover the existing tag vocabulary
+
+| ID       | Acceptance Criterion                                                                      |
+| -------- | ----------------------------------------------------------------------------------------- |
+| AC-009.1 | WHEN `collect_tags()` is called THE SYSTEM SHALL scan all entities for `tags` frontmatter |
+| AC-009.2 | THE SYSTEM SHALL return a map of tag → list of entity ids                                 |
+| AC-009.3 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values    |
+| AC-009.4 | THE SYSTEM SHALL include each entity id at most once per tag                              |
+| AC-009.5 | THE SYSTEM SHALL handle entities without tags gracefully (skip them)                      |

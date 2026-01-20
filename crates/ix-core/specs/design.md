@@ -54,6 +54,17 @@ canonical id (`<prefix>-<6..12 hex>`). This avoids incorrectly treating metadata
 like `labels: [bug]` as graph edges while still allowing validation of unknown
 prefixes (`foo-123456`) during `check()`.
 
+## Tag Aggregation
+
+The `tags` frontmatter field is reserved for free-form labels. `ix-core` provides:
+
+- `collect_tags()`: Scans all entities, returns `HashMap<String, Vec<EntityId>>`.
+  Tag identity is case-sensitive and based on trimmed tag values; empty tags are
+  ignored and duplicates within a single entity count once.
+
+This enables CLI/MCP tools to expose the tag vocabulary. LLMs are smart enough to
+detect similarity and synonyms themselves—no need for built-in fuzzy matching.
+
 ## Compatibility Notes
 
 - `bd-*` ids (legacy issue ids) are accepted as `EntityKind::Issue` for

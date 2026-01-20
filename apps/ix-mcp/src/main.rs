@@ -184,6 +184,16 @@ fn tools_list_result() -> Value {
                     },
                     "required": ["id"]
                 }
+            },
+            {
+                "name": "ixchel_tags",
+                "description": "List all unique tags with usage counts",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "repo": { "type": "string", "description": "Path inside the target git repository (defaults to CWD)" }
+                    }
+                }
             }
         ]
     })
@@ -206,6 +216,7 @@ fn handle_tools_call(params: Option<Value>) -> Result<Value> {
         "ixchel_show" => tool_show(&args),
         "ixchel_graph" => tool_graph(&args),
         "ixchel_context" => tool_context(&args),
+        "ixchel_tags" => tool_tags(&args),
         _ => anyhow::bail!("Unknown tool: {name}"),
     }
 }
@@ -298,6 +309,25 @@ fn tool_context(args: &Value) -> Result<Value> {
     let context = build_context_json(&repo, id)?;
 
     tool_text(&context)
+}
+
+fn tool_tags(args: &Value) -> Result<Value> {
+    let repo_path = resolve_repo_path(args)?;
+    let repo = ix_core::repo::IxchelRepo::open_from(&repo_path)?;
+    let tags = repo.collect_tags()?;
+
+    let mut items = tags
+        .into_iter()
+        .map(|(tag, ids)| (tag, ids.len()))
+        .collect::<Vec<_>>();
+    items.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let tags = items
+        .iter()
+        .map(|(tag, count)| json!({ "tag": tag, "count": count }))
+        .collect::<Vec<_>>();
+
+    tool_text(&json!({ "total": tags.len(), "tags": tags }))
 }
 
 fn tool_text(payload: &Value) -> Result<Value> {

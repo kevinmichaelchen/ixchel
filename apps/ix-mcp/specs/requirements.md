@@ -30,3 +30,11 @@ This document defines requirements for `ix-mcp` (Ixchel MCP server).
 | -------- | --------------------------------------------------------------------------------- |
 | AC-003.1 | WHERE `arguments.repo` is provided THE SYSTEM SHALL operate relative to that path |
 | AC-003.2 | IF `arguments.repo` is missing THE SYSTEM SHALL default to process CWD            |
+
+### US-004: Tag discovery tool
+
+| ID       | Acceptance Criterion                                                         |
+| -------- | ---------------------------------------------------------------------------- |
+| AC-004.1 | THE SYSTEM SHALL expose `ixchel_tags` for listing all tags with usage counts |
+| AC-004.2 | THE SYSTEM SHALL return a JSON object with `total` and `tags` array          |
+| AC-004.3 | THE SYSTEM SHALL sort tags alphabetically                                   |
