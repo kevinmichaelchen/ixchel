@@ -64,6 +64,8 @@ The `tags` frontmatter field is reserved for free-form labels. `ix-core` provide
   entity count once.
 - `list_untagged(kind)`: Returns entities with no tags (missing tag field or
   only empty/whitespace values) for the full repo or a specific kind.
+- `add_tags(id, tags)` / `remove_tags(id, tags)`: Mutates entity frontmatter
+  with idempotent tag adds/removals and updates `updated_at` on changes.
 
 This enables CLI/MCP tools to expose the tag vocabulary. LLMs are smart enough to
 detect similarity and synonyms themselves—no need for built-in fuzzy matching.

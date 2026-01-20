@@ -268,7 +268,7 @@ impl IxchelRepo {
             let raw = std::fs::read_to_string(&item.path)
                 .with_context(|| format!("Failed to read {}", item.path.display()))?;
             let doc = parse_markdown(&item.path, &raw)?;
-            let tags = normalized_tags(&doc.frontmatter);
+            let tags = normalized_tags_vec(&doc.frontmatter);
             if tags.is_empty() {
                 continue;
             }
@@ -288,13 +288,90 @@ impl IxchelRepo {
             let raw = std::fs::read_to_string(&item.path)
                 .with_context(|| format!("Failed to read {}", item.path.display()))?;
             let doc = parse_markdown(&item.path, &raw)?;
-            if normalized_tags(&doc.frontmatter).is_empty() {
+            if normalized_tags_vec(&doc.frontmatter).is_empty() {
                 out.push(item);
             }
         }
 
         out.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(out)
+    }
+
+    pub fn add_tags(&self, id: &str, tags: &[String]) -> Result<bool> {
+        let path = self
+            .paths
+            .entity_path(id)
+            .with_context(|| format!("Unknown entity id prefix: {id}"))?;
+        let raw = std::fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
+        let mut doc = parse_markdown(&path, &raw)?;
+
+        let mut existing = normalized_tags_vec(&doc.frontmatter);
+        let mut changed = false;
+        for tag in tags {
+            let Some(tag) = normalize_tag(tag) else {
+                continue;
+            };
+            if existing.iter().any(|value| value == &tag) {
+                continue;
+            }
+            existing.push(tag);
+            changed = true;
+        }
+
+        if !changed {
+            return Ok(false);
+        }
+
+        set_string_list(&mut doc.frontmatter, "tags", existing);
+        let now = Utc::now();
+        set_string(
+            &mut doc.frontmatter,
+            "updated_at",
+            now.to_rfc3339_opts(SecondsFormat::Secs, true),
+        );
+
+        let out = render_markdown(&doc)?;
+        std::fs::write(&path, out).with_context(|| format!("Failed to write {}", path.display()))?;
+        Ok(true)
+    }
+
+    pub fn remove_tags(&self, id: &str, tags: &[String]) -> Result<bool> {
+        let path = self
+            .paths
+            .entity_path(id)
+            .with_context(|| format!("Unknown entity id prefix: {id}"))?;
+        let raw = std::fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read {}", path.display()))?;
+        let mut doc = parse_markdown(&path, &raw)?;
+
+        let to_remove = tags
+            .iter()
+            .filter_map(|tag| normalize_tag(tag))
+            .collect::<BTreeSet<_>>();
+        if to_remove.is_empty() {
+            return Ok(false);
+        }
+
+        let mut existing = normalized_tags_vec(&doc.frontmatter);
+        let before_len = existing.len();
+        existing.retain(|tag| !to_remove.contains(tag));
+
+        if existing.len() == before_len {
+            return Ok(false);
+        }
+
+        set_string_list(&mut doc.frontmatter, "tags", existing);
+        let now = Utc::now();
+        set_string(
+            &mut doc.frontmatter,
+            "updated_at",
+            now.to_rfc3339_opts(SecondsFormat::Secs, true),
+        );
+
+        let out = render_markdown(&doc)?;
+        std::fs::write(&path, out).with_context(|| format!("Failed to write {}", path.display()))?;
+        Ok(true)
     }
 
     pub fn link(&self, from_id: &str, rel: &str, to_id: &str) -> Result<()> {
@@ -552,11 +629,14 @@ fn normalize_tag(tag: &str) -> Option<String> {
     }
 }
 
-fn normalized_tags(frontmatter: &Mapping) -> BTreeSet<String> {
-    let mut tags = BTreeSet::new();
+fn normalized_tags_vec(frontmatter: &Mapping) -> Vec<String> {
+    let mut tags = Vec::new();
+    let mut seen = BTreeSet::new();
     for tag in get_string_list(frontmatter, "tags") {
         if let Some(tag) = normalize_tag(&tag) {
-            tags.insert(tag);
+            if seen.insert(tag.clone()) {
+                tags.push(tag);
+            }
         }
     }
     tags

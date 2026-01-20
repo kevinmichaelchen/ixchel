@@ -126,3 +126,16 @@ Ixchel repositories.
 | AC-010.1 | WHEN `list_untagged(kind)` is called THE SYSTEM SHALL scan all entities (or only `kind`) |
 | AC-010.2 | THE SYSTEM SHALL return entities missing tags or containing only empty/whitespace tags  |
 | AC-010.3 | THE SYSTEM SHALL sort results by entity id                                               |
+
+### US-011: Modify tags on an entity
+
+**As a** caller\
+**I want to** add or remove tags from an entity\
+**So that** tools can keep frontmatter metadata up to date
+
+| ID       | Acceptance Criterion                                                                      |
+| -------- | ----------------------------------------------------------------------------------------- |
+| AC-011.1 | WHEN `add_tags(id, tags)` is called THE SYSTEM SHALL add tags idempotently                |
+| AC-011.2 | WHEN `remove_tags(id, tags)` is called THE SYSTEM SHALL remove tags idempotently          |
+| AC-011.3 | THE SYSTEM SHALL ignore empty/whitespace tags                                             |
+| AC-011.4 | WHERE tags change THE SYSTEM SHALL update `updated_at`                                    |

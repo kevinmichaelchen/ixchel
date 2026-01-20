@@ -27,3 +27,5 @@
 ## Phase 4: Tag Aggregation
 
 - [x] Implement `collect_tags()` to aggregate tags across all entities
+- [x] Implement `list_untagged()` to find entities missing tags
+- [x] Implement `add_tags()` / `remove_tags()` for tag mutation
