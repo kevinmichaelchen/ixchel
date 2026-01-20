@@ -206,8 +206,9 @@ fn cmd_tags(
             .collect::<Vec<_>>();
         print_json(&json!({ "total": tags.len(), "tags": tags }))?;
     } else {
+        let width = items.iter().map(|(tag, _)| tag.len()).max().unwrap_or(0);
         for (tag, count) in items {
-            println!("{tag}\t{count}");
+            println!("{tag:width$}  {count}", width = width);
         }
     }
     Ok(())
