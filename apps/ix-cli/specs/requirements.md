@@ -20,6 +20,9 @@ This document defines requirements for `ix-cli` (Ixchel CLI).
 | AC-002.3 | WHEN a user runs `ixchel show <id>` THE SYSTEM SHALL print raw Markdown for that id                |
 | AC-002.4 | WHEN a user runs `ixchel delete <id>` THE SYSTEM SHALL delete the entity file                      |
 | AC-002.5 | WHEN a user runs `ixchel edit <id>` THE SYSTEM SHALL open the entity in `$IXCHEL_EDITOR`/`$EDITOR` |
+| AC-002.6 | WHERE `--sort recent` is provided (or default) THE SYSTEM SHALL sort list results by `created_at` descending |
+| AC-002.7 | WHERE `--sort updated` is provided THE SYSTEM SHALL sort list results by `updated_at` descending             |
+| AC-002.8 | WHERE `--sort id` is provided THE SYSTEM SHALL sort list results by id ascending                             |
 
 ### US-003: Manage relationships
 
