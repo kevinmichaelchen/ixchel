@@ -62,6 +62,8 @@ The `tags` frontmatter field is reserved for free-form labels. `ix-core` provide
   `HashMap<String, Vec<EntityId>>`. Tag identity is case-sensitive and based on
   trimmed tag values; empty tags are ignored and duplicates within a single
   entity count once.
+- `list_untagged(kind)`: Returns entities with no tags (missing tag field or
+  only empty/whitespace values) for the full repo or a specific kind.
 
 This enables CLI/MCP tools to expose the tag vocabulary. LLMs are smart enough to
 detect similarity and synonyms themselves—no need for built-in fuzzy matching.

@@ -114,3 +114,15 @@ Ixchel repositories.
 | AC-009.3 | THE SYSTEM SHALL treat tags as case-sensitive, trimmed strings and ignore empty values    |
 | AC-009.4 | THE SYSTEM SHALL include each entity id at most once per tag                              |
 | AC-009.5 | THE SYSTEM SHALL handle entities without tags gracefully (skip them)                      |
+
+### US-010: List entities missing tags
+
+**As a** caller (CLI, MCP server)\
+**I want to** list entities without tags\
+**So that** agents can identify documents that need metadata enrichment
+
+| ID       | Acceptance Criterion                                                                     |
+| -------- | ---------------------------------------------------------------------------------------- |
+| AC-010.1 | WHEN `list_untagged(kind)` is called THE SYSTEM SHALL scan all entities (or only `kind`) |
+| AC-010.2 | THE SYSTEM SHALL return entities missing tags or containing only empty/whitespace tags  |
+| AC-010.3 | THE SYSTEM SHALL sort results by entity id                                               |

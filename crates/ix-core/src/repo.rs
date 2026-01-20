@@ -268,23 +268,32 @@ impl IxchelRepo {
             let raw = std::fs::read_to_string(&item.path)
                 .with_context(|| format!("Failed to read {}", item.path.display()))?;
             let doc = parse_markdown(&item.path, &raw)?;
-            let tags = get_string_list(&doc.frontmatter, "tags");
+            let tags = normalized_tags(&doc.frontmatter);
             if tags.is_empty() {
                 continue;
             }
 
-            let mut seen = BTreeSet::new();
             for tag in tags {
-                let Some(tag) = normalize_tag(&tag) else {
-                    continue;
-                };
-                if !seen.insert(tag.clone()) {
-                    continue;
-                }
                 out.entry(tag).or_default().push(item.id.clone());
             }
         }
 
+        Ok(out)
+    }
+
+    pub fn list_untagged(&self, kind: Option<EntityKind>) -> Result<Vec<EntitySummary>> {
+        let mut out = Vec::new();
+
+        for item in self.list(kind)? {
+            let raw = std::fs::read_to_string(&item.path)
+                .with_context(|| format!("Failed to read {}", item.path.display()))?;
+            let doc = parse_markdown(&item.path, &raw)?;
+            if normalized_tags(&doc.frontmatter).is_empty() {
+                out.push(item);
+            }
+        }
+
+        out.sort_by(|a, b| a.id.cmp(&b.id));
         Ok(out)
     }
 
@@ -541,4 +550,14 @@ fn normalize_tag(tag: &str) -> Option<String> {
     } else {
         Some(trimmed.to_string())
     }
+}
+
+fn normalized_tags(frontmatter: &Mapping) -> BTreeSet<String> {
+    let mut tags = BTreeSet::new();
+    for tag in get_string_list(frontmatter, "tags") {
+        if let Some(tag) = normalize_tag(&tag) {
+            tags.insert(tag);
+        }
+    }
+    tags
 }
