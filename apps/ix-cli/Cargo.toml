@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Ixchel CLI"
+homepage = "https://kevinmichaelchen.github.io/ixchel"
 readme = "README.md"
 keywords = ["cli", "knowledge-graph", "git", "rag"]
 categories = ["command-line-utilities", "development-tools"]
@@ -24,3 +25,7 @@ workspace = true
 [[bin]]
 name = "ixchel"
 path = "src/main.rs"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ version }-{ target }{ archive-suffix }"
+pkg-fmt = "tgz"

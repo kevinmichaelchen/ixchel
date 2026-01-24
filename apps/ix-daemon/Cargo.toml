@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Global per-user daemon for Ixchel IPC, sync queueing, and single-writer enforcement"
+homepage = "https://kevinmichaelchen.github.io/ixchel"
 readme = "README.md"
 keywords = ["daemon", "ipc", "sync", "queue"]
 categories = ["command-line-utilities"]
@@ -30,3 +31,7 @@ tempfile = "3.10"
 
 [lints]
 workspace = true
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ version }-{ target }{ archive-suffix }"
+pkg-fmt = "tgz"

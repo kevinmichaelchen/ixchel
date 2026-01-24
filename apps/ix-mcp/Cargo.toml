@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 description = "Ixchel MCP server"
+homepage = "https://kevinmichaelchen.github.io/ixchel"
 readme = "README.md"
 keywords = ["mcp", "agent", "knowledge-graph"]
 categories = ["development-tools"]
@@ -27,3 +28,7 @@ workspace = true
 [[bin]]
 name = "ixchel-mcp"
 path = "src/main.rs"
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ version }-{ target }{ archive-suffix }"
+pkg-fmt = "tgz"
