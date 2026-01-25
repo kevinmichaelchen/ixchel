@@ -1,0 +1,51 @@
+# release-plz configuration
+# https://release-plz.ieni.dev/docs/config
+
+[workspace]
+# Use conventional commits for changelog generation
+changelog_config = "cliff.toml"
+
+# Create GitHub releases (cargo-dist handles binaries, release-plz handles crates.io)
+git_release_enable = true
+git_release_draft = false
+
+# PR configuration
+pr_labels = ["release"]
+pr_draft = false
+
+# Publish to crates.io
+publish = true
+
+# Run cargo-semver-checks to detect breaking changes
+semver_check = true
+
+# Packages to release (exclude demo-got which requires Metal)
+[[package]]
+name = "ix-cli"
+
+[[package]]
+name = "ix-daemon"
+
+[[package]]
+name = "ix-mcp"
+
+[[package]]
+name = "ix-core"
+
+[[package]]
+name = "ix-app"
+
+[[package]]
+name = "ix-config"
+
+[[package]]
+name = "ix-embeddings"
+
+[[package]]
+name = "ix-storage-helixdb"
+
+[[package]]
+name = "ix-id"
+
+[[package]]
+name = "ix-helixdb-ops"
