@@ -1,2 +1,4 @@
-# Database directory (co-located with crate)
-.data/
+# Database directories (co-located with crate)
+# Each backend uses its own directory to avoid conflicts
+.data-surrealdb/
+.data-helixdb/

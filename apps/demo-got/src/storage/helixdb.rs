@@ -1,5 +1,6 @@
-//! HelixDB storage layer for the family tree graph.
+//! HelixDB storage backend for the family tree graph.
 
+use crate::backend::{GotBackend, IngestStats};
 use crate::error::{GotError, Result};
 use crate::loader::{FamilyTree, RelationshipDef};
 use crate::types::{GraphStats, House, Person, RelationType, SearchResult};
@@ -21,17 +22,188 @@ use uuid::Uuid;
 
 const NODE_LABEL: &str = "PERSON";
 
-/// HelixDB storage wrapper for the Game of Thrones family tree.
-pub struct GotStorage {
+/// HelixDB storage backend for the Game of Thrones family tree.
+pub struct HelixDbBackend {
     storage: HelixGraphStorage,
     db_path: PathBuf,
     /// Maps person ID (string) to node ID (u128).
     id_to_node: HashMap<String, u128>,
 }
 
-impl GotStorage {
-    /// Create or open a storage instance at the given path.
-    pub fn new(db_path: &Path) -> Result<Self> {
+impl HelixDbBackend {
+    /// Get the database path.
+    #[must_use]
+    pub fn db_path(&self) -> &Path {
+        &self.db_path
+    }
+
+    /// Internal: Insert a person as a node in the graph.
+    fn insert_person_internal(&self, person: &Person) -> Result<u128> {
+        let arena = Bump::new();
+        let mut wtxn =
+            self.storage.graph_env.write_txn().map_err(|e| {
+                GotError::DatabaseError(format!("Failed to start transaction: {e}"))
+            })?;
+
+        let node_id = Uuid::new_v4().as_u128();
+        let label: &str = arena.alloc_str(NODE_LABEL);
+
+        let titles_json = serde_json::to_string(&person.titles).unwrap_or_default();
+        let alias_str = person.alias.clone().unwrap_or_default();
+        let is_alive_str = person.is_alive.to_string();
+
+        let props: Vec<(&str, Value)> = vec![
+            (arena.alloc_str("id"), Value::String(person.id.clone())),
+            (arena.alloc_str("name"), Value::String(person.name.clone())),
+            (
+                arena.alloc_str("house"),
+                Value::String(person.house.to_string()),
+            ),
+            (arena.alloc_str("titles"), Value::String(titles_json)),
+            (arena.alloc_str("alias"), Value::String(alias_str)),
+            (arena.alloc_str("is_alive"), Value::String(is_alive_str)),
+        ];
+
+        let properties = ImmutablePropertiesMap::new(props.len(), props.into_iter(), &arena);
+
+        let node = helix_db::utils::items::Node {
+            id: node_id,
+            label,
+            version: 1,
+            properties: Some(properties),
+        };
+
+        graph_ops::put_node(&self.storage, &mut wtxn, &node)
+            .map_err(|e| GotError::DatabaseError(format!("Failed to store node: {e}")))?;
+
+        graph_ops::update_secondary_indices(&self.storage, &mut wtxn, &node).map_err(|e| {
+            GotError::DatabaseError(format!("Failed to update secondary index: {e}"))
+        })?;
+
+        wtxn.commit()
+            .map_err(|e| GotError::DatabaseError(format!("Failed to commit node: {e}")))?;
+
+        Ok(node_id)
+    }
+
+    /// Internal: Create an edge between two nodes.
+    fn create_edge_internal(
+        &self,
+        from_node_id: u128,
+        to_node_id: u128,
+        relation_type: RelationType,
+    ) -> Result<()> {
+        let arena = Bump::new();
+        let mut wtxn =
+            self.storage.graph_env.write_txn().map_err(|e| {
+                GotError::DatabaseError(format!("Failed to start transaction: {e}"))
+            })?;
+
+        let edge_id = Uuid::new_v4().as_u128();
+        let edge_label = arena.alloc_str(relation_type.as_edge_label());
+
+        let edge = Edge {
+            id: edge_id,
+            label: edge_label,
+            version: 1,
+            from_node: from_node_id,
+            to_node: to_node_id,
+            properties: None,
+        };
+
+        graph_ops::put_edge(&self.storage, &mut wtxn, &edge)
+            .map_err(|e| GotError::DatabaseError(format!("Failed to store edge: {e}")))?;
+
+        wtxn.commit()
+            .map_err(|e| GotError::DatabaseError(format!("Failed to commit edge: {e}")))?;
+
+        Ok(())
+    }
+
+    /// Internal: Look up node ID by vector ID using the secondary index.
+    fn lookup_by_vector_id(
+        &self,
+        rtxn: &heed3::RoTxn<'_>,
+        vector_id: u128,
+    ) -> Result<Option<u128>> {
+        let key = Value::String(vector_id.to_string());
+        graph_ops::lookup_secondary_index(&self.storage, rtxn, "vector_id", &key)
+            .map_err(|e| GotError::DatabaseError(format!("Failed to lookup vector_id: {e}")))
+    }
+
+    /// Internal: Get a person from a node ID.
+    fn get_person_internal(
+        &self,
+        rtxn: &heed3::RoTxn<'_>,
+        node_id: u128,
+        arena: &Bump,
+    ) -> Result<Person> {
+        let node = self
+            .storage
+            .get_node(rtxn, &node_id, arena)
+            .map_err(|e| GotError::DatabaseError(format!("Failed to get node: {e:?}")))?;
+
+        self.node_to_person(&node)
+    }
+
+    /// Convert a HelixDB node to a Person struct.
+    fn node_to_person(&self, node: &helix_db::utils::items::Node<'_>) -> Result<Person> {
+        let get_str = |name: &str| -> String {
+            node.get_property(name)
+                .and_then(|v| match v {
+                    Value::String(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .unwrap_or_default()
+        };
+
+        let get_bool = |name: &str| -> bool {
+            node.get_property(name)
+                .and_then(|v| match v {
+                    Value::String(s) => s.parse().ok(),
+                    _ => None,
+                })
+                .unwrap_or(false)
+        };
+
+        let id = get_str("id");
+        let name = get_str("name");
+        let house_str = get_str("house");
+        let titles_json = get_str("titles");
+        let alias_str = get_str("alias");
+        let is_alive = get_bool("is_alive");
+
+        let house: House = house_str
+            .parse()
+            .map_err(|e| GotError::DatabaseError(format!("Invalid house: {e}")))?;
+
+        let titles: Vec<String> = serde_json::from_str(&titles_json).unwrap_or_default();
+        let alias = if alias_str.is_empty() {
+            None
+        } else {
+            Some(alias_str)
+        };
+
+        Ok(Person {
+            id,
+            name,
+            house,
+            titles,
+            alias,
+            is_alive,
+        })
+    }
+
+    /// Parse a string node ID back to u128.
+    fn parse_node_id(node_id: &str) -> Result<u128> {
+        node_id
+            .parse()
+            .map_err(|e| GotError::DatabaseError(format!("Invalid node ID '{node_id}': {e}")))
+    }
+}
+
+impl GotBackend for HelixDbBackend {
+    fn new(db_path: &Path) -> Result<Self> {
         let graph_path = db_path.join("graph.db");
         std::fs::create_dir_all(&graph_path).map_err(|e| {
             GotError::DatabaseError(format!("Failed to create database directory: {e}"))
@@ -68,13 +240,11 @@ impl GotStorage {
         })
     }
 
-    /// Check if the database exists and has data.
-    pub fn exists(db_path: &Path) -> bool {
+    fn exists(db_path: &Path) -> bool {
         db_path.join("graph.db").exists()
     }
 
-    /// Clear all data from the database.
-    pub fn clear(&self) -> Result<()> {
+    fn clear(&self) -> Result<()> {
         let mut wtxn =
             self.storage.graph_env.write_txn().map_err(|e| {
                 GotError::DatabaseError(format!("Failed to start transaction: {e}"))
@@ -134,13 +304,12 @@ impl GotStorage {
         Ok(())
     }
 
-    /// Ingest a family tree into the database.
-    pub fn ingest(&mut self, tree: &FamilyTree) -> Result<IngestStats> {
+    fn ingest(&mut self, tree: &FamilyTree) -> Result<IngestStats> {
         let mut stats = IngestStats::default();
 
         // First pass: insert all people as nodes
         for person in &tree.people {
-            let node_id = self.insert_person(person)?;
+            let node_id = self.insert_person_internal(person)?;
             self.id_to_node.insert(person.id.clone(), node_id);
             stats.nodes_inserted += 1;
         }
@@ -161,7 +330,7 @@ impl GotStorage {
                             .get(child_id)
                             .copied()
                             .ok_or_else(|| GotError::PersonNotFound(child_id.clone()))?;
-                        self.create_edge(from_node, to_node, RelationType::ParentOf)?;
+                        self.create_edge_internal(from_node, to_node, RelationType::ParentOf)?;
                         stats.edges_inserted += 1;
                     }
                 }
@@ -178,8 +347,8 @@ impl GotStorage {
                             .copied()
                             .ok_or_else(|| GotError::PersonNotFound(between[1].clone()))?;
                         // Bidirectional: create edges in both directions
-                        self.create_edge(a, b, RelationType::SpouseOf)?;
-                        self.create_edge(b, a, RelationType::SpouseOf)?;
+                        self.create_edge_internal(a, b, RelationType::SpouseOf)?;
+                        self.create_edge_internal(b, a, RelationType::SpouseOf)?;
                         stats.edges_inserted += 2;
                     }
                 }
@@ -197,8 +366,8 @@ impl GotStorage {
                                 .get(&between[j])
                                 .copied()
                                 .ok_or_else(|| GotError::PersonNotFound(between[j].clone()))?;
-                            self.create_edge(a, b, RelationType::SiblingOf)?;
-                            self.create_edge(b, a, RelationType::SiblingOf)?;
+                            self.create_edge_internal(a, b, RelationType::SiblingOf)?;
+                            self.create_edge_internal(b, a, RelationType::SiblingOf)?;
                             stats.edges_inserted += 2;
                         }
                     }
@@ -209,67 +378,16 @@ impl GotStorage {
         Ok(stats)
     }
 
-    /// Insert a person as a node in the graph.
-    fn insert_person(&self, person: &Person) -> Result<u128> {
-        let arena = Bump::new();
-        let mut wtxn =
-            self.storage.graph_env.write_txn().map_err(|e| {
-                GotError::DatabaseError(format!("Failed to start transaction: {e}"))
-            })?;
-
-        let node_id = Uuid::new_v4().as_u128();
-        let label: &str = arena.alloc_str(NODE_LABEL);
-
-        let titles_json = serde_json::to_string(&person.titles).unwrap_or_default();
-        let alias_str = person.alias.clone().unwrap_or_default();
-        let is_alive_str = person.is_alive.to_string();
-
-        let props: Vec<(&str, Value)> = vec![
-            (arena.alloc_str("id"), Value::String(person.id.clone())),
-            (arena.alloc_str("name"), Value::String(person.name.clone())),
-            (
-                arena.alloc_str("house"),
-                Value::String(person.house.to_string()),
-            ),
-            (arena.alloc_str("titles"), Value::String(titles_json)),
-            (arena.alloc_str("alias"), Value::String(alias_str)),
-            (arena.alloc_str("is_alive"), Value::String(is_alive_str)),
-        ];
-
-        let properties = ImmutablePropertiesMap::new(props.len(), props.into_iter(), &arena);
-
-        let node = helix_db::utils::items::Node {
-            id: node_id,
-            label,
-            version: 1,
-            properties: Some(properties),
-        };
-
-        graph_ops::put_node(&self.storage, &mut wtxn, &node)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to store node: {e}")))?;
-
-        graph_ops::update_secondary_indices(&self.storage, &mut wtxn, &node).map_err(|e| {
-            GotError::DatabaseError(format!("Failed to update secondary index: {e}"))
-        })?;
-
-        wtxn.commit()
-            .map_err(|e| GotError::DatabaseError(format!("Failed to commit node: {e}")))?;
-
-        Ok(node_id)
+    fn insert_person_basic(&self, person: &Person) -> Result<String> {
+        let node_id = self.insert_person_internal(person)?;
+        Ok(node_id.to_string())
     }
 
-    /// Insert a person as a node in the graph without an embedding.
-    pub fn insert_person_basic(&self, person: &Person) -> Result<u128> {
-        self.insert_person(person)
-    }
-
-    /// Insert a person as a node in the graph with an embedding vector.
-    /// Returns (node_id, vector_id).
-    pub fn insert_person_with_embedding(
+    fn insert_person_with_embedding(
         &self,
         person: &Person,
         embedding: &[f32],
-    ) -> Result<(u128, u128)> {
+    ) -> Result<(String, String)> {
         let arena = Bump::new();
         let mut wtxn =
             self.storage.graph_env.write_txn().map_err(|e| {
@@ -331,12 +449,21 @@ impl GotStorage {
         wtxn.commit()
             .map_err(|e| GotError::DatabaseError(format!("Failed to commit node: {e}")))?;
 
-        Ok((node_id, vector_id))
+        Ok((node_id.to_string(), vector_id.to_string()))
     }
 
-    /// Perform semantic search using a query embedding.
-    /// Returns matching people with similarity scores (higher is more similar).
-    pub fn search_semantic(&self, embedding: &[f32], limit: usize) -> Result<Vec<SearchResult>> {
+    fn create_edge(
+        &self,
+        from_node_id: &str,
+        to_node_id: &str,
+        relation_type: RelationType,
+    ) -> Result<()> {
+        let from_id = Self::parse_node_id(from_node_id)?;
+        let to_id = Self::parse_node_id(to_node_id)?;
+        self.create_edge_internal(from_id, to_id, relation_type)
+    }
+
+    fn search_semantic(&self, embedding: &[f32], limit: usize) -> Result<Vec<SearchResult>> {
         let arena = Bump::new();
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
@@ -377,88 +504,7 @@ impl GotStorage {
         Ok(results)
     }
 
-    /// Look up a node ID by vector ID using the secondary index.
-    fn lookup_by_vector_id(
-        &self,
-        rtxn: &heed3::RoTxn<'_>,
-        vector_id: u128,
-    ) -> Result<Option<u128>> {
-        let key = Value::String(vector_id.to_string());
-        graph_ops::lookup_secondary_index(&self.storage, rtxn, "vector_id", &key)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to lookup vector_id: {e}")))
-    }
-
-    /// Get a person from a node ID (internal version that takes a transaction).
-    fn get_person_internal(
-        &self,
-        rtxn: &heed3::RoTxn<'_>,
-        node_id: u128,
-        arena: &Bump,
-    ) -> Result<Person> {
-        let node = self
-            .storage
-            .get_node(rtxn, &node_id, arena)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to get node: {e:?}")))?;
-
-        self.node_to_person(&node)
-    }
-
-    /// Create an edge between two nodes (internal use).
-    fn create_edge(
-        &self,
-        from_node_id: u128,
-        to_node_id: u128,
-        relation_type: RelationType,
-    ) -> Result<()> {
-        self.create_edge_impl(from_node_id, to_node_id, relation_type)
-    }
-
-    /// Create an edge between two nodes (public for use in main.rs).
-    pub fn create_edge_public(
-        &self,
-        from_node_id: u128,
-        to_node_id: u128,
-        relation_type: RelationType,
-    ) -> Result<()> {
-        self.create_edge_impl(from_node_id, to_node_id, relation_type)
-    }
-
-    /// Implementation for creating edges.
-    fn create_edge_impl(
-        &self,
-        from_node_id: u128,
-        to_node_id: u128,
-        relation_type: RelationType,
-    ) -> Result<()> {
-        let arena = Bump::new();
-        let mut wtxn =
-            self.storage.graph_env.write_txn().map_err(|e| {
-                GotError::DatabaseError(format!("Failed to start transaction: {e}"))
-            })?;
-
-        let edge_id = Uuid::new_v4().as_u128();
-        let edge_label = arena.alloc_str(relation_type.as_edge_label());
-
-        let edge = Edge {
-            id: edge_id,
-            label: edge_label,
-            version: 1,
-            from_node: from_node_id,
-            to_node: to_node_id,
-            properties: None,
-        };
-
-        graph_ops::put_edge(&self.storage, &mut wtxn, &edge)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to store edge: {e}")))?;
-
-        wtxn.commit()
-            .map_err(|e| GotError::DatabaseError(format!("Failed to commit edge: {e}")))?;
-
-        Ok(())
-    }
-
-    /// Look up a node ID by person ID using the secondary index.
-    pub fn lookup_by_id(&self, person_id: &str) -> Result<Option<u128>> {
+    fn lookup_by_id(&self, person_id: &str) -> Result<Option<String>> {
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
@@ -468,109 +514,68 @@ impl GotStorage {
             graph_ops::lookup_secondary_index(&self.storage, &rtxn, "id", &key)
                 .map_err(|e| GotError::DatabaseError(format!("Failed to lookup: {e}")))?
         {
-            return Ok(Some(node_id));
+            return Ok(Some(node_id.to_string()));
         }
 
         Ok(None)
     }
 
-    /// Get a person from a node ID.
-    pub fn get_person(&self, node_id: u128) -> Result<Person> {
+    fn get_person(&self, node_id: &str) -> Result<Person> {
         let arena = Bump::new();
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
 
+        let node_id_u128 = Self::parse_node_id(node_id)?;
         let node = self
             .storage
-            .get_node(&rtxn, &node_id, &arena)
+            .get_node(&rtxn, &node_id_u128, &arena)
             .map_err(|e| GotError::DatabaseError(format!("Failed to get node: {e:?}")))?;
 
         self.node_to_person(&node)
     }
 
-    /// Convert a HelixDB node to a Person struct.
-    fn node_to_person(&self, node: &helix_db::utils::items::Node<'_>) -> Result<Person> {
-        let get_str = |name: &str| -> String {
-            node.get_property(name)
-                .and_then(|v| match v {
-                    Value::String(s) => Some(s.clone()),
-                    _ => None,
-                })
-                .unwrap_or_default()
-        };
-
-        let get_bool = |name: &str| -> bool {
-            node.get_property(name)
-                .and_then(|v| match v {
-                    Value::String(s) => s.parse().ok(),
-                    _ => None,
-                })
-                .unwrap_or(false)
-        };
-
-        let id = get_str("id");
-        let name = get_str("name");
-        let house_str = get_str("house");
-        let titles_json = get_str("titles");
-        let alias_str = get_str("alias");
-        let is_alive = get_bool("is_alive");
-
-        let house: House = house_str
-            .parse()
-            .map_err(|e| GotError::DatabaseError(format!("Invalid house: {e}")))?;
-
-        let titles: Vec<String> = serde_json::from_str(&titles_json).unwrap_or_default();
-        let alias = if alias_str.is_empty() {
-            None
-        } else {
-            Some(alias_str)
-        };
-
-        Ok(Person {
-            id,
-            name,
-            house,
-            titles,
-            alias,
-            is_alive,
-        })
-    }
-
-    /// Get all nodes connected by incoming edges of a specific type.
-    /// For PARENT_OF: returns parents of the given node.
-    pub fn get_incoming_neighbors(
+    fn get_incoming_neighbors(
         &self,
-        node_id: u128,
+        node_id: &str,
         relation_type: RelationType,
-    ) -> Result<Vec<u128>> {
+    ) -> Result<Vec<String>> {
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
 
+        let node_id_u128 = Self::parse_node_id(node_id)?;
         let label_hash = hash_label(relation_type.as_edge_label(), None);
-        graph_ops::incoming_neighbors(&self.storage, &rtxn, node_id, &label_hash)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to read incoming edges: {e}")))
+        let neighbors =
+            graph_ops::incoming_neighbors(&self.storage, &rtxn, node_id_u128, &label_hash)
+                .map_err(|e| {
+                    GotError::DatabaseError(format!("Failed to read incoming edges: {e}"))
+                })?;
+
+        Ok(neighbors.into_iter().map(|id| id.to_string()).collect())
     }
 
-    /// Get all nodes connected by outgoing edges of a specific type.
-    /// For PARENT_OF: returns children of the given node.
-    pub fn get_outgoing_neighbors(
+    fn get_outgoing_neighbors(
         &self,
-        node_id: u128,
+        node_id: &str,
         relation_type: RelationType,
-    ) -> Result<Vec<u128>> {
+    ) -> Result<Vec<String>> {
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
 
+        let node_id_u128 = Self::parse_node_id(node_id)?;
         let label_hash = hash_label(relation_type.as_edge_label(), None);
-        graph_ops::outgoing_neighbors(&self.storage, &rtxn, node_id, &label_hash)
-            .map_err(|e| GotError::DatabaseError(format!("Failed to read outgoing edges: {e}")))
+        let neighbors =
+            graph_ops::outgoing_neighbors(&self.storage, &rtxn, node_id_u128, &label_hash)
+                .map_err(|e| {
+                    GotError::DatabaseError(format!("Failed to read outgoing edges: {e}"))
+                })?;
+
+        Ok(neighbors.into_iter().map(|id| id.to_string()).collect())
     }
 
-    /// Get statistics about the graph.
-    pub fn get_stats(&self) -> Result<GraphStats> {
+    fn get_stats(&self) -> Result<GraphStats> {
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
@@ -621,8 +626,7 @@ impl GotStorage {
         })
     }
 
-    /// Get all people belonging to a specific house.
-    pub fn get_house_members(&self, house: House) -> Result<Vec<Person>> {
+    fn get_house_members(&self, house: House) -> Result<Vec<Person>> {
         let rtxn = self.storage.graph_env.read_txn().map_err(|e| {
             GotError::DatabaseError(format!("Failed to start read transaction: {e}"))
         })?;
@@ -653,27 +657,11 @@ impl GotStorage {
 
         Ok(members)
     }
-
-    /// Get the database path.
-    #[must_use]
-    pub fn db_path(&self) -> &Path {
-        &self.db_path
-    }
-}
-
-/// Statistics from an ingest operation.
-#[derive(Debug, Default)]
-pub struct IngestStats {
-    pub nodes_inserted: usize,
-    pub edges_inserted: usize,
 }
 
 #[cfg(test)]
 mod tests {
-    use super::GotStorage;
-    use crate::error::Result;
-    use crate::loader::{FamilyTree, RelationshipDef};
-    use crate::types::{House, Person, RelationType};
+    use super::*;
     use tempfile::TempDir;
 
     fn build_tree() -> FamilyTree {
@@ -717,9 +705,9 @@ mod tests {
         }
     }
 
-    fn open_storage() -> Result<(TempDir, GotStorage)> {
+    fn open_storage() -> Result<(TempDir, HelixDbBackend)> {
         let temp = TempDir::new()?;
-        let storage = GotStorage::new(temp.path())?;
+        let storage = HelixDbBackend::new(temp.path())?;
         Ok((temp, storage))
     }
 
@@ -738,20 +726,20 @@ mod tests {
             .lookup_by_id("catelyn-stark")?
             .expect("catelyn node");
 
-        let ned = storage.get_person(ned_node)?;
+        let ned = storage.get_person(&ned_node)?;
         assert_eq!(ned.name, "Eddard Stark");
         assert_eq!(ned.house, House::Stark);
 
-        let outgoing_parent = storage.get_outgoing_neighbors(ned_node, RelationType::ParentOf)?;
-        assert_eq!(outgoing_parent, vec![robb_node]);
+        let outgoing_parent = storage.get_outgoing_neighbors(&ned_node, RelationType::ParentOf)?;
+        assert_eq!(outgoing_parent, vec![robb_node.clone()]);
 
-        let incoming_parent = storage.get_incoming_neighbors(robb_node, RelationType::ParentOf)?;
-        assert_eq!(incoming_parent, vec![ned_node]);
+        let incoming_parent = storage.get_incoming_neighbors(&robb_node, RelationType::ParentOf)?;
+        assert_eq!(incoming_parent, vec![ned_node.clone()]);
 
-        let spouse_out = storage.get_outgoing_neighbors(ned_node, RelationType::SpouseOf)?;
-        assert_eq!(spouse_out, vec![catelyn_node]);
+        let spouse_out = storage.get_outgoing_neighbors(&ned_node, RelationType::SpouseOf)?;
+        assert_eq!(spouse_out, vec![catelyn_node.clone()]);
 
-        let spouse_in = storage.get_incoming_neighbors(ned_node, RelationType::SpouseOf)?;
+        let spouse_in = storage.get_incoming_neighbors(&ned_node, RelationType::SpouseOf)?;
         assert_eq!(spouse_in, vec![catelyn_node]);
 
         Ok(())

@@ -77,7 +77,7 @@ pub enum RelationType {
 }
 
 impl RelationType {
-    /// Returns the edge label used in HelixDB.
+    /// Returns the edge label used in the graph database.
     #[must_use]
     pub const fn as_edge_label(&self) -> &'static str {
         match self {

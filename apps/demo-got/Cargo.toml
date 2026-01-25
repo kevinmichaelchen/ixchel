@@ -2,10 +2,10 @@
 name = "demo-got"
 version = "0.1.0"
 edition = "2024"
-description = "Game of Thrones family tree graph demo with HelixDB"
+description = "Game of Thrones family tree graph demo with pluggable storage backends"
 license = "MIT"
 repository = "https://github.com/kevinmichaelchen/ixchel"
-keywords = ["demo", "graph", "helixdb", "game-of-thrones"]
+keywords = ["demo", "graph", "helixdb", "surrealdb", "game-of-thrones"]
 categories = ["command-line-utilities"]
 
 [dependencies]
@@ -21,6 +21,8 @@ heed3 = "0.22.0"
 helix-db = { git = "https://github.com/HelixDB/helix-db.git", features = ["vectors"] }
 ix-helixdb-ops = { path = "../../crates/ix-helixdb-ops" }
 ix-embeddings = { path = "../../crates/ix-embeddings", features = ["candle"] }
+surrealdb.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 default = []

@@ -1,16 +1,25 @@
 //! CLI for the Game of Thrones family tree demo.
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use demo_got::{
-    BioLoader, FamilyTree, GotStorage, House, find_ancestors, find_descendants,
-    get_person_with_family,
+    BioLoader, FamilyTree, GotBackend, HelixDbBackend, House, RelationType, RelationshipDef,
+    SurrealDbBackend, find_ancestors, find_descendants, get_person_with_family,
 };
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+enum Backend {
+    /// HelixDB storage backend
+    Helixdb,
+    /// SurrealDB storage backend
+    #[default]
+    Surrealdb,
+}
+
 #[derive(Parser)]
 #[command(name = "demo-got")]
-#[command(about = "Game of Thrones family tree graph demo with HelixDB")]
+#[command(about = "Game of Thrones family tree graph demo with pluggable storage backends")]
 #[command(version)]
 struct Cli {
     /// Output as JSON
@@ -20,6 +29,10 @@ struct Cli {
     /// Path to the database directory
     #[arg(long, global = true)]
     db_path: Option<PathBuf>,
+
+    /// Storage backend to use
+    #[arg(long, global = true, value_enum, default_value = "surrealdb")]
+    backend: Backend,
 
     #[command(subcommand)]
     command: Commands,
@@ -110,19 +123,33 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> anyhow::Result<()> {
-    // Default database path is inside the crate directory for co-location
-    let db_path = cli
-        .db_path
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(".data"));
+    // Default database path includes backend name to avoid conflicts
+    let backend_suffix = match cli.backend {
+        Backend::Helixdb => "helixdb",
+        Backend::Surrealdb => "surrealdb",
+    };
+    let db_path = cli.db_path.unwrap_or_else(|| {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!(".data-{backend_suffix}"))
+    });
 
-    match cli.command {
+    match cli.backend {
+        Backend::Helixdb => run_with_backend::<HelixDbBackend>(cli.json, &db_path, cli.command),
+        Backend::Surrealdb => run_with_backend::<SurrealDbBackend>(cli.json, &db_path, cli.command),
+    }
+}
+
+fn run_with_backend<B: GotBackend>(
+    json: bool,
+    db_path: &std::path::Path,
+    command: Commands,
+) -> anyhow::Result<()> {
+    match command {
         Commands::Ingest {
             file,
             clear,
             skip_embeddings,
         } => {
             let yaml_path = file.unwrap_or_else(|| {
-                // Default to data/westeros.yaml in the crate directory
                 PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/westeros.yaml")
             });
 
@@ -139,24 +166,22 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             let bios = BioLoader::load_all(&data_dir)?;
             println!("Loaded {} character biographies", bios.len());
 
-            let mut storage = GotStorage::new(&db_path)?;
+            let mut storage = B::new(db_path)?;
 
             if clear {
                 println!("Clearing existing data...");
                 storage.clear()?;
             }
 
-            println!("Ingesting into HelixDB at {}...", db_path.display());
+            println!("Ingesting into database at {}...", db_path.display());
 
             if skip_embeddings {
-                // Use the original ingest without embeddings
                 let stats = storage.ingest(&tree)?;
                 println!(
                     "Ingested {} nodes and {} edges (no embeddings)",
                     stats.nodes_inserted, stats.edges_inserted
                 );
             } else {
-                // Generate embeddings and ingest with vectors
                 println!("Initializing embedding model...");
                 let embedder = ix_embeddings::Embedder::new()
                     .map_err(|e| anyhow::anyhow!("Failed to create embedder: {e}"))?;
@@ -212,14 +237,14 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Search { query, limit } => {
-            if !GotStorage::exists(&db_path) {
+            if !B::exists(db_path) {
                 anyhow::bail!(
                     "Database not found at {}. Run 'demo-got ingest' first.",
                     db_path.display()
                 );
             }
 
-            let storage = GotStorage::new(&db_path)?;
+            let storage = B::new(db_path)?;
 
             // Generate query embedding
             let embedder = ix_embeddings::Embedder::new()
@@ -231,7 +256,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             // Perform semantic search
             let results = storage.search_semantic(&query_embedding, limit)?;
 
-            if cli.json {
+            if json {
                 let output: Vec<_> = results
                     .iter()
                     .map(|r| {
@@ -272,20 +297,20 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Query { query_type } => {
-            if !GotStorage::exists(&db_path) {
+            if !B::exists(db_path) {
                 anyhow::bail!(
                     "Database not found at {}. Run 'demo-got ingest' first.",
                     db_path.display()
                 );
             }
 
-            let storage = GotStorage::new(&db_path)?;
+            let storage = B::new(db_path)?;
 
             match query_type {
                 QueryType::Ancestors { person_id, depth } => {
                     let ancestors = find_ancestors(&storage, &person_id, depth)?;
 
-                    if cli.json {
+                    if json {
                         let output: Vec<_> = ancestors
                             .iter()
                             .map(|a| {
@@ -323,7 +348,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 QueryType::Descendants { person_id, depth } => {
                     let descendants = find_descendants(&storage, &person_id, depth)?;
 
-                    if cli.json {
+                    if json {
                         let output: Vec<_> = descendants
                             .iter()
                             .map(|d| {
@@ -359,7 +384,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
 
                     let members = storage.get_house_members(house)?;
 
-                    if cli.json {
+                    if json {
                         let output: Vec<_> = members
                             .iter()
                             .map(|p| {
@@ -391,7 +416,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 QueryType::Person { person_id } => {
                     let family = get_person_with_family(&storage, &person_id)?;
 
-                    if cli.json {
+                    if json {
                         let output = serde_json::json!({
                             "person": {
                                 "id": family.person.id,
@@ -466,17 +491,17 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Stats => {
-            if !GotStorage::exists(&db_path) {
+            if !B::exists(db_path) {
                 anyhow::bail!(
                     "Database not found at {}. Run 'demo-got ingest' first.",
                     db_path.display()
                 );
             }
 
-            let storage = GotStorage::new(&db_path)?;
+            let storage = B::new(db_path)?;
             let stats = storage.get_stats()?;
 
-            if cli.json {
+            if json {
                 println!("{}", serde_json::to_string_pretty(&stats)?);
             } else {
                 println!("Database Statistics");
@@ -503,13 +528,11 @@ struct IngestWithEmbeddingsStats {
 }
 
 /// Ingest family tree data with embeddings for semantic search.
-fn ingest_with_embeddings(
-    storage: &mut GotStorage,
+fn ingest_with_embeddings<B: GotBackend>(
+    storage: &mut B,
     tree: &FamilyTree,
     embeddings: &std::collections::HashMap<String, Vec<f32>>,
 ) -> anyhow::Result<IngestWithEmbeddingsStats> {
-    use demo_got::{RelationType, RelationshipDef};
-
     let mut stats = IngestWithEmbeddingsStats {
         nodes_inserted: 0,
         edges_inserted: 0,
@@ -517,7 +540,8 @@ fn ingest_with_embeddings(
     };
 
     // Track person ID -> node ID mapping for relationship creation
-    let mut id_to_node: std::collections::HashMap<String, u128> = std::collections::HashMap::new();
+    let mut id_to_node: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
 
     // First pass: insert all people as nodes
     for person in &tree.people {
@@ -541,29 +565,29 @@ fn ingest_with_embeddings(
     for rel in &tree.relationships {
         match rel {
             RelationshipDef::ParentOf { from, to } => {
-                let Some(&from_node) = id_to_node.get(from) else {
+                let Some(from_node) = id_to_node.get(from) else {
                     continue;
                 };
 
                 for child_id in to {
-                    let Some(&to_node) = id_to_node.get(child_id) else {
+                    let Some(to_node) = id_to_node.get(child_id) else {
                         continue;
                     };
-                    create_edge_internal(storage, from_node, to_node, RelationType::ParentOf)?;
+                    storage.create_edge(from_node, to_node, RelationType::ParentOf)?;
                     stats.edges_inserted += 1;
                 }
             }
             RelationshipDef::SpouseOf { between } => {
                 if between.len() >= 2 {
-                    let Some(&a) = id_to_node.get(&between[0]) else {
+                    let Some(a) = id_to_node.get(&between[0]) else {
                         continue;
                     };
-                    let Some(&b) = id_to_node.get(&between[1]) else {
+                    let Some(b) = id_to_node.get(&between[1]) else {
                         continue;
                     };
                     // Bidirectional: create edges in both directions
-                    create_edge_internal(storage, a, b, RelationType::SpouseOf)?;
-                    create_edge_internal(storage, b, a, RelationType::SpouseOf)?;
+                    storage.create_edge(a, b, RelationType::SpouseOf)?;
+                    storage.create_edge(b, a, RelationType::SpouseOf)?;
                     stats.edges_inserted += 2;
                 }
             }
@@ -571,14 +595,14 @@ fn ingest_with_embeddings(
                 // Create edges between all pairs (bidirectional)
                 for i in 0..between.len() {
                     for j in (i + 1)..between.len() {
-                        let Some(&a) = id_to_node.get(&between[i]) else {
+                        let Some(a) = id_to_node.get(&between[i]) else {
                             continue;
                         };
-                        let Some(&b) = id_to_node.get(&between[j]) else {
+                        let Some(b) = id_to_node.get(&between[j]) else {
                             continue;
                         };
-                        create_edge_internal(storage, a, b, RelationType::SiblingOf)?;
-                        create_edge_internal(storage, b, a, RelationType::SiblingOf)?;
+                        storage.create_edge(a, b, RelationType::SiblingOf)?;
+                        storage.create_edge(b, a, RelationType::SiblingOf)?;
                         stats.edges_inserted += 2;
                     }
                 }
@@ -587,15 +611,4 @@ fn ingest_with_embeddings(
     }
 
     Ok(stats)
-}
-
-/// Helper to create an edge using the public storage method.
-fn create_edge_internal(
-    storage: &GotStorage,
-    from_node_id: u128,
-    to_node_id: u128,
-    relation_type: demo_got::RelationType,
-) -> anyhow::Result<()> {
-    storage.create_edge_public(from_node_id, to_node_id, relation_type)?;
-    Ok(())
 }
