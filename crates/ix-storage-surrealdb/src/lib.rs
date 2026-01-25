@@ -8,7 +8,7 @@ mod types;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use ix_core::entity::{EntityKind, kind_from_id};
@@ -42,7 +42,9 @@ const METADATA_KEYS: &[&str] = &[
 pub struct SurrealDbIndex {
     repo_root: PathBuf,
     db_path: PathBuf,
-    db: Option<Surreal<Db>>,
+    /// Database connection, lazily initialized on first use.
+    /// Uses `Mutex` for interior mutability so read operations can open the DB.
+    db: Mutex<Option<Surreal<Db>>>,
     runtime: Arc<Runtime>,
     embedder: Embedder,
     engine: String,
@@ -83,22 +85,64 @@ impl SurrealDbIndex {
         Ok(Self {
             repo_root,
             db_path,
-            db: None, // Opened lazily
+            db: Mutex::new(None), // Opened lazily
             runtime,
             embedder,
             engine,
         })
     }
 
+    /// Ensure the database is open, opening it lazily if needed.
+    ///
+    /// This allows read operations (`search`, `health_check`) to work on an existing
+    /// database without requiring `sync()` to be called first on the same instance.
+    fn ensure_db_open(&self) -> Result<()> {
+        let mut db_guard = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire database lock: {e}"))?;
+
+        if db_guard.is_some() {
+            return Ok(());
+        }
+
+        // Only open if the database path exists (has been synced before)
+        if !self.db_path.exists() {
+            anyhow::bail!(
+                "Database not found at {}. Run `sync` first to create it.",
+                self.db_path.display()
+            );
+        }
+
+        let db = self
+            .runtime
+            .block_on(open_database(&self.db_path, &self.engine))?;
+        *db_guard = Some(db);
+        drop(db_guard);
+        Ok(())
+    }
+
+    /// Get a reference to the database, ensuring it's open first.
+    #[allow(clippy::significant_drop_tightening)]
+    fn with_db<T, F>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(&Surreal<Db>) -> Result<T>,
+    {
+        self.ensure_db_open()?;
+        let db_guard = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire database lock: {e}"))?;
+        let db = db_guard
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
+        f(db)
+    }
+
     /// Query outgoing relationships from an entity.
     ///
     /// Returns the IDs of entities that `from_id` has the given relationship to.
     pub fn outgoing(&self, from_id: &str, rel: &str) -> Result<Vec<String>> {
-        let db = self
-            .db
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
-
         let label = rel.trim().to_ascii_uppercase();
         if label.is_empty() {
             return Ok(Vec::new());
@@ -107,32 +151,30 @@ impl SurrealDbIndex {
         // Clone to owned values for async block
         let from_id_owned = from_id.to_string();
         let label_owned = label;
+        let runtime = self.runtime.clone();
 
-        let result: Vec<types::NeighborResult> = self.runtime.block_on(async {
-            db.query(
-                "SELECT out.entity_id AS entity_id FROM relates WHERE in.entity_id = $from_id AND label = $label",
-            )
-            .bind(("from_id", from_id_owned))
-            .bind(("label", label_owned))
-            .await?
-            .take(0)
-        })?;
+        self.with_db(|db| {
+            let result: Vec<types::NeighborResult> = runtime.block_on(async {
+                db.query(
+                    "SELECT out.entity_id AS entity_id FROM relates WHERE in.entity_id = $from_id AND label = $label",
+                )
+                .bind(("from_id", from_id_owned))
+                .bind(("label", label_owned))
+                .await?
+                .take(0)
+            })?;
 
-        let mut out: Vec<String> = result.into_iter().map(|r| r.entity_id).collect();
-        out.sort();
-        out.dedup();
-        Ok(out)
+            let mut out: Vec<String> = result.into_iter().map(|r| r.entity_id).collect();
+            out.sort();
+            out.dedup();
+            Ok(out)
+        })
     }
 
     /// Query incoming relationships to an entity.
     ///
     /// Returns the IDs of entities that have the given relationship to `to_id`.
     pub fn incoming(&self, to_id: &str, rel: &str) -> Result<Vec<String>> {
-        let db = self
-            .db
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
-
         let label = rel.trim().to_ascii_uppercase();
         if label.is_empty() {
             return Ok(Vec::new());
@@ -141,27 +183,36 @@ impl SurrealDbIndex {
         // Clone to owned values for async block
         let to_id_owned = to_id.to_string();
         let label_owned = label;
+        let runtime = self.runtime.clone();
 
-        let result: Vec<types::NeighborResult> = self.runtime.block_on(async {
-            db.query(
-                "SELECT in.entity_id AS entity_id FROM relates WHERE out.entity_id = $to_id AND label = $label",
-            )
-            .bind(("to_id", to_id_owned))
-            .bind(("label", label_owned))
-            .await?
-            .take(0)
-        })?;
+        self.with_db(|db| {
+            let result: Vec<types::NeighborResult> = runtime.block_on(async {
+                db.query(
+                    "SELECT in.entity_id AS entity_id FROM relates WHERE out.entity_id = $to_id AND label = $label",
+                )
+                .bind(("to_id", to_id_owned))
+                .bind(("label", label_owned))
+                .await?
+                .take(0)
+            })?;
 
-        let mut out: Vec<String> = result.into_iter().map(|r| r.entity_id).collect();
-        out.sort();
-        out.dedup();
-        Ok(out)
+            let mut out: Vec<String> = result.into_iter().map(|r| r.entity_id).collect();
+            out.sort();
+            out.dedup();
+            Ok(out)
+        })
     }
 
-    fn rebuild_database(&mut self) -> Result<()> {
+    fn rebuild_database(&self) -> Result<()> {
         // Explicitly drop the old database connection to release the lock
-        if let Some(old_db) = self.db.take() {
-            drop(old_db);
+        {
+            let mut db_guard = self
+                .db
+                .lock()
+                .map_err(|e| anyhow::anyhow!("Failed to acquire database lock: {e}"))?;
+            if let Some(old_db) = db_guard.take() {
+                drop(old_db);
+            }
         }
 
         if self.db_path.exists() {
@@ -172,10 +223,16 @@ impl SurrealDbIndex {
         std::fs::create_dir_all(&self.db_path)
             .with_context(|| format!("Failed to create {}", self.db_path.display()))?;
 
-        self.db = Some(
-            self.runtime
-                .block_on(open_database(&self.db_path, &self.engine))?,
-        );
+        let new_db = self
+            .runtime
+            .block_on(open_database(&self.db_path, &self.engine))?;
+
+        let mut db_guard = self
+            .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire database lock: {e}"))?;
+        *db_guard = Some(new_db);
+        drop(db_guard);
         Ok(())
     }
 
@@ -187,14 +244,10 @@ impl SurrealDbIndex {
 
     fn insert_edges(
         &self,
+        db: &Surreal<Db>,
         id_to_record_id: &BTreeMap<String, String>,
         records: Vec<PendingRelation>,
     ) -> Result<()> {
-        let db = self
-            .db
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
-
         for record in records {
             for (rel, to_ids) in record.rels {
                 let label = rel.to_ascii_uppercase();
@@ -230,15 +283,20 @@ impl SurrealDbIndex {
 }
 
 impl IndexBackend for SurrealDbIndex {
+    #[allow(clippy::significant_drop_tightening)]
     fn sync(&mut self, repo: &IxchelRepo) -> Result<SyncStats> {
         self.rebuild_database()?;
 
-        // Initialize schema with embedding dimension
-        let db = self
+        // Lock the database for the duration of sync
+        let db_guard = self
             .db
+            .lock()
+            .map_err(|e| anyhow::anyhow!("Failed to acquire database lock: {e}"))?;
+        let db = db_guard
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
 
+        // Initialize schema with embedding dimension
         let dimension = self.embedder.dimension();
         self.runtime.block_on(async {
             db.query(schema::SCHEMA_INIT).await?;
@@ -317,18 +375,14 @@ impl IndexBackend for SurrealDbIndex {
             stats.added += 1;
         }
 
-        self.insert_edges(&id_to_record_id, pending_relations)?;
+        self.insert_edges(db, &id_to_record_id, pending_relations)?;
 
         Ok(stats)
     }
 
     fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchHit>> {
-        let db = self
-            .db
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
-
         let embedding = self.embed(query)?;
+        let runtime = self.runtime.clone();
 
         // Use HNSW KNN search - results come back ordered by distance
         // The <|K,EF|> operator returns K nearest neighbors with ef_search=EF
@@ -341,44 +395,46 @@ impl IndexBackend for SurrealDbIndex {
              WHERE embedding <|{limit},{ef_search}|> $query_embedding \
              ORDER BY distance"
         );
-        let results: Vec<SearchResult> = self.runtime.block_on(async {
-            db.query(&query_str)
-                .bind(("query_embedding", embedding))
-                .await?
-                .take(0)
-        })?;
 
-        // Convert distance to score (lower distance = higher score)
-        let hits = results
-            .into_iter()
-            .map(|r| {
-                // Cosine distance: 0 = identical, 2 = opposite
-                // Convert to score: 1/(1+distance) gives ~1.0 for identical, ~0.33 for opposite
-                #[allow(clippy::cast_possible_truncation)]
-                let score = (1.0 / (1.0 + r.distance)) as f32;
-                let kind = r.kind.and_then(|k| k.parse::<EntityKind>().ok());
-                SearchHit {
-                    score,
-                    id: r.entity_id,
-                    kind,
-                    title: r.title,
-                }
-            })
-            .collect();
+        self.with_db(|db| {
+            let results: Vec<SearchResult> = runtime.block_on(async {
+                db.query(&query_str)
+                    .bind(("query_embedding", embedding))
+                    .await?
+                    .take(0)
+            })?;
 
-        Ok(hits)
+            // Convert distance to score (lower distance = higher score)
+            let hits = results
+                .into_iter()
+                .map(|r| {
+                    // Cosine distance: 0 = identical, 2 = opposite
+                    // Convert to score: 1/(1+distance) gives ~1.0 for identical, ~0.33 for opposite
+                    #[allow(clippy::cast_possible_truncation)]
+                    let score = (1.0 / (1.0 + r.distance)) as f32;
+                    let kind = r.kind.and_then(|k| k.parse::<EntityKind>().ok());
+                    SearchHit {
+                        score,
+                        id: r.entity_id,
+                        kind,
+                        title: r.title,
+                    }
+                })
+                .collect();
+
+            Ok(hits)
+        })
     }
 
     fn health_check(&self) -> Result<()> {
-        let db = self
-            .db
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Database not initialized"))?;
+        let runtime = self.runtime.clone();
 
-        self.runtime.block_on(async {
-            let _: Vec<serde_json::Value> =
-                db.query("SELECT * FROM entity LIMIT 1").await?.take(0)?;
-            Ok(())
+        self.with_db(|db| {
+            runtime.block_on(async {
+                let _: Vec<serde_json::Value> =
+                    db.query("SELECT * FROM entity LIMIT 1").await?.take(0)?;
+                Ok(())
+            })
         })
     }
 }
