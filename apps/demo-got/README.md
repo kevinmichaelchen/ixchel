@@ -1,10 +1,15 @@
 # demo-got
 
-A Game of Thrones family tree demo showcasing HelixDB's graph and vector search capabilities.
+A Game of Thrones family tree demo showcasing graph and vector search capabilities with pluggable storage backends.
 
 ## Overview
 
-This crate demonstrates how to use HelixDB as an embedded graph database for storing and querying family relationships. It ingests ~30 characters from Game of Thrones (Houses Stark, Targaryen, Baratheon, Tully, Lannister) and supports both graph traversal queries and semantic search over character biographies.
+This crate demonstrates how to use embedded graph databases for storing and querying family relationships. It ingests ~30 characters from Game of Thrones (Houses Stark, Targaryen, Baratheon, Tully, Lannister) and supports both graph traversal queries and semantic search over character biographies.
+
+**Supported backends:**
+
+- **SurrealDB** (default) - Pure Rust embedded database with SurrealKV storage
+- **HelixDB** - High-performance graph database with LMDB storage
 
 ## Installation
 
@@ -14,15 +19,32 @@ cargo build -p demo-got
 
 ## Usage
 
+### Backend Selection
+
+Use the `--backend` flag to choose your storage backend:
+
+```bash
+# SurrealDB (default)
+cargo run -p demo-got -- ingest
+
+# HelixDB
+cargo run -p demo-got -- --backend helixdb ingest
+```
+
+Each backend uses its own database directory to avoid conflicts:
+
+- SurrealDB: `.data-surrealdb/`
+- HelixDB: `.data-helixdb/`
+
 ### Ingest Data
 
-Load the family tree from YAML into HelixDB with embeddings:
+Load the family tree from YAML into the database with embeddings:
 
 ```bash
 cargo run -p demo-got -- ingest
 ```
 
-This creates a `.data/` directory inside the crate with the persisted graph data. By default, it also:
+This creates a database directory inside the crate with the persisted graph data. By default, it also:
 
 - Loads character biographies from `data/*.md` files
 - Generates embeddings using the local embedding model
@@ -124,48 +146,70 @@ cargo run -p demo-got -- --json query ancestors jon-snow
 
 ## Data Model
 
-### Nodes (PERSON)
+### Nodes (Person)
 
-| Property  | Type   | Description                              |
-| --------- | ------ | ---------------------------------------- |
-| id        | String | Unique identifier (e.g., "jon-snow")     |
-| name      | String | Full name (e.g., "Jon Snow")             |
-| house     | String | House affiliation                        |
-| titles    | JSON   | Array of titles held                     |
-| alias     | String | Common nickname                          |
-| is_alive  | String | "true" or "false"                        |
-| vector_id | String | Links to embedding vector (if generated) |
+| Property  | Type     | Description                          |
+| --------- | -------- | ------------------------------------ |
+| id        | String   | Unique identifier (e.g., "jon-snow") |
+| name      | String   | Full name (e.g., "Jon Snow")         |
+| house     | String   | House affiliation                    |
+| titles    | String[] | Array of titles held                 |
+| alias     | String?  | Common nickname                      |
+| is_alive  | bool     | Living or deceased                   |
+| embedding | float[]  | Vector embedding (if generated)      |
 
-### Edges
+### Edges (Relationships)
 
-| Label      | Direction      | Description                |
-| ---------- | -------------- | -------------------------- |
-| PARENT_OF  | Parent → Child | Biological/adoptive parent |
-| SPOUSE_OF  | Bidirectional  | Marriage relationship      |
-| SIBLING_OF | Bidirectional  | Sibling relationship       |
+| Label      | Direction       | Description                |
+| ---------- | --------------- | -------------------------- |
+| PARENT_OF  | Parent -> Child | Biological/adoptive parent |
+| SPOUSE_OF  | Bidirectional   | Marriage relationship      |
+| SIBLING_OF | Bidirectional   | Sibling relationship       |
 
 ## Architecture
 
 ```
 apps/demo-got/
 ├── src/
-│   ├── main.rs      # CLI entry point (clap)
-│   ├── lib.rs       # Module exports
-│   ├── types.rs     # Person, House, RelationType, SearchResult
-│   ├── error.rs     # GotError enum
-│   ├── loader.rs    # YAML + bio markdown parsing
-│   ├── storage.rs   # HelixDB wrapper with vector support
-│   └── query.rs     # BFS graph traversal
+│   ├── main.rs           # CLI entry point (clap)
+│   ├── lib.rs            # Module exports
+│   ├── backend.rs        # GotBackend trait definition
+│   ├── types.rs          # Person, House, RelationType, SearchResult
+│   ├── error.rs          # GotError enum
+│   ├── loader.rs         # YAML + bio markdown parsing
+│   ├── query.rs          # BFS graph traversal (generic over backend)
+│   └── storage/
+│       ├── mod.rs        # Backend exports
+│       ├── helixdb.rs    # HelixDB implementation
+│       └── surrealdb.rs  # SurrealDB implementation
 └── data/
-    ├── westeros.yaml   # Family tree seed data
-    └── *.md            # Character biographies (30 files)
+    ├── westeros.yaml     # Family tree seed data
+    └── *.md              # Character biographies (30 files)
+```
+
+### Backend Abstraction
+
+The `GotBackend` trait defines the storage interface:
+
+```rust
+pub trait GotBackend: Send + Sync {
+    fn new(db_path: &Path) -> Result<Self>;
+    fn exists(db_path: &Path) -> bool;
+    fn clear(&self) -> Result<()>;
+    fn ingest(&mut self, tree: &FamilyTree) -> Result<IngestStats>;
+    fn search_semantic(&self, embedding: &[f32], limit: usize) -> Result<Vec<SearchResult>>;
+    fn get_person(&self, node_id: &str) -> Result<Person>;
+    fn get_incoming_neighbors(&self, node_id: &str, rel: RelationType) -> Result<Vec<String>>;
+    fn get_outgoing_neighbors(&self, node_id: &str, rel: RelationType) -> Result<Vec<String>>;
+    // ... more methods
+}
 ```
 
 ### Vector Search
 
 Semantic search uses:
 
-- **HNSW index**: `m=16`, `ef_construction=128`, `ef_search=64`
+- **HNSW index**: `m=16`, `ef_construction=128-150`, `ef_search=64`
 - **Embedding model**: `BAAI/bge-small-en-v1.5` (384 dimensions)
 - **Composite text**: `{name} ({alias})\nTitles: {titles}\n\n{bio}`
 
