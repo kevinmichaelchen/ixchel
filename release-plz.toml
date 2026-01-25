@@ -19,7 +19,8 @@ publish = true
 # Run cargo-semver-checks to detect breaking changes
 semver_check = true
 
-# Packages to release (exclude demo-got which requires Metal)
+# Packages to release
+# Excluded: demo-got (Metal dep), ix-storage-helixdb, ix-helixdb-ops (git deps)
 [[package]]
 name = "ix-cli"
 
@@ -42,10 +43,23 @@ name = "ix-config"
 name = "ix-embeddings"
 
 [[package]]
-name = "ix-storage-helixdb"
+name = "ix-storage-surrealdb"
 
 [[package]]
 name = "ix-id"
 
+# Skip packages with git dependencies (publish = false in Cargo.toml)
+[[package]]
+name = "ix-storage-helixdb"
+publish = false
+release = false
+
 [[package]]
 name = "ix-helixdb-ops"
+publish = false
+release = false
+
+[[package]]
+name = "demo-got"
+publish = false
+release = false
