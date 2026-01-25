@@ -24,7 +24,7 @@ sync, single-writer enforcement, and queueing across repos and tools.
 | Windows                       | ❌ Not yet supported |
 
 Windows support requires rewriting the IPC layer to use named pipes instead of
-Unix sockets. See [issue #TBD](https://github.com/kevinmichaelchen/ixchel/issues/TBD).
+Unix sockets. See [iss-7165bb](/.ixchel/issues/iss-7165bb.md).
 
 ## Specs
 
