@@ -21,7 +21,7 @@ serde_json.workspace = true
 
 [features]
 default = []
-helixdb = ["ix-app/helixdb"]
+# Note: helixdb feature removed - not available from crates.io (see ix-app/Cargo.toml)
 
 [lints]
 workspace = true

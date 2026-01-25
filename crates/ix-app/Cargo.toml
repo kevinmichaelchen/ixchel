@@ -13,13 +13,35 @@ categories = ["development-tools"]
 [dependencies]
 anyhow.workspace = true
 ix-core = { path = "../ix-core", version = "0.1.0" }
-ix-storage-helixdb = { path = "../ix-storage-helixdb", optional = true }
 ix-storage-surrealdb = { path = "../ix-storage-surrealdb", version = "0.1.0" }
 
 [features]
 default = []
-helixdb = ["dep:ix-storage-helixdb"]
 
 [lints]
 workspace = true
+
+# =============================================================================
+# HelixDB Backend Support
+# =============================================================================
+#
+# The helixdb feature and ix-storage-helixdb dependency are intentionally
+# excluded from this published crate because:
+#
+# 1. ix-storage-helixdb depends on helix-db which uses a git URL
+# 2. crates.io does not allow git dependencies
+# 3. helix-db hasn't been published to crates.io in 6+ months
+#
+# Impact:
+# - `cargo install ix-cli` from crates.io: SurrealDB backend only
+# - `cargo binstall ix-cli`: Both backends (binary built from source)
+# - Building from git: Both backends (add ix-storage-helixdb to dependencies)
+#
+# To enable HelixDB when building from source, add to your Cargo.toml:
+#   [dependencies]
+#   ix-storage-helixdb = { git = "https://github.com/kevinmichaelchen/ixchel" }
+#
+# And add the feature flag to ix-app:
+#   [features]
+#   helixdb = ["ix-app/helixdb"]
 
