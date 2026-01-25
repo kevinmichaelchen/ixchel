@@ -1,6 +1,6 @@
 use crate::{
     Command, DEFAULT_SOCKET_PATH, DaemonError, EnqueueSyncPayload, Request, Response,
-    ResponseResult, SyncState, WaitSyncPayload,
+    ResponseResult, SyncState, UnwatchPayload, WaitSyncPayload, WatchPayload,
 };
 use std::path::Path;
 use std::process::Stdio;
@@ -197,6 +197,56 @@ impl Client {
         );
         let _ = self.send(request).await;
         Ok(())
+    }
+
+    /// Start watching a repository for file changes.
+    ///
+    /// Returns `(repo_root, started)` where `started` is true if watching was newly started.
+    pub async fn watch(&self, repo_root: &str) -> Result<(String, bool), DaemonError> {
+        let request = Request::new(
+            repo_root,
+            "",
+            Command::Watch(WatchPayload {
+                repo_root: String::new(), // Use the one from request envelope
+            }),
+        );
+        let response = self.send(request).await?;
+
+        match response.result {
+            ResponseResult::Ok { payload } => {
+                if let crate::ResponsePayload::Watch(watch) = payload {
+                    Ok((watch.repo_root, watch.started))
+                } else {
+                    Err(DaemonError::Internal("Unexpected response type".into()))
+                }
+            }
+            ResponseResult::Error { error } => Err(DaemonError::Internal(error.message)),
+        }
+    }
+
+    /// Stop watching a repository for file changes.
+    ///
+    /// Returns `(repo_root, stopped)` where `stopped` is true if watching was actually stopped.
+    pub async fn unwatch(&self, repo_root: &str) -> Result<(String, bool), DaemonError> {
+        let request = Request::new(
+            repo_root,
+            "",
+            Command::Unwatch(UnwatchPayload {
+                repo_root: String::new(), // Use the one from request envelope
+            }),
+        );
+        let response = self.send(request).await?;
+
+        match response.result {
+            ResponseResult::Ok { payload } => {
+                if let crate::ResponsePayload::Unwatch(unwatch) = payload {
+                    Ok((unwatch.repo_root, unwatch.stopped))
+                } else {
+                    Err(DaemonError::Internal("Unexpected response type".into()))
+                }
+            }
+            ResponseResult::Error { error } => Err(DaemonError::Internal(error.message)),
+        }
     }
 }
 
