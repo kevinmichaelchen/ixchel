@@ -13,8 +13,8 @@ categories = ["database"]
 [dependencies]
 anyhow.workspace = true
 blake3.workspace = true
-ix-core = { path = "../ix-core" }
-ix-embeddings = { path = "../ix-embeddings" }
+ix-core = { path = "../ix-core", version = "0.1.0" }
+ix-embeddings = { path = "../ix-embeddings", version = "0.1.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 serde_yaml.workspace = true

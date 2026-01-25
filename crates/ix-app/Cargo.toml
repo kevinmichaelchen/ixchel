@@ -12,9 +12,9 @@ categories = ["development-tools"]
 
 [dependencies]
 anyhow.workspace = true
-ix-core = { path = "../ix-core" }
+ix-core = { path = "../ix-core", version = "0.1.0" }
 ix-storage-helixdb = { path = "../ix-storage-helixdb", optional = true }
-ix-storage-surrealdb = { path = "../ix-storage-surrealdb" }
+ix-storage-surrealdb = { path = "../ix-storage-surrealdb", version = "0.1.0" }
 
 [features]
 default = []
