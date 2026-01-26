@@ -108,7 +108,15 @@ pub fn parse_id(id: &str) -> Result<(String, String), IdError> {
 #[macro_export]
 macro_rules! define_id {
     ($name:ident, $prefix:expr) => {
-        #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+        #[derive(
+            Debug,
+            Clone,
+            PartialEq,
+            Eq,
+            Hash,
+            $crate::__private::serde::Serialize,
+            $crate::__private::serde::Deserialize,
+        )]
         pub struct $name(String);
 
         impl $name {

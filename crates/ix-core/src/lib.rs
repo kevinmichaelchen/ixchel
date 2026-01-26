@@ -8,6 +8,11 @@ pub mod repo;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[doc(hidden)]
+pub mod __private {
+    pub use serde;
+}
+
 // Re-export commonly used items from submodules for convenience
 pub use config::{
     ConfigError, ConfigLoader, EmbeddingConfig, GitHubConfig, IxchelConfig, SharedConfig,
